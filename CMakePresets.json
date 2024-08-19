@@ -1,0 +1,41 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "Debug",
+            "displayName": "Debug GCC 4.7.2 mingw32",
+            "description": "Using compilers: C = D:\\Tools\\MinGW64\\bin\\gcc.exe, CXX = D:\\Tools\\MinGW64\\bin\\g++.exe",
+            "generator": "MinGW Makefiles",
+            "binaryDir": "${sourceDir}/${presetName}",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/${presetName}",
+                "CMAKE_C_COMPILER": "D:/Tools/MinGW64/bin/gcc.exe",
+                "CMAKE_CXX_COMPILER": "D:/Tools/MinGW64/bin/g++.exe",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "Release",
+            "displayName": "Release GCC 4.7.2 mingw32",
+            "description": "Using compilers: C = D:\\Tools\\MinGW64\\bin\\gcc.exe, CXX = D:\\Tools\\MinGW64\\bin\\g++.exe",
+            "generator": "MinGW Makefiles",
+            "binaryDir": "${sourceDir}/${presetName}",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/${presetName}",
+                "CMAKE_C_COMPILER": "D:/Tools/MinGW64/bin/gcc.exe",
+                "CMAKE_CXX_COMPILER": "D:/Tools/MinGW64/bin/g++.exe",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "Debug",
+            "configurePreset": "Debug"
+        },
+        {
+            "name": "Release",
+            "configurePreset": "Release"
+        }
+    ]
+}
