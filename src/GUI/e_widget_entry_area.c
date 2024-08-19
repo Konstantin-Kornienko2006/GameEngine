@@ -1,6 +1,7 @@
 #include "GUI/e_widget_entry_area.h"
 
 #include "Core/engine.h"
+#include "Core/e_window.h"
 
 #include "wManager/window_manager.h"
 #include "wManager/manager_includes.h"
@@ -8,6 +9,8 @@
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
 #include "Data/e_resource_export.h"
+
+extern ZEngine engine;
 
 extern void EntryWidgetPress(EWidget *widget, void *entry, void *arg);
 extern void EntryWidgetUnfocus(EWidget *widget, void *entry, void *arg);
@@ -57,7 +60,7 @@ void EntryAreaWidgetMakeDelete(EWidgetEntryArea *area)
             if(area->textHeight  <= area->entry.height){
                 ChildStack *child = WidgetFindChild(&area->entry.widget, area->entry.curr_texts);
 
-                if(child->next != NULL && child->before != NULL)
+                /*if(child->next != NULL && child->before != NULL)
                 {
                     ChildStack *next = child->next;
                     ChildStack *before = child->before;
@@ -97,7 +100,7 @@ void EntryAreaWidgetMakeDelete(EWidgetEntryArea *area)
                 }
 
                 area->entry.curr_texts --;
-                area->entry.num_texts --;
+                area->entry.num_texts --;*/
             }
 
             if(area->textHeight > area->entry.height)
@@ -193,6 +196,8 @@ void EntryAreaWidgetInsertText(EWidgetEntryArea *area, const char *src)
 
 int EntryAreaWidgetKeyPressInput(EWidget* widget, int key, void *arg){
 
+    ZWindow *window = (ZWindow *)engine.window;
+
     EWidgetEntryArea *temp = widget;
 
     if(key == ENGINE_KEY_BACKSPACE)
@@ -236,7 +241,7 @@ int EntryAreaWidgetKeyPressInput(EWidget* widget, int key, void *arg){
     if(e_ctrl_press == true && e_v_press == true && !e_pasted)
     {
 
-        char *text = wManagerGetClipboardString(e_window);
+        char *text = wManagerGetClipboardString(window->e_window);
 
         EntryAreaWidgetInsertText(temp, text);
 
@@ -274,7 +279,7 @@ void EntryAreaWidgetInit(EWidgetEntryArea *entry, int fontSize, DrawParam *dPara
     memcpy(entry->entry.widget.go.name, "Entry_Area", 10);
     entry->entry.widget.type = ENGINE_WIDGET_TYPE_ENTRY_AREA;
 
-    entry->entry.widget.color = (vec4){0.7, 0.7, 0.7, 1.0f};
+    entry->entry.widget.color = (vec3){0.7, 0.7, 0.7};
 
     TextWidgetInit(&entry->entry.text, fontSize, NULL, &entry->entry.widget);
     TextWidgetAddDefault(&entry->entry.text, dParam->render);

@@ -8,6 +8,8 @@
 #include "Data/e_resource_engine.h"
 #include "Data/e_resource_export.h"
 
+extern ZEngine engine;
+
 GJKObject gjkObject;
 
 vec2 perpendicular (vec2 v) { vec2 p = { v.y, -v.x }; return p; }
@@ -202,9 +204,9 @@ float SqDistPointSquare(vec2 pos, InterSquareParam *box)
     vec2 up = {box->position.x + box->size, box->position.y + box->size};
     vec2 down = {box->position.x - box->size, box->position.y - box->size};
 
-    float *p = &pos;
-    float *max = &up;
-    float *min = &down;
+    float *p = (float *)&pos;
+    float *max = (float *)&up;
+    float *min = (float *)&down;
 
     float sqDist = 0.0f;
     for (int i = 0; i < 2; i++) {
@@ -488,7 +490,7 @@ int IntersectionSphapeSquare(void *obj1, InterSquareParam *square)
 
     InterTriangleParam triangle;
 
-    vec2 wind_size = {WIDTH, HEIGHT};
+    vec2 wind_size = {engine.width, engine.height};
 
     for(int i=0;i< iParam->indexesSize; i+=3)
     {

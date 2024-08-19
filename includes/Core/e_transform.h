@@ -32,32 +32,32 @@ typedef struct{
     mat4 model;
 } Transform3D;
 
-struct GameObject2D;
-struct GameObject3D;
+struct GameObject2D_T;
+struct GameObject3D_T;
 
 void Transform2DInit(Transform2D* transform);
 void Transform3DInit(Transform3D* transform);
 
-void Transform2DSetPosition(struct GameObject2D* go, float x, float y);
-vec2 Transform2DGetPosition(struct GameObject2D* go);
-void Transform2DReposition(struct GameObject2D* go);
-void Transform2DSetImageOffset(struct GameObject2D* go, float x, float y);
-vec2 Transform2DGetImageOffset(struct GameObject2D* go);
-void Transform2DSetScale(struct GameObject2D* go, float x, float y);
-vec2 Transform2DGetScale(struct GameObject2D* go);
-void Transform2DRescale(struct GameObject2D* go);
+void Transform2DSetPosition(struct GameObject2D_T* go, float x, float y);
+vec2 Transform2DGetPosition(struct GameObject2D_T* go);
+void Transform2DReposition(struct GameObject2D_T* go);
+void Transform2DSetImageOffset(struct GameObject2D_T* go, float x, float y);
+vec2 Transform2DGetImageOffset(struct GameObject2D_T* go);
+void Transform2DSetScale(struct GameObject2D_T* go, float x, float y);
+vec2 Transform2DGetScale(struct GameObject2D_T* go);
+void Transform2DRescale(struct GameObject2D_T* go);
 
 void Transform3DSetPositionT(Transform3D* transform, float x, float y, float z);
-void Transform3DSetPosition(struct GameObject3D* go, float x, float y, float z);
-vec3 Transform3DGetPosition(struct GameObject3D* go);
+void Transform3DSetPosition(struct GameObject3D_T* go, float x, float y, float z);
+vec3 Transform3DGetPosition(struct GameObject3D_T* go);
 
 void Transform3DSetScaleT(Transform3D* transform, float x, float y, float z);
-void Transform3DSetScale(struct GameObject3D* go, float x, float y, float z);
-vec3 Transform3DGetScale(struct GameObject3D* go);
+void Transform3DSetScale(struct GameObject3D_T* go, float x, float y, float z);
+vec3 Transform3DGetScale(struct GameObject3D_T* go);
 
 void Transform3DSetRotateT(Transform3D* transform, float x, float y, float z);
-void Transform3DSetRotate(struct GameObject3D* go, float x, float y, float z);
-vec3 Transform3DGetRotate(struct GameObject3D* go);
+void Transform3DSetRotate(struct GameObject3D_T* go, float x, float y, float z);
+vec3 Transform3DGetRotate(struct GameObject3D_T* go);
 
 #ifdef __cplusplus
 }

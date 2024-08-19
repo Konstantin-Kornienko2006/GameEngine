@@ -1,9 +1,13 @@
+#include "Core/e_window.h"
+
 #include "Data/e_resource_engine.h"
 
-#ifdef _WIN_
+#ifdef _WIN32
     #include "wManager/manager_includes.h"
     #include "wManager/input_manager.h"
     #include "wManager/win_defines.h"
+
+extern ZEngine engine;
 
 extern wManagerWindow _wMWindow;
 extern wManagerInfo _wMInfo;
@@ -325,7 +329,7 @@ void updateCursorImage(wManagerWindow *window)
         /*if (window->cursor)
             SetCursor(window->cursor->win32.handle);
         else*/
-            SetCursor(LoadCursorW(NULL, IDC_ARROW));
+            SetCursor(LoadCursorW(NULL, (LPCWSTR)IDC_ARROW));
     }
     else
         //Connected via Remote Desktop, NULL cursor will present SetCursorPos the move the cursor.
@@ -500,7 +504,7 @@ const char* _wManagerGetClipboardStringWin32(void)
 
         if (tries == 3)
         {
-            _glfwInputErrorWin32(ENGINE_PLATFORM_ERROR,
+            _wManagerInputErrorWin32(ENGINE_PLATFORM_ERROR,
                                  "Win32: Failed to open clipboard");
             return NULL;
         }
@@ -750,10 +754,12 @@ void enableCursor(wManagerWindow *window)
 
 extern void _wManagerInputWindowDamage(wManagerWindow* window);
 extern void _wManagerInputWindowPos(wManagerWindow* window, int x, int y);
+extern void _wManagerUpdateKeyNamesWin32(void);
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    ZWindow *e_window = (ZWindow *)engine.window;
 
-    wManagerWindow* window = e_window;
+    wManagerWindow* window = e_window->e_window;
 
     if (!window)
     {
@@ -822,35 +828,34 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             _wManagerInputWindowFocus(window, false);
             return 0;
         }
+       case WM_SYSCOMMAND:
+       {
+           switch (wParam & 0xfff0)
+           {
+   //                case SC_SCREENSAVE:
+   //                case SC_MONITORPOWER:
+   //                {
+   //                    if (window->monitor)
+   //                    {
+   //                        // We are running in full screen mode, so disallow
+   //                        // screen saver and screen blanking
+   //                        return 0;
+   //                    }
+   //                    else
+   //                        break;
+   //                }
 
-//        case WM_SYSCOMMAND:
-//        {
-//            switch (wParam & 0xfff0)
-//            {
-//    //                case SC_SCREENSAVE:
-//    //                case SC_MONITORPOWER:
-//    //                {
-//    //                    if (window->monitor)
-//    //                    {
-//    //                        // We are running in full screen mode, so disallow
-//    //                        // screen saver and screen blanking
-//    //                        return 0;
-//    //                    }
-//    //                    else
-//    //                        break;
-//    //                }
+               // User trying to access application menu using ALT?
+               case SC_KEYMENU:
+               {
+                   if (!window->keymenu)
+                       return 0;
 
-//                // User trying to access application menu using ALT?
-//                case SC_KEYMENU:
-//                {
-//                    if (!window->keymenu)
-//                        return 0;
-
-//                    break;
-//                }
-//            }
-//            break;
-//        }
+                   break;
+               }
+           }
+           break;
+       }
 
         case WM_CLOSE:
         {
@@ -859,56 +864,56 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
 
 
-//        case WM_INPUTLANGCHANGE:
-//        {
-//            _wMInfoUpdateKeyNamesWin32();
-//            break;
-//        }
+       case WM_INPUTLANGCHANGE:
+       {
+           _wManagerUpdateKeyNamesWin32();
+           break;
+       }
 
-//        case WM_CHAR:
-//        case WM_SYSCHAR:
-//        {
-//            if (wParam >= 0xd800 && wParam <= 0xdbff)
-//                window->highSurrogate = (WCHAR) wParam;
-//            else
-//            {
-//                uint32_t codepoint = 0;
+       case WM_CHAR:
+       case WM_SYSCHAR:
+       {
+           if (wParam >= 0xd800 && wParam <= 0xdbff)
+               ((wManagerWin *)window)->highSurrogate = (WCHAR) wParam;
+           else
+           {
+               uint32_t codepoint = 0;
 
-//                if (wParam >= 0xdc00 && wParam <= 0xdfff)
-//                {
-//                    if (window->highSurrogate)
-//                    {
-//                        codepoint += (window->highSurrogate - 0xd800) << 10;
-//                        codepoint += (WCHAR) wParam - 0xdc00;
-//                        codepoint += 0x10000;
-//                    }
-//                }
-//                else
-//                    codepoint = (WCHAR) wParam;
+               if (wParam >= 0xdc00 && wParam <= 0xdfff)
+               {
+                   if (((wManagerWin *)window)->highSurrogate)
+                   {
+                       codepoint += (((wManagerWin *)window)->highSurrogate - 0xd800) << 10;
+                       codepoint += (WCHAR) wParam - 0xdc00;
+                       codepoint += 0x10000;
+                   }
+               }
+               else
+                   codepoint = (WCHAR) wParam;
 
-//                window->highSurrogate = 0;
-//                _wManagerInputChar(window, codepoint, getKeyMods(), uMsg != WM_SYSCHAR);
-//            }
+               ((wManagerWin *)window)->highSurrogate = 0;
+               _wManagerInputChar(window, codepoint, getKeyMods(), uMsg != WM_SYSCHAR);
+           }
 
-//            if (uMsg == WM_SYSCHAR && window->hints.window.win32.keymenu)
-//                break;
+           if (uMsg == WM_SYSCHAR && window->hints.window.win32.keymenu)
+               break;
 
-//            return 0;
-//        }
+           return 0;
+       }
 
-//        case WM_UNICHAR:
-//        {
-//            if (wParam == UNICODE_NOCHAR)
-//            {
-//                // WM_UNICHAR is not sent by Windows, but is sent by some
-//                // third-party input method engine
-//                // Returning TRUE here announces support for this message
-//                return true;
-//            }
+       case WM_UNICHAR:
+       {
+           if (wParam == UNICODE_NOCHAR)
+           {
+               // WM_UNICHAR is not sent by Windows, but is sent by some
+               // third-party input method engine
+               // Returning TRUE here announces support for this message
+               return true;
+           }
 
-//            _wManagerInputChar(window, (uint32_t) wParam, getKeyMods(), true);
-//            return 0;
-//        }
+           _wManagerInputChar(window, (uint32_t) wParam, getKeyMods(), true);
+           return 0;
+       }
 
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
@@ -1006,61 +1011,61 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             break;
         }
 
-//        case WM_LBUTTONDOWN:
-//        case WM_RBUTTONDOWN:
-//        case WM_MBUTTONDOWN:
-//        case WM_XBUTTONDOWN:
-//        case WM_LBUTTONUP:
-//        case WM_RBUTTONUP:
-//        case WM_MBUTTONUP:
-//        case WM_XBUTTONUP:
-//        {
-//            int i, button, action;
+       case WM_LBUTTONDOWN:
+       case WM_RBUTTONDOWN:
+       case WM_MBUTTONDOWN:
+       case WM_XBUTTONDOWN:
+       case WM_LBUTTONUP:
+       case WM_RBUTTONUP:
+       case WM_MBUTTONUP:
+       case WM_XBUTTONUP:
+       {
+           int i, button, action;
 
-//            if (uMsg == WM_LBUTTONDOWN || uMsg == WM_LBUTTONUP)
-//                button = ENGINE_MOUSE_BUTTON_LEFT;
-//            else if (uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP)
-//                button = ENGINE_MOUSE_BUTTON_RIGHT;
-//            else if (uMsg == WM_MBUTTONDOWN || uMsg == WM_MBUTTONUP)
-//                button = ENGINE_MOUSE_BUTTON_MIDDLE;
-//            else if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1)
-//                button = ENGINE_MOUSE_BUTTON_4;
-//            else
-//                button = ENGINE_MOUSE_BUTTON_5;
+           if (uMsg == WM_LBUTTONDOWN || uMsg == WM_LBUTTONUP)
+               button = ENGINE_MOUSE_BUTTON_LEFT;
+           else if (uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP)
+               button = ENGINE_MOUSE_BUTTON_RIGHT;
+           else if (uMsg == WM_MBUTTONDOWN || uMsg == WM_MBUTTONUP)
+               button = ENGINE_MOUSE_BUTTON_MIDDLE;
+           else if (GET_XBUTTON_WPARAM(wParam) == XBUTTON1)
+               button = ENGINE_MOUSE_BUTTON_4;
+           else
+               button = ENGINE_MOUSE_BUTTON_5;
 
-//            if (uMsg == WM_LBUTTONDOWN || uMsg == WM_RBUTTONDOWN ||
-//                uMsg == WM_MBUTTONDOWN || uMsg == WM_XBUTTONDOWN)
-//            {
-//                action = ENGINE_PRESS;
-//            }
-//            else
-//                action = ENGINE_RELEASE;
+           if (uMsg == WM_LBUTTONDOWN || uMsg == WM_RBUTTONDOWN ||
+               uMsg == WM_MBUTTONDOWN || uMsg == WM_XBUTTONDOWN)
+           {
+               action = ENGINE_PRESS;
+           }
+           else
+               action = ENGINE_RELEASE;
 
-//            for (i = 0;  i <= ENGINE_MOUSE_BUTTON_LAST;  i++)
-//            {
-//                if (window->mouseButtons[i] == ENGINE_PRESS)
-//                    break;
-//            }
+           for (i = 0;  i <= ENGINE_MOUSE_BUTTON_LAST;  i++)
+           {
+               if (window->mouseButtons[i] == ENGINE_PRESS)
+                   break;
+           }
 
-//            if (i > ENGINE_MOUSE_BUTTON_LAST)
-//                SetCapture(hWnd);
+           if (i > ENGINE_MOUSE_BUTTON_LAST)
+               SetCapture(hWnd);
 
-//            _wManagerInputMouseClick(window, button, action, getKeyMods());
+           _wManagerInputMouseClick(window, button, action, getKeyMods());
 
-//            for (i = 0;  i <= ENGINE_MOUSE_BUTTON_LAST;  i++)
-//            {
-//                if (window->mouseButtons[i] == ENGINE_PRESS)
-//                    break;
-//            }
+           for (i = 0;  i <= ENGINE_MOUSE_BUTTON_LAST;  i++)
+           {
+               if (window->mouseButtons[i] == ENGINE_PRESS)
+                   break;
+           }
 
-//            if (i > ENGINE_MOUSE_BUTTON_LAST)
-//                ReleaseCapture();
+           if (i > ENGINE_MOUSE_BUTTON_LAST)
+               ReleaseCapture();
 
-//            if (uMsg == WM_XBUTTONDOWN || uMsg == WM_XBUTTONUP)
-//                return TRUE;
+           if (uMsg == WM_XBUTTONDOWN || uMsg == WM_XBUTTONUP)
+               return TRUE;
 
-//            return 0;
-//        }
+           return 0;
+       }
 
         case WM_MOUSEMOVE:
         {
@@ -1185,89 +1190,79 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             _wManagerInputScroll(window, 0.0, (SHORT) HIWORD(wParam) / (double) WHEEL_DELTA);
             return 0;
         }
+        case WM_ENTERSIZEMOVE:
+        case WM_ENTERMENULOOP:
+        {
+           if (window->frameAction)
+               break;
 
-//        case WM_MOUSEHWHEEL:
-//        {
-//            // This message is only sent on Windows Vista and later
-//            // NOTE: The X-axis is inverted for consistency with macOS and X11
-//            _wManagerInputScroll(window, -((SHORT) HIWORD(wParam) / (double) WHEEL_DELTA), 0.0);
-//            return 0;
-//        }
+           // HACK: Enable the cursor while the user is moving or
+           //       resizing the window or using the window menu
+           if (window->cursorMode == ENGINE_CURSOR_DISABLED)
+               enableCursor(window);
+           else if (window->cursorMode == ENGINE_CURSOR_CAPTURED)
+               releaseCursor(window);
 
-//        case WM_ENTERSIZEMOVE:
-//        case WM_ENTERMENULOOP:
-//        {
-//            if (window->frameAction)
-//                break;
+           break;
+        }
 
-//            // HACK: Enable the cursor while the user is moving or
-//            //       resizing the window or using the window menu
-//            if (((wManagerWin* )window->WindowData)->cursorMode == ENGINE_CURSOR_DISABLED)
-//                enableCursor(window);
-//            else if (((wManagerWin* )window->WindowData)->cursorMode == ENGINE_CURSOR_CAPTURED)
-//                releaseCursor(window);
+        case WM_EXITSIZEMOVE:
+        case WM_EXITMENULOOP:
+        {
+           if (window->frameAction)
+               break;
 
-//            break;
-//        }
+           // HACK: Disable the cursor once the user is done moving or
+           //       resizing the window or using the menu
+           if (window->cursorMode == ENGINE_CURSOR_DISABLED)
+               disableCursor(window);
+           else if (window->cursorMode == ENGINE_CURSOR_CAPTURED)
+               captureCursor(window);
 
-//        case WM_EXITSIZEMOVE:
-//        case WM_EXITMENULOOP:
-//        {
-//            if (window->frameAction)
-//                break;
+           break;
+        }
+        case WM_SIZE:
+        {
+           const int width = LOWORD(lParam);
+           const int height = HIWORD(lParam);
+           const int32_t iconified = wParam == SIZE_MINIMIZED;
+           const int32_t maximized = wParam == SIZE_MAXIMIZED ||
+                                      (window->maximized &&
+                                       wParam != SIZE_RESTORED);
 
-//            // HACK: Disable the cursor once the user is done moving or
-//            //       resizing the window or using the menu
-//            if (((wManagerWin* )window->WindowData)->cursorMode == ENGINE_CURSOR_DISABLED)
-//                disableCursor(window);
-//            else if (((wManagerWin* )window->WindowData)->cursorMode == ENGINE_CURSOR_CAPTURED)
-//                captureCursor(window);
+           if (((wManagerWin *)&_wMWindow)->capturedCursorWindow == window)
+               captureCursor(window);
 
-//            break;
-//        }
+           if (window->iconified != iconified)
+               _wManagerInputWindowIconify(window, iconified);
 
-//        case WM_SIZE:
-//        {
-//            const int width = LOWORD(lParam);
-//            const int height = HIWORD(lParam);
-//            const int32_t iconified = wParam == SIZE_MINIMIZED;
-//            const int32_t maximized = wParam == SIZE_MAXIMIZED ||
-//                                       (window->maximized &&
-//                                        wParam != SIZE_RESTORED);
+           if (window->maximized != maximized)
+               _wManagerInputWindowMaximize(window, maximized);
 
-//            if (_wMWindow.capturedCursorWindow == window)
-//                captureCursor(window);
+           if (width != window->width || height != window->height)
+           {
+               window->width = width;
+               window->height = height;
 
-//            if (window->iconified != iconified)
-//                _wManagerInputWindowIconify(window, iconified);
+               _wManagerInputFramebufferSize(window, width, height);
+               _wManagerInputWindowSize(window, width, height);
+           }
 
-//            if (window->maximized != maximized)
-//                _wManagerInputWindowMaximize(window, maximized);
-
-//            if (width != window->width || height != window->height)
+//            if (window->monitor && ((wManagerWin *)window->WindowData)->iconified != iconified)
 //            {
-//                window->width = width;
-//                window->height = height;
-
-//                _wManagerInputFramebufferSize(window, width, height);
-//                _wManagerInputWindowSize(window, width, height);
+//                if (iconified)
+//                    releaseMonitor(window);
+//                else
+//                {
+//                    acquireMonitor(window);
+//                    fitToMonitor(window);
+//                }
 //            }
 
-////            if (window->monitor && ((wManagerWin *)window->WindowData)->iconified != iconified)
-////            {
-////                if (iconified)
-////                    releaseMonitor(window);
-////                else
-////                {
-////                    acquireMonitor(window);
-////                    fitToMonitor(window);
-////                }
-////            }
-
-//            window->iconified = iconified;
-//            window->maximized = maximized;
-//            return 0;
-//        }
+           window->iconified = iconified;
+           window->maximized = maximized;
+           return 0;
+        }
 
         case WM_MOVE:
         {
@@ -1282,144 +1277,37 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             return 0;
         }
 
-//        case WM_SIZING:
-//        {
-//            if (window->numer == ENGINE_DONT_CARE ||
-//                window->denom == ENGINE_DONT_CARE)
-//            {
-//                break;
-//            }
+        // case WM_SIZING:
+        // {
+        //    if (window->numer == ENGINE_DONT_CARE ||
+        //        window->denom == ENGINE_DONT_CARE)
+        //    {
+        //        break;
+        //    }
 
-//            applyAspectRatio(window, (int) wParam, (RECT*) lParam);
-//            return TRUE;
-//        }
-
-//        case WM_GETMINMAXINFO:
-//        {
-//            RECT frame = {0};
-//            MINMAXINFO* mmi = (MINMAXINFO*) lParam;
-//            const DWORD style = getWindowStyle(window);
-//            const DWORD exStyle = getWindowExStyle(window);
-
-////            if (window->monitor)
-////                break;
-
-//            AdjustWindowRectEx(&frame, style, FALSE, exStyle);
-
-//            if (window->minwidth != ENGINE_DONT_CARE &&
-//                window->minheight != ENGINE_DONT_CARE)
-//            {
-//                mmi->ptMinTrackSize.x = window->minwidth + frame.right - frame.left;
-//                mmi->ptMinTrackSize.y = window->minheight + frame.bottom - frame.top;
-//            }
-
-//            if (window->maxwidth != ENGINE_DONT_CARE &&
-//                window->maxheight != ENGINE_DONT_CARE)
-//            {
-//                mmi->ptMaxTrackSize.x = window->maxwidth + frame.right - frame.left;
-//                mmi->ptMaxTrackSize.y = window->maxheight + frame.bottom - frame.top;
-//            }
-
-//            if (!window->hints.window.decorated)
-//            {
-//                MONITORINFO mi;
-//                const HMONITOR mh = MonitorFromWindow(((wManagerWin *)window->WindowData)->handle,
-//                                                      MONITOR_DEFAULTTONEAREST);
-
-//                ZeroMemory(&mi, sizeof(mi));
-//                mi.cbSize = sizeof(mi);
-//                GetMonitorInfoW(mh, &mi);
-
-//                mmi->ptMaxPosition.x = mi.rcWork.left - mi.rcMonitor.left;
-//                mmi->ptMaxPosition.y = mi.rcWork.top - mi.rcMonitor.top;
-//                mmi->ptMaxSize.x = mi.rcWork.right - mi.rcWork.left;
-//                mmi->ptMaxSize.y = mi.rcWork.bottom - mi.rcWork.top;
-//            }
-
-//            return 0;
-//        }
-
+        //    applyAspectRatio(window, (int) wParam, (RECT*) lParam);
+        //    return TRUE;
+        // }
         case WM_PAINT:
         {
             _wManagerInputWindowDamage(window);
             break;
         }
 
-//        case WM_ERASEBKGND:
-//        {
-//            return true;
-//        }
-//        case WM_NCACTIVATE:
-//        case WM_NCPAINT:
-//        {
-//            // Prevent title bar from being drawn after restoring a minimized
-//            // undecorated window
-//            if (!window->hints.window.decorated)
-//                return true;
+        case WM_ERASEBKGND:
+        {
+           return true;
+        }
+        case WM_NCACTIVATE:
+        case WM_NCPAINT:
+        {
+           // Prevent title bar from being drawn after restoring a minimized
+           // undecorated window
+           if (!window->hints.window.decorated)
+               return true;
 
-//            break;
-//        }
-
-//        case WM_DWMCOMPOSITIONCHANGED:
-//        case WM_DWMCOLORIZATIONCOLORCHANGED:
-//        {
-//            if (((wManagerWin *)window->WindowData)->transparent)
-//                updateFramebufferTransparency(window);
-//            return 0;
-//        }
-
-//        case WM_GETDPISCALEDSIZE:
-//        {
-//            if (window->scaleToMonitor)
-//                break;
-
-//            // Adjust the window size to keep the content area size constant
-//            if (_wMInfoIsWindows10Version1703OrGreaterWin32())
-//            {
-//                RECT source = {0}, target = {0};
-//                SIZE* size = (SIZE*) lParam;
-
-//                AdjustWindowRectExForDpi(&source, getWindowStyle(window),
-//                                         FALSE, getWindowExStyle(window),
-//                                         GetDpiForWindow(((wManagerWin *)window->WindowData)->handle));
-//                AdjustWindowRectExForDpi(&target, getWindowStyle(window),
-//                                         FALSE, getWindowExStyle(window),
-//                                         LOWORD(wParam));
-
-//                size->cx += (target.right - target.left) -
-//                            (source.right - source.left);
-//                size->cy += (target.bottom - target.top) -
-//                            (source.bottom - source.top);
-//                return TRUE;
-//            }
-
-//            break;
-//        }
-
-//        case WM_DPICHANGED:
-//        {
-//            const float xscale = HIWORD(wParam) / (float) USER_DEFAULT_SCREEN_DPI;
-//            const float yscale = LOWORD(wParam) / (float) USER_DEFAULT_SCREEN_DPI;
-
-//            // Resize windowed mode windows that either permit rescaling or that
-//            // need it to compensate for non-client area scaling
-//            if (!window->monitor &&
-//                (((wManagerWin *)window->WindowData)->scaleToMonitor ||
-//                 _wMInfoIsWindows10Version1703OrGreaterWin32()))
-//            {
-//                RECT* suggested = (RECT*) lParam;
-//                SetWindowPos(((wManagerWin *)window->WindowData)->handle, HWND_TOP,
-//                             suggested->left,
-//                             suggested->top,
-//                             suggested->right - suggested->left,
-//                             suggested->bottom - suggested->top,
-//                             SWP_NOACTIVATE | SWP_NOZORDER);
-//            }
-
-//            _wMInfoInputWindowContentScale(window, xscale, yscale);
-//            break;
-//        }
-
+           break;
+        }
         case WM_SETCURSOR:
         {
             if (LOWORD(lParam) == HTCLIENT)
@@ -1517,7 +1405,7 @@ int createNativeWindow(wManagerWindow* window,
 
            // NOTE: This window placement is temporary and approximate, as the
            //       correct position and size cannot be known until the monitor
-           //       video mode has been picked in _glfwSetVideoModeWin32
+           //       video mode has been picked in _wManagerSetVideoModeWin32
            frameX = mi.rcMonitor.left;
            frameY = mi.rcMonitor.top;
            frameWidth  = mi.rcMonitor.right - mi.rcMonitor.left;
@@ -1647,7 +1535,7 @@ int createNativeWindow(wManagerWindow* window,
 void fitToMonitor(wManagerWindow* window)
 {
     MONITORINFO mi = { sizeof(mi) };
-    GetMonitorInfoW(((wManagerWin *)window->monitor->MonitorData)->handle, &mi);
+    GetMonitorInfoW((HMONITOR)((wManagerWin *)window->monitor->MonitorData)->handle, &mi);
     SetWindowPos(((wManagerWin *)window->monitor->MonitorData)->handle, HWND_TOPMOST,
                  mi.rcMonitor.left,
                  mi.rcMonitor.top,
@@ -1773,10 +1661,10 @@ void _wManagerSetWindowIconWin32(wManagerWindow* window, int count, void* images
 
     /*if (count)
     {
-        const GLFWimage* bigImage = chooseImage(count, images,
+        const wManagerimage* bigImage = chooseImage(count, images,
                                                 GetSystemMetrics(SM_CXICON),
                                                 GetSystemMetrics(SM_CYICON));
-        const GLFWimage* smallImage = chooseImage(count, images,
+        const wManagerimage* smallImage = chooseImage(count, images,
                                                   GetSystemMetrics(SM_CXSMICON),
                                                   GetSystemMetrics(SM_CYSMICON));
 
@@ -1886,6 +1774,8 @@ VkResult _wManagerCreateWindowSurfaceWin32(VkInstance instance,
 }
 
 void _wManagerPollEventsWin32(){
+    ZWindow *e_window = (ZWindow *)engine.window;
+    
     MSG msg;
     HWND handle;
     wManagerWindow *window;
@@ -1894,11 +1784,11 @@ void _wManagerPollEventsWin32(){
     {
         if (msg.message == WM_QUIT)
         {
-            // NOTE: While GLFW does not itself post WM_QUIT, other processes
+            // NOTE: While wManager does not itself post WM_QUIT, other processes
             //       may post it to this one, for example Task Manager
             // HACK: Treat WM_QUIT as a close on all windows
 
-            window = e_window;//_wMInfo.windowListHead;
+            window = e_window->e_window;//_wMInfo.windowListHead;
             while (window)
             {
                 _wManagerInputWindowCloseRequest(window);
@@ -1957,7 +1847,7 @@ void _wManagerPollEventsWin32(){
         _wManagerGetWindowSizeWin32(window, &width, &height);
 
         // NOTE: Re-center the cursor only if it has moved since the last call,
-        //       to avoid breaking glfwWaitEvents with WM_MOUSEMOVE
+        //       to avoid breaking wManagerWaitEvents with WM_MOUSEMOVE
         // The re-center is required in order to prevent the mouse cursor stopping at the edges of the screen.
         if (((wManagerWin* )window->WindowData)->lastCursorPosX != width / 2 ||
             ((wManagerWin* )window->WindowData)->lastCursorPosY != height / 2)

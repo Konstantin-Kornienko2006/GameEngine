@@ -1,13 +1,15 @@
 #ifndef RENDER_TEXTURE_H
 #define RENDER_TEXTURE_H
 
+#include "Core/e_texture.h"
+
 #include "Variabels/engine_includes.h"
 
 #include "gameObject.h"
 
 #define MAX_SURFACES 10
 
-typedef enum{
+typedef enum EngineRenderType{
     ENGINE_RENDER_TYPE_WINDOW = 0x1,
     ENGINE_RENDER_TYPE_IMAGE = 0x2,
     ENGINE_RENDER_TYPE_DEPTH = 0x4,
@@ -15,7 +17,7 @@ typedef enum{
     ENGINE_RENDER_TYPE_GEOMETRY = 0x10,
 } EngineRenderType;
 
-typedef enum{
+typedef enum EngineRenderFlag{
     ENGINE_RENDER_FLAG_ONE_SHOT = 0x1,
     ENGINE_RENDER_FLAG_SHOOTED = 0x2,
     ENGINE_RENDER_FLAG_PERSPECTIVE = 0x4,
@@ -24,15 +26,9 @@ typedef enum{
     ENGINE_RENDER_FLAG_DEPTH = 0x20,
 } EngineRenderFlag;
 
-typedef struct{
-    void* depth_image;
-    void* depth_memory;
-    void* depth_view;
-
-    void *image;
-    void *image_memory;
-    void *sampler;
-    void *view;
+typedef struct RenderFrame{
+    Texture2D depth_texture;
+    Texture2D render_texture;
 
     void **shadowCubeRenderPass;
     void **shadowCubeMapFaceImageViews;
@@ -42,7 +38,7 @@ typedef struct{
     uint32_t m_currentLayout;
 } RenderFrame;
 
-typedef struct{
+typedef struct RenderTexture{
     RenderFrame *frames;
     uint32_t num_frames;
 

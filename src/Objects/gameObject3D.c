@@ -4,6 +4,8 @@
 
 #include "wManager/window_manager.h"
 
+#include "Core/e_memory.h"
+#include "Core/e_device.h"
 #include "Core/e_camera.h"
 #include "Core/pipeline.h"
 #include "Core/e_buffer.h"
@@ -22,13 +24,15 @@
 #define VERTEX_BUFFER_BIND_ID 0
 #define INSTANCE_BUFFER_BIND_ID 1
 
+extern ZEngine engine;
+
 typedef void (*Update_Descriptor3D)(GameObject3D* go, BluePrintDescriptor *descriptor);
 
 void GameObject3DDescriptorModelUpdate(GameObject3D* go, BluePrintDescriptor *descriptor)
 {
-    Camera3D* cam = (Camera3D*) cam3D;
+    Camera3D* cam = (Camera3D*) engine.cam3D;
 
-    RenderTexture *render = current_render;
+    RenderTexture *render = engine.current_render;
 
     ModelBuffer3D mbo = {};
     vec3 cameraUp = {0.0f,1.0f, 0.0f};
@@ -40,17 +44,17 @@ void GameObject3DDescriptorModelUpdate(GameObject3D* go, BluePrintDescriptor *de
     mbo.proj = m4_perspective(render->width, render->height, render->persp_view_angle, render->persp_view_near, render->persp_view_distance);
     mbo.proj.m[1][1] *= -1;
 
-    DescriptorUpdate(descriptor, &mbo, sizeof(mbo));
+    DescriptorUpdate(descriptor, (char *)&mbo, sizeof(mbo));
 }
 
 void GameObject3DDirLightModelUpdate(GameObject3D* go, BluePrintDescriptor *descriptor)
 {
-    Camera3D* cam = (Camera3D*) cam3D;
+    Camera3D* cam = (Camera3D*) engine.cam3D;
 
     ModelBuffer3D mbo = {};
     vec3 cameraUp = {0.0f,1.0f, 0.0f};
 
-    RenderTexture *render = current_render;
+    RenderTexture *render = engine.current_render;
 
     DirLightBuffer dlb = {};
     memset(&dlb, 0, sizeof(DirLightBuffer));
@@ -71,17 +75,17 @@ void GameObject3DDirLightModelUpdate(GameObject3D* go, BluePrintDescriptor *desc
     }else
         mbo.proj = m4_ortho(-render->ortg_view_size, render->ortg_view_size, -render->ortg_view_size, render->ortg_view_size, -render->ortg_view_distance, render->ortg_view_distance);
 
-    DescriptorUpdate(descriptor, &mbo, sizeof(mbo));
+    DescriptorUpdate(descriptor, (char *)&mbo, sizeof(mbo));
 }
 
 void GameObject3DOmniLightModelUpdate(GameObject3D* go, BluePrintDescriptor *descriptor)
 {
-    Camera3D* cam = (Camera3D*) cam3D;
+    Camera3D* cam = (Camera3D*) engine.cam3D;
 
     ModelBuffer3D mbo = {};
     vec3 cameraUp = {0.0f,1.0f, 0.0f};
 
-    RenderTexture *render = current_render;
+    RenderTexture *render = engine.current_render;
 
     PointLightBuffer plb = {};
     memset(&plb, 0, sizeof(PointLightBuffer));
@@ -102,17 +106,17 @@ void GameObject3DOmniLightModelUpdate(GameObject3D* go, BluePrintDescriptor *des
     }else
         mbo.proj = m4_ortho(-render->ortg_view_size, render->ortg_view_size, -render->ortg_view_size, render->ortg_view_size, -render->ortg_view_distance, render->ortg_view_distance);
 
-    DescriptorUpdate(descriptor, &mbo, sizeof(mbo));
+    DescriptorUpdate(descriptor, (char *)&mbo, sizeof(mbo));
 }
 
 void GameObject3DSpotLightModelUpdate(GameObject3D* go, BluePrintDescriptor *descriptor)
 {
-    Camera3D* cam = (Camera3D*) cam3D;
+    Camera3D* cam = (Camera3D*) engine.cam3D;
 
     ModelBuffer3D mbo = {};
     vec3 cameraUp = {0.0f,1.0f, 0.0f};
 
-    RenderTexture *render = current_render;
+    RenderTexture *render = engine.current_render;
 
     SpotLightBuffer slb = {};
     memset(&slb, 0, sizeof(SpotLightBuffer));
@@ -133,12 +137,12 @@ void GameObject3DSpotLightModelUpdate(GameObject3D* go, BluePrintDescriptor *des
     }else
         mbo.proj = m4_ortho(-render->ortg_view_size, render->ortg_view_size, -render->ortg_view_size, render->ortg_view_size, -render->ortg_view_distance, render->ortg_view_distance);
 
-    DescriptorUpdate(descriptor, &mbo, sizeof(mbo));
+    DescriptorUpdate(descriptor, (char *)&mbo, sizeof(mbo));
 }
 
 void GameObject3DDescriptorDirLightsUpdate(GameObject3D* go, BluePrintDescriptor *descriptor)
 {
-    RenderTexture *render = current_render;
+    RenderTexture *render = engine.current_render;
 
     DirLightBuffer dlb = {};
     memset(&dlb, 0, sizeof(DirLightBuffer));
@@ -147,11 +151,11 @@ void GameObject3DDescriptorDirLightsUpdate(GameObject3D* go, BluePrintDescriptor
 
     LightObjectFillDirLights(&dlb);
 
-    if(dir_shadow_array != NULL)
+    if(engine.DataR.dir_shadow_array != NULL)
     {
-        RenderTexture **renders = dir_shadow_array;
+        RenderTexture **renders = engine.DataR.dir_shadow_array;
 
-        for(int i=0;i < num_dir_shadows;i++)
+        for(int i=0;i < engine.DataR.num_dir_shadows;i++)
         {
             dlb.mats[i].view = m4_look_at( dlb.dir[0].position, v3_add( dlb.dir[0].position, dlb.dir[0].direction), renders[i]->up_vector);
 
@@ -171,25 +175,25 @@ void GameObject3DDescriptorDirLightsUpdate(GameObject3D* go, BluePrintDescriptor
         dlb.cascadeSplits.w = renders[0]->cascadeSplit;
     }
 
-    DescriptorUpdate(descriptor, &dlb, sizeof(dlb));
+    DescriptorUpdate(descriptor, (char *)&dlb, sizeof(dlb));
 }
 
 void GameObject3DDescriptorPointLightsUpdate(GameObject3D* go, BluePrintDescriptor *descriptor)
 {
-    Camera3D* cam = (Camera3D*) cam3D;
+    Camera3D* cam = (Camera3D*) engine.cam3D;
 
     PointLightBuffer plb = {};
     memset(&plb, 0, sizeof(PointLightBuffer));
 
     LightObjectFillPointLights(&plb);
 
-    if(num_point_shadows > 0)
-        for(int i=0;i < num_point_shadows;i++){
+    if(engine.DataR.num_point_shadows > 0)
+        for(int i=0;i < engine.DataR.num_point_shadows;i++){
             plb.pos[i].light_pos = plb.points[i].position;
             plb.pos[i].view_pos = cam->position;
         }
 
-    DescriptorUpdate(descriptor, &plb, sizeof(plb));
+    DescriptorUpdate(descriptor, (char *)&plb, sizeof(plb));
 }
 
 void GameObject3DDescriptorSpotLightsUpdate(GameObject3D* go, BluePrintDescriptor *descriptor)
@@ -199,12 +203,12 @@ void GameObject3DDescriptorSpotLightsUpdate(GameObject3D* go, BluePrintDescripto
 
     LightObjectFillSpotLights(&slb);
 
-    if(spot_shadow_array != NULL)
+    if(engine.DataR.spot_shadow_array != NULL)
     {
 
-        RenderTexture **renders = spot_shadow_array;
+        RenderTexture **renders = engine.DataR.spot_shadow_array;
 
-        for(int i=0;i < num_spot_shadows;i++)
+        for(int i=0;i < engine.DataR.num_spot_shadows;i++)
         {
             RenderTexture *spot = renders[i];
 
@@ -221,7 +225,7 @@ void GameObject3DDescriptorSpotLightsUpdate(GameObject3D* go, BluePrintDescripto
         }
     }
 
-    DescriptorUpdate(descriptor, &slb, sizeof(slb));
+    DescriptorUpdate(descriptor, (char *)&slb, sizeof(slb));
 }
 
 void GameObject3DLigtStatusBufferUpdate(GameObject3D* go, BluePrintDescriptor *descriptor)
@@ -233,7 +237,7 @@ void GameObject3DLigtStatusBufferUpdate(GameObject3D* go, BluePrintDescriptor *d
 
     lsb.isEnable = (go->self.flags & ENGINE_GAME_OBJECT_FLAG_LIGHT);
 
-    DescriptorUpdate(descriptor, &lsb, sizeof(lsb));
+    DescriptorUpdate(descriptor, (char *)&lsb, sizeof(lsb));
 }
 
 void GameObject3DLightPosUpdate(GameObject3D* go, BluePrintDescriptor *descriptor)
@@ -250,14 +254,14 @@ void GameObject3DLightPosUpdate(GameObject3D* go, BluePrintDescriptor *descripto
     lpb.light_pos = plb.points[layer_indx].position;
     lpb.view_pos = Camera3DGetPosition();
 
-    DescriptorUpdate(descriptor, &lpb, sizeof(lpb));
+    DescriptorUpdate(descriptor, (char *)&lpb, sizeof(lpb));
 }
 
 void GameObject3DSDFBufferUpdate(GameObject3D* go, BluePrintDescriptor *descriptor)
 {
     SDFBuffer sdfb;
 
-    RenderTexture *render = current_render;
+    RenderTexture *render = engine.current_render;
 
     double time = wManagerGetTime();
 
@@ -269,7 +273,7 @@ void GameObject3DSDFBufferUpdate(GameObject3D* go, BluePrintDescriptor *descript
 
     sdfb.view = m4_look_at( sdfb.cam_pos, v3_add( sdfb.cam_pos, sdfb.cam_rot), vec3_f( 0, 1, 0));
 
-    DescriptorUpdate(descriptor, &sdfb, sizeof(sdfb));
+    DescriptorUpdate(descriptor, (char *)&sdfb, sizeof(sdfb));
 }
 
 void GameObject3DDefaultUpdate(GameObject3D* go) {
@@ -278,7 +282,7 @@ void GameObject3DDefaultUpdate(GameObject3D* go) {
     {
         BluePrintPack *pack = &go->graphObj.blueprints.blue_print_packs[i];
 
-        if(pack->render_point == current_render)
+        if(pack->render_point == engine.current_render)
         {
             for(int j=0;j < pack->num_descriptors;j++)
             {
@@ -300,9 +304,9 @@ void GameObject3DDefaultDraw(GameObject3D* go, void *command){
     {
         BluePrintPack *blue_pack = &go->graphObj.blueprints.blue_print_packs[i];
 
-        if(blue_pack->render_point == current_render)
+        if(blue_pack->render_point == engine.current_render)
         {
-            RenderTexture *render = current_render;
+            RenderTexture *render = engine.current_render;
 
             ShaderPack *pack = &go->graphObj.gItems.shader_packs[i];
 
@@ -320,17 +324,17 @@ void GameObject3DDefaultDraw(GameObject3D* go, void *command){
                 vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].pipeline);
 
                 if(settings->flags & ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW){
-                    vkCmdSetViewport(command, 0, 1, &settings->viewport);
-                    vkCmdSetScissor(command, 0, 1, &settings->scissor);
+                    vkCmdSetViewport(command, 0, 1, (const VkViewport *)&settings->viewport);
+                    vkCmdSetScissor(command, 0, 1, (const VkRect2D *)&settings->scissor);
                 }
 
-                vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].layout, 0, 1, &pack->descriptor.descr_sets[imageIndex], 0, NULL);
+                vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].layout, 0, 1, (const VkDescriptorSet *)&pack->descriptor.descr_sets[engine.imageIndex], 0, NULL);
 
                 uint32_t num_instances = 1;
                 uint32_t num_verts = go->graphObj.shapes[settings->vert_indx].vParam.verticesSize;
                 if(num_verts > 0)
                 {
-                    VkBuffer vertexBuffers[] = {go->graphObj.shapes[settings->vert_indx].vParam.vertexBuffer};
+                    VkBuffer vertexBuffers[] = {go->graphObj.shapes[settings->vert_indx].vParam.buffer.buffer};
                     VkDeviceSize offsets[] = {0};
 
                     // Binding point 0 : Mesh vertex buffer
@@ -338,7 +342,7 @@ void GameObject3DDefaultDraw(GameObject3D* go, void *command){
 
                     if(go->num_instances > 0){
                         // Binding point 1 : Instance data buffer
-                        vkCmdBindVertexBuffers(command, INSTANCE_BUFFER_BIND_ID, 1, &go->buffer.buffer, offsets);
+                        vkCmdBindVertexBuffers(command, INSTANCE_BUFFER_BIND_ID, 1, (const VkBuffer *)&go->buffer.buffer, offsets);
                         num_instances = go->num_instances;
                     }
                 }
@@ -347,7 +351,7 @@ void GameObject3DDefaultDraw(GameObject3D* go, void *command){
                     continue;
 
                 if(settings->flags & ENGINE_PIPELINE_FLAG_DRAW_INDEXED && go->graphObj.shapes[settings->vert_indx].iParam.indexesSize > 0){
-                    vkCmdBindIndexBuffer(command, go->graphObj.shapes[settings->vert_indx].iParam.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+                    vkCmdBindIndexBuffer(command, go->graphObj.shapes[settings->vert_indx].iParam.buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
                     vkCmdDrawIndexed(command, go->graphObj.shapes[settings->vert_indx].iParam.indexesSize, num_instances, 0, 0, 0);
                 }else
                     vkCmdDraw(command, go->graphObj.shapes[settings->vert_indx].vParam.verticesSize, num_instances, 0, 0);
@@ -426,7 +430,7 @@ void GameObject3DAddSettingPipeline(GameObject3D* go, uint32_t indx_pack, void *
 
     uint32_t indx = go->graphObj.blueprints.blue_print_packs[indx_pack].num_settings;
 
-    PipelineSetting* settings = &go->graphObj.blueprints.blue_print_packs[indx_pack].settings;
+    PipelineSetting* settings = (PipelineSetting *)&go->graphObj.blueprints.blue_print_packs[indx_pack].settings;
     memcpy(&settings[indx], setting, sizeof(PipelineSetting));
 
     go->graphObj.blueprints.blue_print_packs[indx_pack].num_settings ++;
@@ -448,12 +452,12 @@ void GameObject3DRecreate(GameObject3D* go){
         {
             settings[i].scissor.offset.x = 0;
             settings[i].scissor.offset.y = 0;
-            settings[i].scissor.extent.height = HEIGHT;
-            settings[i].scissor.extent.width = WIDTH;
+            settings[i].scissor.extent.height = engine.height;
+            settings[i].scissor.extent.width = engine.width;
             settings[i].viewport.x = 0;
             settings[i].viewport.y = 0;
-            settings[i].viewport.height = HEIGHT;
-            settings[i].viewport.width = WIDTH;
+            settings[i].viewport.height = engine.height;
+            settings[i].viewport.width = engine.width;
         }
     }
 
@@ -469,21 +473,21 @@ void GameObject3DDestroy(GameObject3D* go){
 
     for(int i=0;i < go->num_images;i++)
     {
-        free(go->images[i].path);
+        FreeMemory(go->images[i].path);
 
         if(go->images[i].size > 0)
-            free(go->images[i].buffer);
+            FreeMemory(go->images[i].buffer);
     }
 
-    free(go->images);
+    FreeMemory(go->images);
 
     for(int i=0; i < go->graphObj.num_shapes; i++)
     {
         if(go->graphObj.shapes[i].vParam.verticesSize)
-            free(go->graphObj.shapes[i].vParam.vertices);
+            FreeMemory(go->graphObj.shapes[i].vParam.vertices);
 
         if(go->graphObj.shapes[i].iParam.indexesSize)
-            free(go->graphObj.shapes[i].iParam.indices);
+            FreeMemory(go->graphObj.shapes[i].iParam.indices);
     }
 
     if(go->num_instances > 0)
@@ -492,46 +496,54 @@ void GameObject3DDestroy(GameObject3D* go){
 
 void GameObject3DInitTextures(GameObject3D *go, DrawParam *dParam)
 {
-    go->images = calloc(3, sizeof(GameObjectImage));
+    go->images = AllocateMemoryP(3, sizeof(GameObjectImage), go);
 
     if(dParam == NULL)
         return;
 
+    int iter = 0;
+
     if(strlen(dParam->diffuse) != 0)
     {
         int len = strlen(dParam->diffuse);
-        go->images[0].path = calloc(len + 1, sizeof(char));
-        memcpy(go->images[0].path, dParam->diffuse, len);
-        go->images[0].path[len] = '\0';
+        go->images[iter].path = AllocateMemoryP(len + 1, sizeof(char), go);
+        memcpy(go->images[iter].path, dParam->diffuse, len);
+        go->images[iter].path[len] = '\0';
         //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
+         go->num_images ++;
+         iter++;
     }
 
     if(strlen(dParam->normal) != 0)
     {
         int len = strlen(dParam->normal);
-        go->images[1].path = calloc(len + 1, sizeof(char));
-        memcpy(go->images[1].path, dParam->normal, len);
-        go->images[1].path[len] = '\0';
+        go->images[iter].path = AllocateMemoryP(len + 1, sizeof(char), go);
+        memcpy(go->images[iter].path, dParam->normal, len);
+        go->images[iter].path[len] = '\0';
         //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
+         go->num_images ++;
+         iter++;
     }
 
     if(strlen(dParam->specular) != 0)
     {
         int len = strlen(dParam->specular);
-        go->images[2].path = calloc(len + 1, sizeof(char));
-        memcpy(go->images[2].path, dParam->specular, len);
-        go->images[2].path[len] = '\0';
+        go->images[iter].path = AllocateMemoryP(len + 1, sizeof(char), go);
+        memcpy(go->images[iter].path, dParam->specular, len);
+        go->images[iter].path[len] = '\0';
         //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
+        go->num_images ++;
+        iter++;
     }
 }
 
 void GameObject3DInit(GameObject3D *go){
 
-    GameObjectSetUpdateFunc(go, (void *)GameObject3DDefaultUpdate);
-    GameObjectSetDrawFunc(go, (void *)GameObject3DDefaultDraw);
-    GameObjectSetCleanFunc(go, (void *)GameObject3DClean);
-    GameObjectSetRecreateFunc(go, (void *)GameObject3DRecreate);
-    GameObjectSetDestroyFunc(go, (void *)GameObject3DDestroy);
+    GameObjectSetUpdateFunc((GameObject *)go, (void *)GameObject3DDefaultUpdate);
+    GameObjectSetDrawFunc((GameObject *)go, (void *)GameObject3DDefaultDraw);
+    GameObjectSetCleanFunc((GameObject *)go, (void *)GameObject3DClean);
+    GameObjectSetRecreateFunc((GameObject *)go, (void *)GameObject3DRecreate);
+    GameObjectSetDestroyFunc((GameObject *)go, (void *)GameObject3DDestroy);
 
     go->self.obj_type = ENGINE_GAME_OBJECT_TYPE_3D;
 
@@ -595,32 +607,32 @@ void GameObject3DInitInstances(GameObject3D *go){
 
     bufferSize = sizeof(VertexInstance3D) * MAX_INSTANCES;
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &go->buffer.buffer, &go->buffer.buffer_memory, ENGINE_BUFFER_ALLOCATE_VERTEX);
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &go->buffer, ENGINE_BUFFER_ALLOCATE_VERTEX);
 
 }
 
 void GameObject3DUpdateInstances(GameObject3D *go){
+    ZDevice *device = (ZDevice *)engine.device;
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
+    BufferObject stagingBuffer;
     VkDeviceSize bufferSize;
 
     bufferSize = sizeof(VertexInstance3D) * MAX_INSTANCES;
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory, ENGINE_BUFFER_ALLOCATE_STAGING);
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, ENGINE_BUFFER_ALLOCATE_STAGING);
 
     //Изменение памяти
     void* data;
-    vkMapMemory(e_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    vkMapMemory(device->e_device, stagingBuffer.memory, 0, bufferSize, 0, &data);
     memset(data, 0, bufferSize);
     memcpy(data, go->instances, (size_t) go->num_instances * sizeof(VertexInstance3D));
-    vkUnmapMemory(e_device, stagingBufferMemory);
+    vkUnmapMemory(device->e_device, stagingBuffer.memory);
 
     //-------------
 
-    BuffersCopy(stagingBuffer, go->buffer.buffer, bufferSize);
+    BuffersCopy(&stagingBuffer, &go->buffer, bufferSize);
 
-    BuffersDestroyBuffer(stagingBuffer);
+    BuffersDestroyBuffer(&stagingBuffer);
 
 }
 
@@ -649,7 +661,7 @@ void GameObject3DInitCopy(GameObject3D *to, GameObject3D *from)
             if(descriptor->descrType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                 BluePrintAddUniformObject(&to->graphObj.blueprints, i, descriptor->buffsize, descriptor->stageflag, descriptor->update, descriptor->indx_layer);
             else
-                BluePrintAddTextureImage(&to->graphObj.blueprints, i, &descriptor->image, descriptor->stageflag);
+                BluePrintAddTextureImage(&to->graphObj.blueprints, i, (GameObjectImage *)&descriptor->image, descriptor->stageflag);
         }
 
         for(int j=0;j < prints_from->blue_print_packs[i].num_settings;j++)

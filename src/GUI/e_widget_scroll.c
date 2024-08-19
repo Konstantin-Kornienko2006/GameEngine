@@ -61,7 +61,7 @@ void ScrollWidgetInit(EWidgetScroll *scroll, uint32_t width, uint32_t height, Dr
     memcpy(scroll->widget.go.name, "Widget_Scroll", 11);
     scroll->widget.type = ENGINE_WIDGET_TYPE_SCROLL;
 
-    scroll->widget.color = (vec4){1.0f, 1.0f, 1.0f, 1.0f};
+    scroll->widget.color = (vec3){1.0f, 1.0f, 1.0f};
     Transform2DSetScale(scroll, width, height);
 
     scroll->widget.transparent = 0.0f;
@@ -69,7 +69,7 @@ void ScrollWidgetInit(EWidgetScroll *scroll, uint32_t width, uint32_t height, Dr
     WidgetInit(&scroll->scroll, dParam, scroll);
     WidgetAddDefault(&scroll->scroll, dParam->render);
     GameObject2DInitDraw(&scroll->scroll);
-    scroll->scroll.color = (vec4){1.0f, 0.0f, 0.0f, 1.0f};
+    scroll->scroll.color = (vec3){1.0f, 0.0f, 0.0f};
 
     Transform2DSetScale(&scroll->scroll, 20, 20);
     Transform2DSetPosition(&scroll->scroll, width * 2 - 40, 0);

@@ -22,14 +22,14 @@ void QuadObjectUpdate(GameObject2D *go, BluePrintDescriptor *descriptor)
     tbo.rotation = go->transform.rotation;
     tbo.scale = go->transform.scale;
 
-    DescriptorUpdate(descriptor, &tbo, sizeof(tbo));
+    DescriptorUpdate(descriptor, (char *)&tbo, sizeof(tbo));
 }
 
 void QuadObjectInit(QuadObject *qu, uint32_t type)
 {
-    GameObject2DInit(qu);
+    GameObject2DInit((GameObject2D *)qu);
 
-    GraphicsObjectSetVertex(&qu->go.graphObj, projPlaneVert, 4, sizeof(Vertex2D), projPlaneIndx, 6, sizeof(uint32_t));
+    GraphicsObjectSetVertex(&qu->go.graphObj, (void *)projPlaneVert, 4, sizeof(Vertex2D), projPlaneIndx, 6, sizeof(uint32_t));
 
     qu->type = type;
 
@@ -65,7 +65,7 @@ void QuadObjectAddDefault(QuadObject *qu, void *render)
     setting.fromFile = 0;
     setting.vert_indx = 0;
 
-    GameObject2DAddSettingPipeline(qu, nums, &setting);
+    GameObject2DAddSettingPipeline((GameObject2D *)qu, nums, &setting);
 
     qu->go.graphObj.blueprints.num_blue_print_packs ++;
 }

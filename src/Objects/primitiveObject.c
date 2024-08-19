@@ -4,6 +4,7 @@
 
 #include "Tools/e_math.h"
 
+#include "Core/e_memory.h"
 #include "Core/e_camera.h"
 #include "Core/e_buffer.h"
 #include "Core/pipeline.h"
@@ -19,19 +20,21 @@
 #include "Data/e_resource_descriptors.h"
 #include "Data/e_resource_export.h"
 
+extern ZEngine engine;
+
 void PrimitiveObjectDestroy(PrimitiveObject *po)
 {
     GameObject3DDestroy(po);
 
-    free(po->params);
+    FreeMemory(po->params);
     po->params = NULL;
 }
 
 void PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void *params){
 
-    GameObject3DInit(po);
+    GameObject3DInit((GameObject3D *)po);
 
-    GameObjectSetDestroyFunc(po, (void *)PrimitiveObjectDestroy);
+    GameObjectSetDestroyFunc((GameObject *)po, (void *)PrimitiveObjectDestroy);
 
     po->type = type;
 
@@ -49,49 +52,49 @@ void PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void
     switch(type)
     {
         case ENGINE_PRIMITIVE3D_LINE :
-            GraphicsObjectSetVertex(&po->go.graphObj, lineVert, 2, sizeof(Vertex3D), NULL, 0, sizeof(uint32_t));
+            GraphicsObjectSetVertex(&po->go.graphObj, (void *)lineVert, 2, sizeof(Vertex3D), NULL, 0, sizeof(uint32_t));
             break;
         case ENGINE_PRIMITIVE3D_TRIANGLE :
-            GraphicsObjectSetVertex(&po->go.graphObj, triVert, 3, sizeof(Vertex3D), triIndx, 3, sizeof(uint32_t));
+            GraphicsObjectSetVertex(&po->go.graphObj, (void *)triVert, 3, sizeof(Vertex3D), triIndx, 3, sizeof(uint32_t));
             break;
         case ENGINE_PRIMITIVE3D_QUAD :
-            GraphicsObjectSetVertex(&po->go.graphObj, quadVert, 4, sizeof(Vertex3D), quadIndx, 6, sizeof(uint32_t));
+            GraphicsObjectSetVertex(&po->go.graphObj, (void *)quadVert, 4, sizeof(Vertex3D), quadIndx, 6, sizeof(uint32_t));
             break;
         case ENGINE_PRIMITIVE3D_PLANE :
             InitPlane3D(&vParam, &iParam, pParam->sectorCount, pParam->stackCount);
-            po->params = calloc(1, sizeof(PlaneParam));
+            po->params = AllocateMemory(1, sizeof(PlaneParam));
             memcpy(po->params, params, sizeof(PlaneParam));
             builded = true;
             break;
         case ENGINE_PRIMITIVE3D_CUBE :
-            GraphicsObjectSetVertex(&po->go.graphObj, cubeVert, 24, sizeof(Vertex3D), cubeIndx, 36, sizeof(uint32_t));
+            GraphicsObjectSetVertex(&po->go.graphObj, (void *)cubeVert, 24, sizeof(Vertex3D), cubeIndx, 36, sizeof(uint32_t));
             break;
         case ENGINE_PRIMITIVE3D_CUBESPHERE :
             Cubesphere(&vParam, &iParam, csParam->radius, csParam->verperrow);
-            po->params = calloc(1, sizeof(CubeSphereParam));
+            po->params = AllocateMemory(1, sizeof(CubeSphereParam));
             memcpy(po->params, params, sizeof(CubeSphereParam));
             builded = true;
             break;
         case ENGINE_PRIMITIVE3D_ICOSPHERE :
             IcoSphereGenerator(&vParam, &iParam, sParam->radius);
-            po->params = calloc(1, sizeof(SphereParam));
+            po->params = AllocateMemory(1, sizeof(SphereParam));
             memcpy(po->params, params, sizeof(SphereParam));
             break;
         case ENGINE_PRIMITIVE3D_SPHERE :
             SphereGenerator3D(&vParam, &iParam, sParam->radius, sParam->sectorCount, sParam->stackCount);
-            po->params = calloc(1, sizeof(SphereParam));
+            po->params = AllocateMemory(1, sizeof(SphereParam));
             memcpy(po->params, params, sizeof(SphereParam));
             builded = true;
             break;
         case ENGINE_PRIMITIVE3D_CONE :
             ConeGenerator(&vParam, &iParam, cParam->height, cParam->sectorCount, cParam->stackCount);
-            po->params = calloc(1, sizeof(ConeParam));
+            po->params = AllocateMemory(1, sizeof(ConeParam));
             memcpy(po->params, params, sizeof(ConeParam));
             builded = true;
             break;
         case ENGINE_PRIMITIVE3D_SKYBOX:
             SphereGenerator3D(&vParam, &iParam, sParam->radius, sParam->sectorCount, sParam->stackCount);
-            po->params = calloc(1, sizeof(SphereParam));
+            po->params = AllocateMemory(1, sizeof(SphereParam));
             memcpy(po->params, params, sizeof(SphereParam));
             builded = true;
             break;
@@ -100,14 +103,14 @@ void PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void
     if(builded)
     {
         GraphicsObjectSetVertex(&po->go.graphObj, vParam.vertices, vParam.verticesSize, sizeof(Vertex3D), iParam.indices, iParam.indexesSize, sizeof(uint32_t));
-        free(vParam.vertices);
-        free(iParam.indices);
+        FreeMemory(vParam.vertices);
+        FreeMemory(iParam.indices);
     }
 
-    GameObject3DInitTextures(po, dParam);
+    GameObject3DInitTextures((GameObject3D *)po, dParam);
 
     if(type == ENGINE_PRIMITIVE3D_SKYBOX)
-        Transform3DSetScale(po, -500, -500, -500);
+        Transform3DSetScale((GameObject3D *)po, -500, -500, -500);
 
 }
 
@@ -122,24 +125,24 @@ void PrimitiveObjectSetShadowDefaultDescriptor(PrimitiveObject *po, DrawParam *d
     BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(SpotLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorSpotLightsUpdate, 0);
     BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(LightStatusBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DLigtStatusBufferUpdate, 0);
 
-    RenderTexture **renders = dir_shadow_array;
+    RenderTexture **renders = engine.DataR.dir_shadow_array;
 
-    if(num_dir_shadows > 1)
-        BluePrintAddRenderImageArray(&po->go.graphObj.blueprints, nums, renders, num_dir_shadows);
+    if(engine.DataR.num_dir_shadows > 1)
+        BluePrintAddRenderImageArray(&po->go.graphObj.blueprints, nums, renders, engine.DataR.num_dir_shadows);
     else
         BluePrintAddRenderImage(&po->go.graphObj.blueprints, nums, renders[0]);
 
-    renders = point_shadow_array;
+    renders = engine.DataR.point_shadow_array;
 
-    if(num_point_shadows > 1)
-        BluePrintAddRenderImageArray(&po->go.graphObj.blueprints, nums, renders, num_point_shadows);
+    if(engine.DataR.num_point_shadows > 1)
+        BluePrintAddRenderImageArray(&po->go.graphObj.blueprints, nums, renders, engine.DataR.num_point_shadows);
     else
         BluePrintAddRenderImage(&po->go.graphObj.blueprints, nums, renders[0]);
 
-    renders = spot_shadow_array;
+    renders = engine.DataR.spot_shadow_array;
 
-    if(num_spot_shadows > 1)
-        BluePrintAddRenderImageArray(&po->go.graphObj.blueprints, nums, renders, num_spot_shadows);
+    if(engine.DataR.num_spot_shadows > 1)
+        BluePrintAddRenderImageArray(&po->go.graphObj.blueprints, nums, renders, engine.DataR.num_spot_shadows);
     else
         BluePrintAddRenderImage(&po->go.graphObj.blueprints, nums, renders[0]);
 
@@ -156,7 +159,7 @@ void PrimitiveObjectSetShadowDefaultDescriptor(PrimitiveObject *po, DrawParam *d
     setting.fromFile = 0;
     setting.vert_indx = 0;
 
-    GameObject3DAddSettingPipeline(po, nums, &setting);
+    GameObject3DAddSettingPipeline((GameObject3D *)po, nums, &setting);
 
     po->go.graphObj.blueprints.num_blue_print_packs ++;
 }
@@ -193,7 +196,7 @@ void PrimitiveObjectSetDefaultDescriptor(PrimitiveObject *po, DrawParam *dParam)
 
     setting.vert_indx = 0;
 
-    GameObject3DAddSettingPipeline(po, nums, &setting);
+    GameObject3DAddSettingPipeline((GameObject3D *)po, nums, &setting);
 
     po->go.graphObj.blueprints.num_blue_print_packs ++;
 }
@@ -217,7 +220,7 @@ void PrimitiveObjectSetInstanceDescriptor(PrimitiveObject *po, DrawParam *dParam
     setting.fromFile = 0;
     setting.vert_indx = 0;
 
-    GameObject3DAddSettingPipeline(po, nums, &setting);
+    GameObject3DAddSettingPipeline((GameObject3D *)po, nums, &setting);
 
     po->go.graphObj.blueprints.num_blue_print_packs ++;
 }
@@ -230,20 +233,20 @@ void *PrimitiveObjectGetVertex(PrimitiveObject *po)
 
 void PrimitiveObjectAddShadow(PrimitiveObject *po, DrawParam *dParam)
 {
-    RenderTexture **renders = dir_shadow_array;
+    RenderTexture **renders = engine.DataR.dir_shadow_array;
 
-    for(int i=0;i < num_dir_shadows;i++)
-        GameObject3DAddShadowDescriptor(po, ENGINE_LIGHT_TYPE_DIRECTIONAL, renders[i], i);
+    for(int i=0;i < engine.DataR.num_dir_shadows;i++)
+        GameObject3DAddShadowDescriptor((GameObject3D *)po, ENGINE_LIGHT_TYPE_DIRECTIONAL, renders[i], i);
 
-    renders = point_shadow_array;
+    renders = engine.DataR.point_shadow_array;
 
-    for(int i=0;i < num_point_shadows;i++)
-        GameObject3DAddOmiShadow(po, renders[i], i);
+    for(int i=0;i < engine.DataR.num_point_shadows;i++)
+        GameObject3DAddOmiShadow((GameObject3D *)po, renders[i], i);
 
-    renders = spot_shadow_array;
+    renders = engine.DataR.spot_shadow_array;
 
-    for(int i=0;i < num_spot_shadows;i++)
-        GameObject3DAddShadowDescriptor(po, ENGINE_LIGHT_TYPE_SPOT, renders[i], i);
+    for(int i=0;i < engine.DataR.num_spot_shadows;i++)
+        GameObject3DAddShadowDescriptor((GameObject3D *)po, ENGINE_LIGHT_TYPE_SPOT, renders[i], i);
 
     PrimitiveObjectSetShadowDefaultDescriptor(po, dParam);
 }
@@ -257,7 +260,7 @@ void PrimitiveObjectInitDefault(PrimitiveObject *po, DrawParam *dParam, char typ
         else
             PrimitiveObjectSetDefaultDescriptor(po, dParam);
 
-        GameObject3DInitDraw(po);
+        GameObject3DInitDraw((GameObject3D *)po);
 }
 
 //Не корректно

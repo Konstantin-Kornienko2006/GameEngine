@@ -4,6 +4,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <sys/types.h>
 
 uint32_t ShaderBuilderCheckVariable(ShaderBuilder *builder, ShaderVariableType variable_type, uint32_t *vals,  uint32_t size){
 
@@ -263,6 +265,26 @@ uint32_t ShaderBuilderAddVector(ShaderBuilder *builder, uint32_t size, char *nam
     return res;
 }
 
+uint32_t ShaderBuilderAddImage(ShaderBuilder *builder){
+    
+    uint32_t arr[] = { 1, 0, 0, 0, 1, 0};
+    uint32_t res = ShaderBuilderCheckVariable(builder, SHADER_VARIABLE_TYPE_IMAGE, arr, 6);
+
+    if(!res){
+        res = ShaderBuilderAddFloat(builder);
+        
+        uint32_t arr[] = { res };
+        uint32_t arr2[] = { 1, 0, 0, 0, 1, 0};
+        res = ShaderBuilderAddVariable(builder, SHADER_VARIABLE_TYPE_IMAGE, 0, arr, 1, arr2, 6);
+
+    }
+    
+    uint32_t arr2[] = { res };
+    res = ShaderBuilderAddVariable(builder, SHADER_VARIABLE_TYPE_SAMPLED_IMAGE, 0, arr2, 1, NULL, 0);
+
+    return res;
+}
+
 uint32_t ShaderBuilderAddStruct(ShaderBuilder *builder, ShaderStructConstr *struct_arr, uint32_t count, char *name ){
 
     uint32_t elem_indx[count];
@@ -314,13 +336,14 @@ uint32_t ShaderBuilderAddStruct(ShaderBuilder *builder, ShaderStructConstr *stru
     return builder->current_index;
 }
 
-uint32_t ShaderBuilderAddUniform(ShaderBuilder *builder, ShaderStructConstr *struct_arr, uint32_t count, char *name){
+uint32_t ShaderBuilderAddUniform(ShaderBuilder *builder, ShaderStructConstr *struct_arr, uint32_t count, char *name, uint32_t location, uint32_t binding){
 
     uint32_t res = ShaderBuilderAddStruct(builder, struct_arr, count, name);
 
     builder->decors[builder->num_decorations].indx = res;
     builder->num_decorations++;
 
+    uint32_t orig_indx = res;
     {
         uint32_t arr[] = { res };
         res = ShaderBuilderAddVariable(builder, SHADER_VARIABLE_TYPE_POINTER, SHADER_DATA_FLAG_UNIFORM, arr, 1, NULL, 0);
@@ -331,6 +354,13 @@ uint32_t ShaderBuilderAddUniform(ShaderBuilder *builder, ShaderStructConstr *str
         res = ShaderBuilderAddVariable(builder, SHADER_VARIABLE_TYPE_VARIABLE, SHADER_DATA_FLAG_UNIFORM, arr, 1, NULL, 0);
     }
 
+
+    builder->ioData[builder->num_io_data].type = SHADER_VARIABLE_TYPE_UNIFORM;
+    builder->ioData[builder->num_io_data].indx = res;
+    builder->ioData[builder->num_io_data].orig_indx = orig_indx;
+    builder->ioData[builder->num_io_data].location = location;
+    builder->ioData[builder->num_io_data].binding = binding;
+    builder->num_io_data ++;
 
     builder->decors[builder->num_decorations].indx = res;
     builder->num_decorations++;
@@ -364,6 +394,9 @@ uint32_t ShaderBuilderAddPointer(ShaderBuilder *builder, ShaderVariableType poin
         case SHADER_VARIABLE_TYPE_VECTOR:
             type_indx = ShaderBuilderAddVector(builder, size, NULL);
             break;
+        case SHADER_VARIABLE_TYPE_IMAGE:
+            type_indx = ShaderBuilderAddImage(builder);
+            break;
     }
 
     uint32_t res = ShaderBuilderCheckPointer(builder, type_indx, flags);
@@ -376,7 +409,7 @@ uint32_t ShaderBuilderAddPointer(ShaderBuilder *builder, ShaderVariableType poin
     return res;
 }
 
-uint32_t ShaderBuilderAddIOData(ShaderBuilder *builder, ShaderVariableType type, ShaderDataFlags flags, ShaderStructConstr *struct_arr, uint32_t size, char *name, uint32_t location){
+uint32_t ShaderBuilderAddIOData(ShaderBuilder *builder, ShaderVariableType type, ShaderDataFlags flags, ShaderStructConstr *struct_arr, uint32_t size, char *name, uint32_t location, uint32_t binding){
 
     uint32_t res = 0;
 
@@ -389,6 +422,9 @@ uint32_t ShaderBuilderAddIOData(ShaderBuilder *builder, ShaderVariableType type,
 
             builder->decors[builder->num_decorations].indx = res;
             builder->num_decorations++;
+            break;
+        case SHADER_VARIABLE_TYPE_IMAGE:
+            res = ShaderBuilderAddImage(builder);
             break;
     }
 
@@ -405,26 +441,36 @@ uint32_t ShaderBuilderAddIOData(ShaderBuilder *builder, ShaderVariableType type,
     }
 
 
-    if(type != SHADER_VARIABLE_TYPE_STRUCT){
-        uint32_t len = strlen(name);
+    if(type != SHADER_VARIABLE_TYPE_IMAGE){
+        if(type != SHADER_VARIABLE_TYPE_STRUCT){
+            uint32_t len = strlen(name);
 
-        memcpy(builder->infos[builder->num_debug_infos].name, name, len);
-        builder->infos[builder->num_debug_infos].indx = res;
+            memcpy(builder->infos[builder->num_debug_infos].name, name, len);
+            builder->infos[builder->num_debug_infos].indx = res;
 
-        builder->num_debug_infos++;
-    }else{
+            builder->num_debug_infos++;
+        }else{
 
-        memset(builder->infos[builder->num_debug_infos].name, 0, 64);
-        builder->infos[builder->num_debug_infos].indx = res;
+            memset(builder->infos[builder->num_debug_infos].name, 0, 64);
+            builder->infos[builder->num_debug_infos].indx = res;
 
-        builder->num_debug_infos++;
+            builder->num_debug_infos++;
+        }
     }
 
-    builder->ioData[builder->num_io_data].type = type;
+    ShaderDataFlags tflags = 0;
+
+    builder->ioData[builder->num_io_data].type = type == SHADER_VARIABLE_TYPE_IMAGE ? SHADER_VARIABLE_TYPE_UNIFORM_CONSTANT : type;
     builder->ioData[builder->num_io_data].indx = res;
     builder->ioData[builder->num_io_data].orig_indx = orig_indx;
     builder->ioData[builder->num_io_data].location = location;
+    builder->ioData[builder->num_io_data].binding = binding;
+    builder->ioData[builder->num_io_data].flags =  flags & SHADER_DATA_FLAG_SYSTEM ? SHADER_DATA_FLAG_SYSTEM : 0;
 
+    if(type == SHADER_VARIABLE_TYPE_IMAGE){
+        builder->ioData[builder->num_io_data].descr_set = builder->curr_descr_set;
+        builder->curr_descr_set ++;
+    }
     builder->num_io_data ++;
 
     return res;
@@ -474,6 +520,19 @@ int ShaderBuilderFindOperand( ShaderLabel *label, ShaderOperandType op_type){
     return -1;
 }
 
+void ShaderBuilderStoreValue(ShaderBuilder *builder, ShaderLabel *label, uint32_t *arr, uint32_t size){
+
+    ShaderOperand *oper = &label->operands[label->num_operands];
+
+    memcpy(oper->var_indx, arr, size * sizeof(uint32_t));
+
+    oper->num_vars = size;
+    oper->op_type = SHADER_OPERAND_TYPE_STORE;
+
+    label->num_operands++;
+
+}
+
 uint32_t ShaderBuilderAcceptAccess(ShaderBuilder *builder, ShaderLabel *label, uint32_t val_indx){
 
     uint32_t res = 0;
@@ -488,6 +547,58 @@ uint32_t ShaderBuilderAcceptAccess(ShaderBuilder *builder, ShaderLabel *label, u
         ShaderBuilderAddOperand(builder, label, &val_indx, 1,  SHADER_OPERAND_TYPE_ACCESS);
 
     return res;
+}
+
+uint32_t ShaderBuilderAcceptLoadL(ShaderBuilder *builder, ShaderLabel *label, uint32_t type, uint32_t val_indx){
+    
+    uint32_t res = 0;
+    
+    ShaderVariable *variable = ShaderBuilderFindVar(builder, val_indx);
+    
+    InputOutputData *data = ShaderBuilderFindIOData(builder, val_indx);
+    if(data != NULL){
+        
+        uint32_t arr[] = {data->orig_indx, val_indx};
+        res = ShaderBuilderAddOperand(builder, label, arr, 2, SHADER_OPERAND_TYPE_LOAD);
+    }else{
+
+        uint32_t res_type = 0;
+
+        switch (variable->type)
+        {
+            case  SHADER_VARIABLE_TYPE_VECTOR:
+                res_type = ShaderBuilderAddVector(builder, variable->values[0], NULL );
+                break;
+            
+            default:
+                break;
+        }
+        
+        uint32_t arr[] = {res_type, val_indx};
+        res = ShaderBuilderAddOperand(builder, label, arr, 2, SHADER_OPERAND_TYPE_LOAD);
+
+    }
+
+    return res;
+}
+
+uint32_t ShaderBuilderGetType(ShaderBuilder *builder, ShaderVariableType type, uint32_t size){
+
+    uint32_t res_type = 0;
+
+    switch (type) {
+        case SHADER_VARIABLE_TYPE_INT:
+            res_type = ShaderBuilderAddInt(builder, 1);
+            break;
+        case SHADER_VARIABLE_TYPE_FLOAT:
+            res_type = ShaderBuilderAddFloat(builder);
+            break;
+        case SHADER_VARIABLE_TYPE_VECTOR:
+            res_type = ShaderBuilderAddVector(builder, size, NULL);
+            break;
+    }
+
+    return res_type;
 }
 
 uint32_t ShaderBuilderAcceptLoad(ShaderBuilder *builder, ShaderLabel *label, ShaderVariableType load_type, uint32_t val_indx, uint32_t size, uint32_t iter){
@@ -539,20 +650,176 @@ uint32_t ShaderBuilderAcceptLoad(ShaderBuilder *builder, ShaderLabel *label, Sha
     return res;
 }
 
-uint32_t ShaderBuilderAddFuncMove(ShaderBuilder *builder, ShaderLabel *label, uint32_t src_indx, uint32_t src_size, uint32_t dest_indx){
+uint32_t ShaderBuilderLoad(ShaderBuilder *builder, ShaderLabel *label, uint32_t type, uint32_t val_indx){
+
+    uint32_t res = 0;
+
+    InputOutputData *data = ShaderBuilderFindIOData(builder, val_indx);
+
+    if(data != NULL){
+        ShaderVariable *variable = ShaderBuilderFindVar(builder, data->orig_indx);
+        
+        uint32_t var_type = ShaderBuilderGetType(builder, variable->type, 3);
+        
+        if(!(variable->flags & SHADER_DATA_FLAG_UNIFORM)){
+            uint32_t arr[] = {var_type, val_indx};
+            res = ShaderBuilderAddOperand(builder, label, arr, 2, SHADER_OPERAND_TYPE_LOAD);
+        }
+
+    }else{
+
+        uint32_t arr[] = {type, val_indx};
+        res = ShaderBuilderAddOperand(builder, label, arr, 2, SHADER_OPERAND_TYPE_LOAD);
+    }
+
+    return res;
+}
+
+uint32_t ShaderBuilderAddFuncMove(ShaderBuilder *builder, ShaderLabel *label, uint32_t src_indx, uint32_t src_size, uint32_t dest_indx, uint32_t dest_size){
 
     uint32_t res = ShaderBuilderAcceptLoad(builder, label, SHADER_VARIABLE_TYPE_VECTOR, src_indx, src_size, 0);
 
+    if(src_size != dest_size)
+    {       
+        uint32_t res_type = ShaderBuilderAddVector(builder, 4, NULL);
+
+        uint32_t arr_extract[src_size]; 
+
+        uint32_t float_point = ShaderBuilderAddFloat(builder);
+
+        for(int i=0;i < src_size;i++){
+            uint32_t arr[] = {float_point, res,  i};
+            arr_extract[i] = ShaderBuilderAddOperand(builder, label, arr, sizeof(arr), SHADER_OPERAND_TYPE_COMPOSITE_EXTRACT);
+        }
+        
+        float v_f = 1.0f;
+        uint32_t v_u = 0;
+        memcpy(&v_u, &v_f, sizeof(uint32_t));        
+        uint32_t cnst2 = ShaderBuilderAddConstant(builder, SHADER_VARIABLE_TYPE_FLOAT, 0, v_u, 1);
+        uint32_t arr[] = {res_type, arr_extract[0], arr_extract[1], arr_extract[2], cnst2};
+        res = ShaderBuilderAddOperand(builder, label, arr, 5, SHADER_OPERAND_TYPE_COMPOSITE_CONSTRUCT);
+    }
+
     uint32_t arr[] = {dest_indx, res};
+    
+    ShaderBuilderStoreValue(builder, label, arr, sizeof(arr));
 
-    ShaderOperand *oper = &label->operands[label->num_operands];
+    return res;
+}
 
-    memcpy(oper->var_indx, arr, sizeof(uint32_t) * 2);
+uint32_t ShaderBuilderGetTexture(ShaderBuilder *builder, ShaderLabel *label, uint32_t texture_indx, uint32_t uv_indx){
 
-    oper->num_vars = 2;
-    oper->op_type = SHADER_OPERAND_TYPE_STORE;
+    uint32_t res = ShaderBuilderAcceptLoadL(builder, label, SHADER_VARIABLE_TYPE_IMAGE, texture_indx);
+    
+    uint32_t res2 = ShaderBuilderAcceptLoadL(builder, label, SHADER_VARIABLE_TYPE_IMAGE, uv_indx);
 
-    label->num_operands++;
+    uint32_t res_type = ShaderBuilderAddVector(builder, 4, NULL);
+
+    uint32_t arr[] = {res_type, res, res2};
+
+    res = ShaderBuilderAddOperand(builder, label, arr, sizeof(arr), SHADER_OPERAND_TYPE_IMAGE_SAMLE_IMPLICIT_LOD);;
+
+    return res;
+}
+
+VectorExtract ShaderBuilderGetElemenets(ShaderBuilder *builder, ShaderLabel *label, uint32_t src_index, uint32_t start_indx, uint32_t size){
+
+    uint32_t res = 0;   
+
+    VectorExtract extract;
+    memset(&extract, 0, sizeof(VectorExtract)); 
+
+    uint32_t float_point = ShaderBuilderAddFloat(builder);  
+
+    for(int i=0;i < size;i++){
+        uint32_t arr[] = {float_point, src_index,  i + start_indx};
+        extract.elems[i] = ShaderBuilderAddOperand(builder, label, arr, 3, SHADER_OPERAND_TYPE_COMPOSITE_EXTRACT);
+    }   
+
+    extract.size = size;
+
+    return extract;
+}
+
+uint32_t ShaderBuilderCompositeConstruct(ShaderBuilder *builder, ShaderLabel *label, uint32_t *arr_arg, uint32_t size_arr){
+        
+    uint32_t res = ShaderBuilderAddOperand(builder, label, arr_arg, size_arr, SHADER_OPERAND_TYPE_COMPOSITE_CONSTRUCT);
+
+    return res;
+}
+
+uint32_t ShaderBuilderAddFuncSetTexure(ShaderBuilder *builder, ShaderLabel *label, uint32_t texture_indx, uint32_t uv_indx, uint32_t dest_indx, uint32_t dest_size){
+    
+    uint32_t res = ShaderBuilderAcceptLoadL(builder, label, SHADER_VARIABLE_TYPE_IMAGE, texture_indx);
+    
+    uint32_t res2 = ShaderBuilderAcceptLoadL(builder, label, SHADER_VARIABLE_TYPE_IMAGE, uv_indx);
+
+    uint32_t res_type = ShaderBuilderAddVector(builder, 4, NULL);
+
+    uint32_t arr[] = {res_type, res, res2};
+
+    res = ShaderBuilderAddOperand(builder, label, arr, sizeof(arr), SHADER_OPERAND_TYPE_IMAGE_SAMLE_IMPLICIT_LOD);;
+        
+    uint32_t arr2[] = {dest_indx, res};
+
+    ShaderBuilderStoreValue(builder, label, arr2, sizeof(arr2));
+
+    return res;
+}
+
+uint32_t ShaderBuilderAddFuncMultS(ShaderBuilder *builder, ShaderLabel *label, uint32_t val_indx, uint32_t single_indx, uint32_t size){
+
+    uint32_t res = 0;
+
+    uint32_t func_indx = ShaderBuilderAddPointer(builder, SHADER_VARIABLE_TYPE_FLOAT, 0, SHADER_DATA_FLAG_FUNCTION);
+
+    uint32_t vec3_indx = ShaderBuilderAddVector(builder, 3, NULL);
+
+    uint32_t arr[] = {func_indx, 7 /*Function*/};
+    uint32_t variable = ShaderBuilderAddOperand(builder, label, arr, 2, SHADER_OPERAND_TYPE_VARIABLE);
+
+    VectorExtract vector = ShaderBuilderGetElemenets(builder, label, single_indx, 0, 1);
+
+    uint32_t arr2[] = { variable, vector.elems[0] };
+    ShaderBuilderStoreValue(builder, label, arr2, 2);
+
+    uint32_t var_type = ShaderBuilderGetType(builder, SHADER_VARIABLE_TYPE_FLOAT, 0);
+
+    uint32_t val1 = ShaderBuilderLoad(builder, label, vec3_indx, val_indx);
+    uint32_t val2 = ShaderBuilderLoad(builder, label, var_type, variable);
+
+    uint32_t arr3[] = { vec3_indx, val1, val2};
+    res = ShaderBuilderAddOperand(builder, label, arr3, 3, SHADER_OPERAND_TYPE_MULS);
+    
+    return res;
+}
+
+uint32_t ShaderBuilderAddFuncSetColor4(ShaderBuilder *builder, ShaderLabel *label, uint32_t val_indx, uint32_t single_indx, uint32_t size){
+
+    uint32_t res = 0;
+
+    uint32_t func_indx = ShaderBuilderAddPointer(builder, SHADER_VARIABLE_TYPE_FLOAT, 0, SHADER_DATA_FLAG_FUNCTION);
+
+    uint32_t arr[] = {func_indx, 7 /*Function*/};
+    uint32_t variable = ShaderBuilderAddOperand(builder, label, arr, 2, SHADER_OPERAND_TYPE_VARIABLE);
+
+    VectorExtract vector = ShaderBuilderGetElemenets(builder, label, single_indx, 0, 1);
+
+    uint32_t arr2[] = { variable, vector.elems[0] };
+    ShaderBuilderStoreValue(builder, label, arr2, 2);
+
+    uint32_t var_type = ShaderBuilderGetType(builder, SHADER_VARIABLE_TYPE_FLOAT, 0);
+
+    uint32_t vec3_indx = ShaderBuilderAddVector(builder, 3, NULL);
+    uint32_t vec4_indx = ShaderBuilderAddVector(builder, 4, NULL);
+    
+    uint32_t val1 = ShaderBuilderLoad(builder, label, vec3_indx, val_indx);
+    uint32_t val2 = ShaderBuilderLoad(builder, label, var_type, variable);
+    
+    vector = ShaderBuilderGetElemenets(builder, label, val1, 0, 3);
+    
+    uint32_t arr5[] = { vec4_indx, vector.elems[0], vector.elems[1], vector.elems[2], val2};
+    res = ShaderBuilderCompositeConstruct(builder, label, arr5, 5);
 
     return res;
 }
@@ -607,7 +874,8 @@ int ShaderBuilderAddFuncAdd(ShaderBuilder *builder, ShaderLabel *label, uint32_t
     }
 
     uint32_t arr[] = {n_res, res};
-    res = ShaderBuilderAddOperand(builder, label, arr, 2, SHADER_OPERAND_TYPE_STORE);
+    
+    ShaderBuilderStoreValue(builder, label, arr, sizeof(arr));
 
     return res;
 }
@@ -692,15 +960,8 @@ void ShaderBuilderInit(ShaderBuilder *builder, ShaderType type){
             {SHADER_VARIABLE_TYPE_ARRAY, 1,  SHADER_VARIABLE_TYPE_FLOAT, "gl_CullDistance"}
         };
 
-        builder->gl_struct_indx = ShaderBuilderAddIOData(builder, SHADER_VARIABLE_TYPE_STRUCT, SHADER_DATA_FLAG_OUTPUT, struct_arr, 4, "gl_PerVertex", 0);
+        builder->gl_struct_indx = ShaderBuilderAddIOData(builder, SHADER_VARIABLE_TYPE_STRUCT, SHADER_DATA_FLAG_OUTPUT | SHADER_DATA_FLAG_SYSTEM, struct_arr, 4, "gl_PerVertex", 0, 0);
     }
-    /*char name[] = "tbo";
-
-    memcpy(builder->infos[builder->num_debug_infos].name, name, strlen(name));
-    builder->infos[builder->num_debug_infos].indx = uniform;
-    builder->infos[builder->num_debug_infos].num_childs = 0;
-
-    builder->num_debug_infos++;*/
 
 }
 
@@ -729,8 +990,14 @@ void ShaderBuilderMake(ShaderBuilder *builder){
     ShaderBuilderAddValue(builder, SpvAddressingModelLogical);
     ShaderBuilderAddValue(builder, SpvMemoryModelGLSL450);
 
+    uint32_t count = 0;
+
+    for(int i=0;i < builder->num_io_data;i++)
+        if(builder->ioData[i].type != SHADER_VARIABLE_TYPE_UNIFORM && builder->ioData[i].type != SHADER_VARIABLE_TYPE_UNIFORM_CONSTANT)
+            count++;
+
     {
-        ShaderBuilderAddOp(builder, SpvOpEntryPoint, 4 + builder->num_io_data + 1);
+        ShaderBuilderAddOp(builder, SpvOpEntryPoint, 4 + count + 1);
 
         switch(builder->type)
         {
@@ -760,18 +1027,19 @@ void ShaderBuilderMake(ShaderBuilder *builder){
         ShaderBuilderAddValue(builder, 0x0);
 
         for(int i=0;i < builder->num_io_data;i++)
-            ShaderBuilderAddValue(builder, builder->ioData[i].indx);
+            if(builder->ioData[i].type != SHADER_VARIABLE_TYPE_UNIFORM && builder->ioData[i].type != SHADER_VARIABLE_TYPE_UNIFORM_CONSTANT)
+                ShaderBuilderAddValue(builder, builder->ioData[i].indx);
 
     }
 
     if(builder->type == SHADER_TYPE_FRAGMENT){
         ShaderBuilderAddOp(builder, SpvOpExecutionMode, 3);
-        ShaderBuilderAddValue(builder, builder->main_point_index );
-        ShaderBuilderAddValue(builder, SpvExecutionModeOriginLowerLeft );
+        ShaderBuilderAddValue(builder, builder->main_point_index->indx );
+        ShaderBuilderAddValue(builder, SpvExecutionModeOriginUpperLeft );
     }
 
     //Debug informations
-   {
+    {
         ShaderBuilderAddOp(builder, SpvOpSource, 3);
         ShaderBuilderAddValue(builder, SpvSourceLanguageGLSL );
         ShaderBuilderAddValue(builder, 450 );
@@ -830,50 +1098,68 @@ void ShaderBuilderMake(ShaderBuilder *builder){
     //Decorations
     {
 
-        uint32_t iter = 0;
-        for(int i=0;i < 4;i++){
-            ShaderBuilderAddOp(builder, SpvOpMemberDecorate, 5);
+        if(builder->num_decorations > 0){
+            uint32_t iter = 0;
+            for(int i=0;i < 4;i++){
+                ShaderBuilderAddOp(builder, SpvOpMemberDecorate, 5);
+                ShaderBuilderAddValue(builder, builder->decors[0].indx );
+                ShaderBuilderAddValue(builder, i );
+                ShaderBuilderAddValue(builder, SpvDecorationBuiltIn);
+                ShaderBuilderAddValue(builder, iter );
+
+                iter++;
+
+                if(iter == 2)
+                    iter ++;
+            }
+
+            ShaderBuilderAddOp(builder, SpvOpDecorate, 3);
             ShaderBuilderAddValue(builder, builder->decors[0].indx );
-            ShaderBuilderAddValue(builder, i );
-            ShaderBuilderAddValue(builder, SpvDecorationBuiltIn);
-            ShaderBuilderAddValue(builder, iter );
+            ShaderBuilderAddValue(builder, SpvDecorationBlock );
 
-            iter++;
+            for(int i =0;i < 3;i++){
+                ShaderBuilderAddOp(builder, SpvOpMemberDecorate, 5);
+                ShaderBuilderAddValue(builder, builder->decors[1].indx );
+                ShaderBuilderAddValue(builder, i );
+                ShaderBuilderAddValue(builder, SpvDecorationOffset );
+                ShaderBuilderAddValue(builder, i * 8 );
+            }
 
-            if(iter == 2)
-                iter ++;
-        }
-
-        ShaderBuilderAddOp(builder, SpvOpDecorate, 3);
-        ShaderBuilderAddValue(builder, builder->decors[0].indx );
-        ShaderBuilderAddValue(builder, SpvDecorationBlock );
-
-        for(int i =0;i < 3;i++){
-            ShaderBuilderAddOp(builder, SpvOpMemberDecorate, 5);
+            ShaderBuilderAddOp(builder, SpvOpDecorate, 3);
             ShaderBuilderAddValue(builder, builder->decors[1].indx );
-            ShaderBuilderAddValue(builder, i );
-            ShaderBuilderAddValue(builder, SpvDecorationOffset );
-            ShaderBuilderAddValue(builder, i * 8 );
+            ShaderBuilderAddValue(builder, SpvDecorationBlock );
+
+            /*ShaderBuilderAddOp(builder, SpvOpDecorate, 4);
+            ShaderBuilderAddValue(builder, builder->decors[2].indx );
+            ShaderBuilderAddValue(builder, SpvDecorationDescriptorSet );
+            ShaderBuilderAddValue(builder, 0 );
+            ShaderBuilderAddOp(builder, SpvOpDecorate, 4);
+            ShaderBuilderAddValue(builder, builder->decors[2].indx );
+            ShaderBuilderAddValue(builder, SpvDecorationBinding );
+            ShaderBuilderAddValue(builder, 0 );*/
         }
 
-        ShaderBuilderAddOp(builder, SpvOpDecorate, 3);
-        ShaderBuilderAddValue(builder, builder->decors[1].indx );
-        ShaderBuilderAddValue(builder, SpvDecorationBlock );
+        for(int i=0;i < builder->num_io_data;i++){
 
-        ShaderBuilderAddOp(builder, SpvOpDecorate, 4);
-        ShaderBuilderAddValue(builder, builder->decors[2].indx );
-        ShaderBuilderAddValue(builder, SpvDecorationDescriptorSet );
-        ShaderBuilderAddValue(builder, 0 );
-        ShaderBuilderAddOp(builder, SpvOpDecorate, 4);
-        ShaderBuilderAddValue(builder, builder->decors[2].indx );
-        ShaderBuilderAddValue(builder, SpvDecorationBinding );
-        ShaderBuilderAddValue(builder, 0 );
+            if(builder->ioData[i].binding != 0){                    
+                ShaderBuilderAddOp(builder, SpvOpDecorate, 4);
+                ShaderBuilderAddValue(builder, builder->ioData[i].indx );
+                ShaderBuilderAddValue(builder, SpvDecorationBinding );
+                ShaderBuilderAddValue(builder, builder->ioData[i].binding - 1 );
+                ShaderBuilderAddOp(builder, SpvOpDecorate, 4);
+                ShaderBuilderAddValue(builder, builder->ioData[i].indx );
+                ShaderBuilderAddValue(builder, SpvDecorationDescriptorSet );
+                ShaderBuilderAddValue(builder, builder->ioData[i].descr_set);   
+            }else{         
 
-        for(int i=1;i < builder->num_io_data;i++){
-            ShaderBuilderAddOp(builder, SpvOpDecorate, 4);
-            ShaderBuilderAddValue(builder, builder->ioData[i].indx );
-            ShaderBuilderAddValue(builder, SpvDecorationLocation );
-            ShaderBuilderAddValue(builder, builder->ioData[i].location );
+                if(builder->ioData[i].flags & SHADER_DATA_FLAG_SYSTEM)
+                    continue;
+
+                ShaderBuilderAddOp(builder, SpvOpDecorate, 4);
+                ShaderBuilderAddValue(builder, builder->ioData[i].indx );
+                ShaderBuilderAddValue(builder, SpvDecorationLocation );
+                ShaderBuilderAddValue(builder, builder->ioData[i].location );
+            }
         }
     }
 
@@ -915,6 +1201,22 @@ void ShaderBuilderMake(ShaderBuilder *builder){
                     ShaderBuilderAddValue(builder, variable->args[0]);
                     ShaderBuilderAddValue(builder, variable->args[1]);
                     break;
+                case SHADER_VARIABLE_TYPE_IMAGE:
+                    ShaderBuilderAddOp(builder, SpvOpTypeImage, 9);
+                    ShaderBuilderAddValue(builder, variable->indx);
+                    ShaderBuilderAddValue(builder, variable->args[0]);
+                    ShaderBuilderAddValue(builder, variable->values[0]);
+                    ShaderBuilderAddValue(builder, variable->values[1]);
+                    ShaderBuilderAddValue(builder, variable->values[2]);
+                    ShaderBuilderAddValue(builder, variable->values[3]);
+                    ShaderBuilderAddValue(builder, variable->values[4]);
+                    ShaderBuilderAddValue(builder, variable->values[5]);
+                    break;
+                case SHADER_VARIABLE_TYPE_SAMPLED_IMAGE:
+                    ShaderBuilderAddOp(builder, SpvOpTypeSampledImage, 3);
+                    ShaderBuilderAddValue(builder, variable->indx);
+                    ShaderBuilderAddValue(builder, variable->args[0]);
+                    break;
                 case SHADER_VARIABLE_TYPE_CONSTANT:
                     ShaderBuilderAddOp(builder, SpvOpConstant, 4);
                     ShaderBuilderAddValue(builder, variable->args[0]);
@@ -936,14 +1238,14 @@ void ShaderBuilderMake(ShaderBuilder *builder){
                 case SHADER_VARIABLE_TYPE_POINTER:
                     ShaderBuilderAddOp(builder, SpvOpTypePointer, 4);
                     ShaderBuilderAddValue(builder, variable->indx);
-                    ShaderBuilderAddValue(builder, variable->flags & SHADER_DATA_FLAG_UNIFORM ? SpvStorageClassUniform : (variable->flags & SHADER_DATA_FLAG_OUTPUT ? SpvStorageClassOutput : SpvStorageClassInput));
+                    ShaderBuilderAddValue(builder, variable->flags & SHADER_DATA_FLAG_UNIFORM ? SpvStorageClassUniform : (variable->flags & SHADER_DATA_FLAG_OUTPUT ? SpvStorageClassOutput : (variable->flags & SHADER_DATA_FLAG_UNIFORM_CONSTANT ? SpvStorageClassUniformConstant : (variable->flags & SHADER_DATA_FLAG_FUNCTION ? SpvStorageClassFunction : SpvStorageClassInput))));
                     ShaderBuilderAddValue(builder, variable->args[0]);
                     break;
                 case SHADER_VARIABLE_TYPE_VARIABLE:
                     ShaderBuilderAddOp(builder, SpvOpVariable, 4);
                     ShaderBuilderAddValue(builder, variable->args[0]);
                     ShaderBuilderAddValue(builder, variable->indx);
-                    ShaderBuilderAddValue(builder, variable->flags & SHADER_DATA_FLAG_UNIFORM ? SpvStorageClassUniform : (variable->flags & SHADER_DATA_FLAG_OUTPUT ? SpvStorageClassOutput : SpvStorageClassInput));
+                    ShaderBuilderAddValue(builder, variable->flags & SHADER_DATA_FLAG_UNIFORM ? SpvStorageClassUniform : (variable->flags & SHADER_DATA_FLAG_OUTPUT ? SpvStorageClassOutput : (variable->flags & SHADER_DATA_FLAG_UNIFORM_CONSTANT ? SpvStorageClassUniformConstant : (variable->flags & SHADER_DATA_FLAG_FUNCTION ? SpvStorageClassFunction : SpvStorageClassInput))));
                     break;
             }
         }
@@ -952,6 +1254,8 @@ void ShaderBuilderMake(ShaderBuilder *builder){
     //Functions
     {
         ShaderOperand * operand;
+                    
+        uint32_t iter = 0;
 
         for(int i=0;i < builder->num_functions;i++)
         {
@@ -965,6 +1269,7 @@ void ShaderBuilderMake(ShaderBuilder *builder){
              {
                 ShaderBuilderAddOp(builder, SpvOpLabel, 2);
                 ShaderBuilderAddValue(builder, builder->functions[i].labels[j].index);
+
 
                 for(int l=0;l < builder->functions[i].labels[j].num_operands;l++){
                     operand = &builder->functions[i].labels[j].operands[l];
@@ -985,13 +1290,20 @@ void ShaderBuilderMake(ShaderBuilder *builder){
                             ShaderBuilderAddValue(builder, operand->var_indx[2]);
                             break;
                         case SHADER_OPERAND_TYPE_COMPOSITE_CONSTRUCT:
-                            ShaderBuilderAddOp(builder, SpvOpCompositeConstruct, 3 + 4);
+                            ShaderBuilderAddOp(builder, SpvOpCompositeConstruct, 3 + operand->num_vars - 1);
+                            ShaderBuilderAddValue(builder, operand->var_indx[0]);
+                            ShaderBuilderAddValue(builder, operand->indx);
+
+                            for(iter = 1;iter < operand->num_vars;iter++)
+                                ShaderBuilderAddValue(builder, operand->var_indx[iter]);
+
+                            break;
+                        case SHADER_OPERAND_TYPE_IMAGE_SAMLE_IMPLICIT_LOD:
+                            ShaderBuilderAddOp(builder, SpvOpImageSampleImplicitLod, 5);
                             ShaderBuilderAddValue(builder, operand->var_indx[0]);
                             ShaderBuilderAddValue(builder, operand->indx);
                             ShaderBuilderAddValue(builder, operand->var_indx[1]);
                             ShaderBuilderAddValue(builder, operand->var_indx[2]);
-                            ShaderBuilderAddValue(builder, operand->var_indx[3]);
-                            ShaderBuilderAddValue(builder, operand->var_indx[4]);
                             break;
                         case SHADER_OPERAND_TYPE_LOAD:
                             ShaderBuilderAddOp(builder, SpvOpLoad, 4);
@@ -1017,6 +1329,19 @@ void ShaderBuilderMake(ShaderBuilder *builder){
                             ShaderBuilderAddValue(builder, operand->indx);
                             ShaderBuilderAddValue(builder, operand->var_indx[1]);
                             ShaderBuilderAddValue(builder, operand->var_indx[2]);
+                            break; 
+                        case SHADER_OPERAND_TYPE_MULS:
+                            ShaderBuilderAddOp(builder, SpvOpVectorTimesScalar, 5);
+                            ShaderBuilderAddValue(builder, operand->var_indx[0]);
+                            ShaderBuilderAddValue(builder, operand->indx);
+                            ShaderBuilderAddValue(builder, operand->var_indx[1]);
+                            ShaderBuilderAddValue(builder, operand->var_indx[2]);
+                            break;                            
+                        case SHADER_OPERAND_TYPE_VARIABLE:
+                            ShaderBuilderAddOp(builder, SpvOpVariable, 4);
+                            ShaderBuilderAddValue(builder, operand->var_indx[0]);
+                            ShaderBuilderAddValue(builder, operand->indx);
+                            ShaderBuilderAddValue(builder, operand->var_indx[1]);
                             break;
                     }
                 }
@@ -1029,16 +1354,14 @@ void ShaderBuilderMake(ShaderBuilder *builder){
     }
 
     builder->code[3] = builder->current_index + 1;
-
-    //if(builder->size % sizeof(uint32_t)) ShaderBuilderAddValue(builder, 0x0);
 }
 
 void ShaderBuilderWriteToFile(ShaderBuilder *builder, const char *path){
 
-    FILE *somefile = fopen(path, "w");
+    FILE *somefile = open(path, O_WRONLY | O_CREAT | O_BINARY);
 
-    fwrite(builder->code, sizeof(uint32_t), builder->size, somefile);
+    write(somefile, builder->code, builder->size * sizeof(uint32_t));
 
-    fclose(somefile);
+    close(somefile);
 
 }

@@ -2,6 +2,10 @@
 
 #include <vulkan/vulkan.h>
 
+#include "Core/e_memory.h"
+#include "Core/e_device.h"
+#include "Core/swapchain.h"
+
 #include "Objects/render_texture.h"
 
 #include "Variabels/e_pipeline_variables.h"
@@ -11,23 +15,23 @@
 #include "Data/e_resource_descriptors.h"
 #include "Data/e_resource_export.h"
 
+extern ZEngine engine;
+
 void PipelineAcceptStack(void *pipeline, void *pipeline_layout)
 {
     PipelineStack *stack;
 
-    if(alloc_pipeline_head->node == NULL){
-        alloc_pipeline_head->next = calloc(1, sizeof(ChildStack));
-        alloc_pipeline_head->node = calloc(1, sizeof(PipelineStack));
+    if(engine.cache.alloc_pipeline_head->node == NULL){
+        engine.cache.alloc_pipeline_head->next = calloc(1, sizeof(ChildStack));
+        engine.cache.alloc_pipeline_head->node = calloc(1, sizeof(PipelineStack));
 
-        alloc_pipeline_head->next->before = alloc_pipeline_head;
-
-        stack = alloc_pipeline_head->node;
+        stack = engine.cache.alloc_pipeline_head->node;
         stack->GraphicsPipeline = pipeline;
         stack->GraphicsPipelineLayout = pipeline_layout;
     }
     else{
 
-        ChildStack *child = alloc_pipeline_head->next;
+        ChildStack *child = engine.cache.alloc_pipeline_head->next;
 
         while(child->next != NULL)
         {
@@ -35,7 +39,6 @@ void PipelineAcceptStack(void *pipeline, void *pipeline_layout)
         }
 
         child->next = calloc(1, sizeof(ChildStack));
-        child->next->before = child;
         child->node = calloc(1, sizeof(PipelineStack));
 
         stack = child->node;
@@ -47,50 +50,48 @@ void PipelineAcceptStack(void *pipeline, void *pipeline_layout)
 
 void PipelineClearAll()
 {
-    ChildStack *child = alloc_pipeline_head;
+    ChildStack *child = engine.cache.alloc_pipeline_head;
+    ChildStack *next = NULL;
 
     PipelineStack *stack = NULL;
 
     uint32_t counter = 0;
 
-    while(child->next != NULL)
+    while(child != NULL)
     {
-        stack = child->node;
+        next = child->next;
+        
+        if(child->node != NULL)
+            counter ++;
 
-        PipelineDestroyStack(stack->GraphicsPipeline);
+        if(child->node != NULL){
+            stack = child->node;
+            PipelineDestroyStack(stack->GraphicsPipeline);
+        }
 
-        free(child->node);
-        child->node = NULL;
-
-        child = child->next;
-
-        free(child->before);
-
-        counter ++;
+        child = next;
     }
 
-    if(child->node != NULL){
-        stack = child->node;
-
-        PipelineDestroyStack(stack->GraphicsPipeline);
-
-        free(child->node);
-        child->node = NULL;
-
-        counter++;
+    if(engine.cache.alloc_pipeline_head != NULL){
+        free(engine.cache.alloc_pipeline_head);
+        engine.cache.alloc_pipeline_head = NULL;
     }
-
-    free(alloc_pipeline_head);
 
     if(counter > 0)
-        printf("Количество не очищенных пайплайнов : %i\n", counter);
+        printf("Autofree VkPipelines count : %i\n", counter);
 }
 
 void PipelineDestroyStack(void *pipeline)
 {
+    if(pipeline == NULL)
+        return;
+
+    ZDevice *device = (ZDevice *)engine.device;
+
     PipelineStack *stack = NULL;
 
-    ChildStack *child = alloc_pipeline_head;
+    ChildStack *child = engine.cache.alloc_pipeline_head;
+    ChildStack *before = NULL;
 
     while(child->next != NULL)
     {
@@ -99,54 +100,29 @@ void PipelineDestroyStack(void *pipeline)
         if(stack->GraphicsPipeline == pipeline)
             break;
 
+        before = child;
         child = child->next;
     }
 
-    stack = child->node;
-
-    if(stack == NULL){
-        perror("Такой области памяти нет!\n");
-        return;
-    }
-
-    if(child->next != NULL && child->before != NULL)
-    {
-        ChildStack *next = child->next;
-        ChildStack *before = child->before;
-
-        vkDestroyPipeline(e_device, stack->GraphicsPipeline, NULL);
-        vkDestroyPipelineLayout(e_device, stack->GraphicsPipelineLayout, NULL);
+    if(child->next != NULL){
+        vkDestroyPipeline(device->e_device, stack->GraphicsPipeline, NULL);
+        vkDestroyPipelineLayout(device->e_device, stack->GraphicsPipelineLayout, NULL);
         free(child->node);
         child->node = NULL;
 
+        if(before != NULL)
+            before->next = child->next;
+        else
+            engine.cache.alloc_pipeline_head = child->next;
+        
         free(child);
-        next->before = before;
-        before->next = next;
-
-    }else if(child->next != NULL){
-        vkDestroyPipeline(e_device, stack->GraphicsPipeline, NULL);
-        vkDestroyPipelineLayout(e_device, stack->GraphicsPipelineLayout, NULL);
-        free(child->node);
-        child->node = NULL;
-
-        child->next->before = NULL;
-        alloc_pipeline_head = child->next;
-        free(child);
-
-    }else if(child->before != NULL){
-        vkDestroyPipeline(e_device, stack->GraphicsPipeline, NULL);
-        vkDestroyPipelineLayout(e_device, stack->GraphicsPipelineLayout, NULL);
-        free(child->node);
-        child->node = NULL;
-
-        child->before->next = NULL;
-
-        free(child);
-
+        child = NULL;
     }
 }
 
 void PipelineSettingSetDefault(GraphicsObject* graphObj, void *arg){
+
+    ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
 
     PipelineSetting *setting = arg;
 
@@ -157,11 +133,11 @@ void PipelineSettingSetDefault(GraphicsObject* graphObj, void *arg){
     setting->fromFile = 1;
     setting->scissor.offset.x = 0;
     setting->scissor.offset.y = 0;
-    setting->scissor.extent = *(EIExtent2D*)&swapChainExtent;
+    setting->scissor.extent = *(EIExtent2D*)&swapchain->swapChainExtent;
     setting->viewport.x = 0.0f;
     setting->viewport.y = 0.0f;
-    setting->viewport.width = (float) swapChainExtent.width;
-    setting->viewport.height = (float) swapChainExtent.height;
+    setting->viewport.width = (float) swapchain->swapChainExtent.width;
+    setting->viewport.height = (float) swapchain->swapChainExtent.height;
     setting->viewport.minDepth = 0.0f;
     setting->viewport.maxDepth = 1.0f;
     setting->flags = ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW | ENGINE_PIPELINE_FLAG_DRAW_INDEXED | ENGINE_PIPELINE_FLAG_BIAS |\
@@ -181,6 +157,8 @@ void PipelineSettingSetShader(PipelineSetting *setting, char *shader, size_t siz
 
 void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t indx_desc)
 {
+    ZDevice *device = (ZDevice *)engine.device;
+
     BluePrintPack *pack = &graphObj->blueprints.blue_print_packs[indx_pack];
     PipelineSetting *setting = &graphObj->blueprints.blue_print_packs[indx_pack].settings[indx_desc];
     ShaderDescriptor *descriptor = &graphObj->gItems.shader_packs[indx_pack].descriptor;
@@ -211,6 +189,9 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t
             }
 
             shaderStages[count_stages].module = createShaderModule(some_shader_code);
+
+            if(setting->fromFile)
+                FreeMemory(some_shader_code.code);
 
             count_stages ++;
 
@@ -291,8 +272,8 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.vertexBindingDescriptionCount = graphObj->shapes[setting->vert_indx].countBind;
     vertexInputInfo.vertexAttributeDescriptionCount = graphObj->shapes[setting->vert_indx].countAttr;
-    vertexInputInfo.pVertexBindingDescriptions = graphObj->shapes[setting->vert_indx].bindingDescription;
-    vertexInputInfo.pVertexAttributeDescriptions = graphObj->shapes[setting->vert_indx].attr;
+    vertexInputInfo.pVertexBindingDescriptions = (const VkVertexInputBindingDescription *) graphObj->shapes[setting->vert_indx].bindingDescription;
+    vertexInputInfo.pVertexAttributeDescriptions = (const VkVertexInputAttributeDescription *)graphObj->shapes[setting->vert_indx].attr;
 
 
     VkPipelineDynamicStateCreateInfo dynamicState;
@@ -335,7 +316,7 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t
         viewportState.pScissors = &scissor;
     }
 
-    VkPushConstantRange *push_ranges = calloc(pack->num_push_constants, sizeof(VkPushConstantRange));
+    VkPushConstantRange *push_ranges = AllocateMemory(pack->num_push_constants, sizeof(VkPushConstantRange));
 
     for(int l=0 ;l < pack->num_push_constants;l++)
     {
@@ -348,16 +329,16 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1; // Кол-во Дескирпторов для Юниформ баферов
-    pipelineLayoutInfo.pSetLayouts = &descriptor->descr_set_layout; // Дескирпторы для Юниформ баферов
+    pipelineLayoutInfo.pSetLayouts = (const VkDescriptorSetLayout *) &descriptor->descr_set_layout; // Дескирпторы для Юниформ баферов
     pipelineLayoutInfo.pushConstantRangeCount = pack->num_push_constants; // Optional
     pipelineLayoutInfo.pPushConstantRanges = push_ranges;
 
-    if (vkCreatePipelineLayout(e_device, &pipelineLayoutInfo, NULL, &pipeline->layout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(device->e_device, &pipelineLayoutInfo, NULL, (VkPipelineLayout *)&pipeline->layout) != VK_SUCCESS) {
         printf("failed to create pipeline layout!");
         exit(1);
     }
 
-    free(push_ranges);
+    FreeMemory(push_ranges);
 
     //Сам пайплайн
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
@@ -365,7 +346,7 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t
     VkPipelineTessellationStateCreateInfo *tessellationState;
     if(setting->flags & (ENGINE_PIPELINE_FLAG_TESSELLATION_CONTROL_SHADER | ENGINE_PIPELINE_FLAG_TESSELLATION_EVALUATION_SHADER))
     {
-        tessellationState = calloc( 1, sizeof(VkPipelineTessellationStateCreateInfo));
+        tessellationState = AllocateMemory( 1, sizeof(VkPipelineTessellationStateCreateInfo));
         tessellationState->sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
         tessellationState->patchControlPoints = 4;//patchControlPoints;
 
@@ -391,15 +372,18 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
     pipelineInfo.pDepthStencilState = &depthStencil;
 
-    if (vkCreateGraphicsPipelines(e_device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &pipeline->pipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(device->e_device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, (VkPipeline *)&pipeline->pipeline) != VK_SUCCESS) {
         printf("failed to create graphics pipeline!");
         exit(1);
     }
 
+    if(setting->flags & (ENGINE_PIPELINE_FLAG_TESSELLATION_CONTROL_SHADER | ENGINE_PIPELINE_FLAG_TESSELLATION_EVALUATION_SHADER))
+        FreeMemory(tessellationState);
+
     //-----------------------
 
     for(int i=0;i < count_stages;i++)
-        vkDestroyShaderModule(e_device, shaderStages[i].module, NULL);
+        vkDestroyShaderModule(device->e_device, shaderStages[i].module, NULL);
 
     PipelineAcceptStack(pipeline->pipeline, pipeline->layout);
 }
@@ -424,8 +408,11 @@ void PipelineCreateGraphics(GraphicsObject* graphObj){
 }
 
 void PipelineCreateRenderPass() {
+    ZDevice *device = (ZDevice *)engine.device;
+    ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
+
     VkAttachmentDescription colorAttachment = {};
-    colorAttachment.format = swapChainImageFormat;
+    colorAttachment.format = swapchain->swapChainImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -459,7 +446,7 @@ void PipelineCreateRenderPass() {
     subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
 
-    VkSubpassDependency* dependency = calloc(2, sizeof(VkSubpassDependency));
+    VkSubpassDependency* dependency = AllocateMemory(2, sizeof(VkSubpassDependency));
     dependency[0].srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency[0].dstSubpass = 0;
     dependency[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT; //VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
@@ -485,12 +472,12 @@ void PipelineCreateRenderPass() {
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = dependency;
 
-    if (vkCreateRenderPass(e_device, &renderPassInfo, NULL, &renderPass) != VK_SUCCESS) {
+    if (vkCreateRenderPass(device->e_device, &renderPassInfo, NULL, (VkRenderPass *)&renderPass) != VK_SUCCESS) {
         printf("failed to create render pass!");
         exit(1);
     }
 
-    free(dependency);
+    FreeMemory(dependency);
     dependency = NULL;    
 }
 
@@ -500,5 +487,6 @@ void PipelineDestroy(ShaderPack *pack)
     for(int i=0;i < pack->num_pipelines;i++)
         PipelineDestroyStack(pack->pipelines[i].pipeline);
 
+    pack->num_pipelines = 0;
 }
 

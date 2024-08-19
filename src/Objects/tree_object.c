@@ -221,7 +221,7 @@ float TreeMakePipe(vertexParam *vParam, indexParam *iParam, void *args, VertextI
 {
     PipeMeshParams *params = args;
 
-    float step = M_PI * 2 / params->sectors;
+    float step = ((float)M_PI * 2) / params->sectors;
 
     TreeVertex3D *verts = vParam->vertices;
 
@@ -502,7 +502,7 @@ void TreeMakePeace(vertexParam *vParam, indexParam *iParam, TreeVerts *tree_vert
 
     uint32_t last_vertex = vi->v_index;
 
-    float t_angle = M_PI / 180 * angle;
+    float t_angle = ((float)M_PI / 180) * angle;
 
     vec3 dir;
     dir.x = cos(t_angle) + sin(t_angle);
@@ -657,7 +657,7 @@ void TreeObjectInit(TreeObject *to, uint32_t type, DrawParam *dParam, void *arg)
 
     TreeParams *params = arg;
 
-    GameObject3DInit(to);
+    GameObject3DInit((GameObject3D *)to);
 
     to->go.graphObj.shapes[0].bindingDescription = &BindTree3DDescription;
     to->go.graphObj.shapes[0].attr = treeAttributeDescription;
@@ -674,8 +674,8 @@ void TreeObjectInit(TreeObject *to, uint32_t type, DrawParam *dParam, void *arg)
 
         uint32_t buff_size = UINT16_MAX;
 
-        vParam.vertices = calloc(buff_size, sizeof(TreeVertex3D));
-        iParam.indices = calloc(buff_size * 3, sizeof(uint32_t));
+        vParam.vertices = AllocateMemory(buff_size, sizeof(TreeVertex3D));
+        iParam.indices = AllocateMemory(buff_size * 3, sizeof(uint32_t));
 
         //InitTreeVertices(&vParam, &iParam, &vi);
 
@@ -687,10 +687,10 @@ void TreeObjectInit(TreeObject *to, uint32_t type, DrawParam *dParam, void *arg)
 
         GraphicsObjectSetVertex(&to->go.graphObj, vParam.vertices, vi.v_index, sizeof(TreeVertex3D), iParam.indices, vi.i_index, sizeof(uint32_t));
 
-        free(vParam.vertices);
-        free(iParam.indices);
+        FreeMemory(vParam.vertices);
+        FreeMemory(iParam.indices);
     }else{
-        GraphicsObjectSetVertex(&to->go.graphObj, cubeVert, 24, sizeof(TreeVertex3D), cubeIndx, 36, sizeof(uint32_t));
+        GraphicsObjectSetVertex(&to->go.graphObj, (void *)cubeVert, 24, sizeof(TreeVertex3D), cubeIndx, 36, sizeof(uint32_t));
     }
 }
 
@@ -704,7 +704,7 @@ void TreeObjectInitInstances(GameObject3D *go){
 
     bufferSize = sizeof(VertexInstance3D) * MAX_INSTANCES;
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &go->buffer.buffer, &go->buffer.buffer_memory, ENGINE_BUFFER_ALLOCATE_VERTEX);
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &go->buffer.buffer, ENGINE_BUFFER_ALLOCATE_VERTEX);
 
 }
 
@@ -729,7 +729,7 @@ void TreeObjectSetInstanceDescriptor(TreeObject *to, DrawParam *dParam){
     //setting.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     //setting.flags &= ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED);
 
-    GameObject3DAddSettingPipeline(to, nums, &setting);
+    GameObject3DAddSettingPipeline((GameObject3D *)to, nums, &setting);
 
     to->go.graphObj.blueprints.num_blue_print_packs ++;
 }
@@ -767,7 +767,7 @@ void TreeObjectSetDefaultDescriptor(TreeObject *to, uint32_t type, DrawParam *dP
     //setting.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     //setting.flags &= ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED);
 
-    GameObject3DAddSettingPipeline(to, nums, &setting);
+    GameObject3DAddSettingPipeline((GameObject3D *)to, nums, &setting);
 
     to->go.graphObj.blueprints.num_blue_print_packs ++;
 }
@@ -778,5 +778,5 @@ void TreeObjectInitDefault(TreeObject *to, uint32_t type, DrawParam *dParam, voi
 
     TreeObjectSetDefaultDescriptor(to, type, dParam);
 
-    GameObject3DInitDraw(to);
+    GameObject3DInitDraw((GameObject3D *)to);
 }

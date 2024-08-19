@@ -34,7 +34,7 @@ void ListWidgetInit(EWidgetList *list, int size_x, int size_y, DrawParam *dParam
     memcpy(list->widget.go.name, "Widget_List", 11);
     list->widget.type = ENGINE_WIDGET_TYPE_LIST;
 
-    list->widget.color = vec4_f(0.4, 0.4, 0.4, 1.0);
+    list->widget.color = vec3_f(0.4, 0.4, 0.4);
     list->widget.transparent = 0.0f;
 
     list->size_x = size_x;
@@ -43,7 +43,7 @@ void ListWidgetInit(EWidgetList *list, int size_x, int size_y, DrawParam *dParam
     Transform2DSetScale(&list->widget, list->size_x, list->size_y);
 }
 
-void ListWidgetSetColor(EWidgetList *list, vec4 color){
+void ListWidgetSetColor(EWidgetList *list, vec3 color){
 
     list->widget.color = color;
 
@@ -60,7 +60,7 @@ void ListWidgetSetColor(EWidgetList *list, vec4 color){
 EWidgetButton *ListWidgetAddItem(EWidgetList *list, const char *text, DrawParam *dParam){
     list->size ++;
 
-    EWidgetButton *item = (EWidgetButton *) calloc(1, sizeof(EWidgetButton));
+    EWidgetButton *item = (EWidgetButton *) AllocateMemory(1, sizeof(EWidgetButton));
 
     Transform2DSetScale(&list->widget, list->size_x, list->size_y * list->size);
     ButtonWidgetInit(item, text, dParam, &list->widget);
@@ -93,7 +93,7 @@ void ListWidgetRemoveItem(EWidgetList *list, int num){
     if(child == NULL)
         return;
 
-    if(child->next != NULL && child->before != NULL)
+    /*if(child->next != NULL && child->before != NULL)
     {
         ChildStack *next = child->next;
         ChildStack *before = child->before;
@@ -101,7 +101,7 @@ void ListWidgetRemoveItem(EWidgetList *list, int num){
         WidgetDestroy(child->node);
         child->node = NULL;
 
-        free(child);
+        FreeMemory(child);
         next->before = before;
         before->next = next;
 
@@ -111,7 +111,7 @@ void ListWidgetRemoveItem(EWidgetList *list, int num){
 
         child->next->before = NULL;
         list->widget.child = child->next;
-        free(child);
+        FreeMemory(child);
 
     }else if(child->before != NULL){
         WidgetDestroy(child->node);
@@ -120,7 +120,7 @@ void ListWidgetRemoveItem(EWidgetList *list, int num){
         child->before->next = NULL;
         list->widget.last = child->before;
 
-        free(child);
+        FreeMemory(child);
 
     }else{
         if(list->widget.child->node != NULL)
@@ -131,12 +131,12 @@ void ListWidgetRemoveItem(EWidgetList *list, int num){
 
         if(list->widget.child != NULL)
         {
-            free(list->widget.child);
+            FreeMemory(list->widget.child);
             list->widget.last = NULL;
             list->widget.child = NULL;
         }
     }
-
+*/
     list->size--;
 
     Transform2DSetScale(&list->widget, list->size_x, list->size_y * list->size);

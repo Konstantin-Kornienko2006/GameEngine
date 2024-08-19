@@ -4,7 +4,9 @@
 
 #include "Tools/e_tools.h"
 
+#include "Core/e_memory.h"
 #include "Core/e_camera.h"
+#include "Core/e_device.h"
 #include "Core/pipeline.h"
 #include "Core/e_buffer.h"
 #include "Core/e_texture.h"
@@ -16,6 +18,8 @@
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
 #include "Data/e_resource_export.h"
+
+extern ZEngine engine;
 
 void Particle3DFind(ParticleObject3D *particle){
 
@@ -60,9 +64,9 @@ void Particle3DDefaultUpdate(ParticleObject3D* particle, BluePrintDescriptor *de
     vertexParam *vParam = &particle->go.graphObj.shapes[0].vParam;
 
     if(vParam->vertices != NULL)
-        free(vParam->vertices);
+        FreeMemory(vParam->vertices);
 
-    vParam->vertices = calloc(particle->num_parts, sizeof(ParticleVertex3D));
+    vParam->vertices = AllocateMemory(particle->num_parts, sizeof(ParticleVertex3D));
 
     ParticleVertex3D *verts = vParam->vertices;
 
@@ -76,11 +80,12 @@ void Particle3DDefaultUpdate(ParticleObject3D* particle, BluePrintDescriptor *de
     BuffersUpdateVertex(vParam);
 
 
-    GameObject3DDescriptorModelUpdate(particle, descriptor);
+    GameObject3DDescriptorModelUpdate((GameObject3D *)particle, descriptor);
 
 }
 
 void Particle3DDefaultDraw(GameObject3D* go){
+    ZDevice *device = (ZDevice *)engine.device;
 
     if(go->graphObj.shapes[0].vParam.verticesSize == 0)
         return;
@@ -89,31 +94,31 @@ void Particle3DDefaultDraw(GameObject3D* go){
     {
         BluePrintPack *pack = &go->graphObj.blueprints.blue_print_packs[i];
 
-        if(pack->render_point == current_render)
+        if(pack->render_point == engine.current_render)
         {
             ShaderPack *pack = &go->graphObj.gItems.shader_packs[i];
 
             for(int j=0; j < pack->num_pipelines; j++){
 
-                vkCmdBindPipeline(commandBuffers[imageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].pipeline);
+                vkCmdBindPipeline(device->commandBuffers[engine.imageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].pipeline);
 
                 PipelineSetting *settings = &go->graphObj.blueprints.blue_print_packs[i].settings[j];
 
-                vkCmdSetViewport(commandBuffers[imageIndex], 0, 1, &settings->viewport);
-                vkCmdSetScissor(commandBuffers[imageIndex], 0, 1, &settings->scissor);
+                vkCmdSetViewport(device->commandBuffers[engine.imageIndex], 0, 1, (const VkViewport *)&settings->viewport);
+                vkCmdSetScissor(device->commandBuffers[engine.imageIndex], 0, 1, (const VkRect2D *)&settings->scissor);
 
-                VkBuffer vertexBuffers[] = {go->graphObj.shapes[settings->vert_indx].vParam.vertexBuffer};
+                VkBuffer vertexBuffers[] = {go->graphObj.shapes[settings->vert_indx].vParam.buffer.buffer};
                 VkDeviceSize offsets[] = {0};
 
-                vkCmdBindVertexBuffers(commandBuffers[imageIndex], 0, 1, vertexBuffers, offsets);
+                vkCmdBindVertexBuffers(device->commandBuffers[engine.imageIndex], 0, 1, vertexBuffers, offsets);
 
-                vkCmdBindDescriptorSets(commandBuffers[imageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].layout, 0, 1, &pack->descriptor.descr_sets[imageIndex], 0, NULL);
+                vkCmdBindDescriptorSets(device->commandBuffers[engine.imageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].layout, 0, 1, &pack->descriptor.descr_sets[engine.imageIndex], 0, NULL);
 
                 if(settings->flags & ENGINE_PIPELINE_FLAG_DRAW_INDEXED){
-                    vkCmdBindIndexBuffer(commandBuffers[imageIndex], go->graphObj.shapes[settings->vert_indx].iParam.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-                    vkCmdDrawIndexed(commandBuffers[imageIndex], go->graphObj.shapes[settings->vert_indx].iParam.indexesSize, 1, 0, 0, 0);
+                    vkCmdBindIndexBuffer(device->commandBuffers[engine.imageIndex], go->graphObj.shapes[settings->vert_indx].iParam.buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+                    vkCmdDrawIndexed(device->commandBuffers[engine.imageIndex], go->graphObj.shapes[settings->vert_indx].iParam.indexesSize, 1, 0, 0, 0);
                 }else
-                    vkCmdDraw(commandBuffers[imageIndex], go->graphObj.shapes[settings->vert_indx].vParam.verticesSize, 1, 0, 0);
+                    vkCmdDraw(device->commandBuffers[engine.imageIndex], go->graphObj.shapes[settings->vert_indx].vParam.verticesSize, 1, 0, 0);
             }
         }
     }
@@ -121,11 +126,11 @@ void Particle3DDefaultDraw(GameObject3D* go){
 
 void Particle3DInit(ParticleObject3D* particle, DrawParam dParam){
 
-    GameObjectSetUpdateFunc(particle, (void *)GameObject3DDefaultUpdate);
-    GameObjectSetDrawFunc(particle, (void *)Particle3DDefaultDraw);
-    GameObjectSetCleanFunc(particle, (void *)GameObject3DClean);
-    GameObjectSetRecreateFunc(particle, (void *)GameObject3DRecreate);
-    GameObjectSetDestroyFunc(particle, (void *)GameObject3DDestroy);
+    GameObjectSetUpdateFunc((GameObject *)particle, (void *)GameObject3DDefaultUpdate);
+    GameObjectSetDrawFunc((GameObject *)particle, (void *)Particle3DDefaultDraw);
+    GameObjectSetCleanFunc((GameObject *)particle, (void *)GameObject3DClean);
+    GameObjectSetRecreateFunc((GameObject *)particle, (void *)GameObject3DRecreate);
+    GameObjectSetDestroyFunc((GameObject *)particle, (void *)GameObject3DDestroy);
 
     Transform3DInit(&particle->go.transform);
     GraphicsObjectInit(&particle->go.graphObj, ENGINE_VERTEX_TYPE_3D_PARTICLE);
@@ -135,16 +140,16 @@ void Particle3DInit(ParticleObject3D* particle, DrawParam dParam){
     particle->go.graphObj.gItems.perspective = true;
     particle->go.self.flags = 0;
 
-    particle->go.graphObj.shapes[0].vParam.vertices = calloc(particle->num_parts, sizeof(ParticleVertex3D));
+    particle->go.graphObj.shapes[0].vParam.vertices = AllocateMemory(particle->num_parts, sizeof(ParticleVertex3D));
     particle->go.graphObj.num_shapes = 1;
-    particle->particles = (Particle3D*) calloc(particle->num_parts, sizeof(Particle3D));
+    particle->particles = (Particle3D*) AllocateMemory(particle->num_parts, sizeof(Particle3D));
 
-    particle->go.images = calloc(1, sizeof(GameObjectImage));
+    particle->go.images = AllocateMemory(1, sizeof(GameObjectImage));
 
     if(strlen(dParam.diffuse) != 0)
     {
         int len = strlen(dParam.diffuse);
-        particle->go.images->path = calloc(len + 1, sizeof(char));
+        particle->go.images->path = AllocateMemory(len + 1, sizeof(char));
         memcpy(particle->go.images->path, dParam.diffuse, len);
         particle->go.images->path[len] = '\0';
         //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
@@ -177,7 +182,7 @@ void Particle3DAddDefault(ParticleObject3D* particle, void *render)
     setting.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     setting.flags &= ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED);
 
-    GameObject3DAddSettingPipeline(particle, nums, &setting);
+    GameObject3DAddSettingPipeline((GameObject3D *)particle, nums, &setting);
 
     particle->go.graphObj.blueprints.num_blue_print_packs ++;
 }

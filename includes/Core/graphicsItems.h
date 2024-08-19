@@ -1,6 +1,8 @@
 #ifndef GRAPHICSITEMS_H
 #define GRAPHICSITEMS_H
 
+#include "Core/e_buffer.h"
+
 #include "Variabels/engine_includes.h"
 
 #define MAX_SHAPES 10
@@ -23,7 +25,7 @@ typedef struct{
 typedef struct{
     void *descr_pool;
     void *descr_set_layout;
-    void **descr_sets;
+    VkDescriptorSet *descr_sets;
 } ShaderDescriptor;
 
 typedef struct{
@@ -39,8 +41,7 @@ typedef struct{
 } GraphicItems;
 
 typedef struct{
-    void* vertexBuffer;
-    void* vertexBufferMemory;
+    BufferObject buffer;
     uint32_t typeSize;
     uint32_t verticesSize;
     uint32_t bufferSize;
@@ -49,8 +50,7 @@ typedef struct{
 } vertexParam;
 
 typedef struct{
-    void* indexBuffer;
-    void* indexBufferMemory;
+    BufferObject buffer;
     uint32_t typeSize;
     uint32_t indexesSize;
     uint32_t bufferSize;

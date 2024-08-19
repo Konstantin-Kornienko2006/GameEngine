@@ -2,15 +2,17 @@
 
 #include "Data/e_resource_data.h"
 
+extern ZEngine engine;
+
 void LightObjectFillDirLights(DirLightBuffer *blb)
 {
     uint32_t num_dirs = 0;
 
-    if(e_var_num_lights > 0)
+    if(engine.DataR.e_var_num_lights > 0)
     {
-        LightObject **lights = e_var_lights;
+        LightObject **lights = (LightObject **)engine.DataR.e_var_lights;
 
-        for(int i=0;i < e_var_num_lights; i++)
+        for(int i=0;i < engine.DataR.e_var_num_lights; i++)
         {
             if (lights[i]->type == ENGINE_LIGHT_TYPE_DIRECTIONAL){
                 blb->dir[num_dirs].ambient = lights[i]->ambient;
@@ -29,11 +31,11 @@ void LightObjectFillPointLights(PointLightBuffer *plb)
 {
     uint32_t num_points = 0;
 
-    if(e_var_num_lights > 0)
+    if(engine.DataR.e_var_num_lights > 0)
     {
-        LightObject **lights = e_var_lights;
+        LightObject **lights = (LightObject **)engine.DataR.e_var_lights;
 
-        for(int i=0;i < e_var_num_lights; i++)
+        for(int i=0;i < engine.DataR.e_var_num_lights; i++)
         {
             if (lights[i]->type == ENGINE_LIGHT_TYPE_POINT){
                 plb->points[num_points].position = lights[i]->position;
@@ -54,11 +56,11 @@ void LightObjectFillSpotLights(SpotLightBuffer *slb)
 {
     uint32_t num_spots = 0;
 
-    if(e_var_num_lights > 0)
+    if(engine.DataR.e_var_num_lights > 0)
     {
-        LightObject **lights = e_var_lights;
+        LightObject **lights = (LightObject **)engine.DataR.e_var_lights;
 
-        for(int i=0;i < e_var_num_lights; i++)
+        for(int i=0;i < engine.DataR.e_var_num_lights; i++)
         {
             if (lights[i]->type == ENGINE_LIGHT_TYPE_SPOT){
                 slb->spots[num_spots].position = lights[i]->position;
@@ -79,11 +81,11 @@ void LightObjectFillSpotLights(SpotLightBuffer *slb)
 
 void LightObjectFillLightStatus(LightStatusBuffer *lsb)
 {
-    if(e_var_num_lights > 0)
+    if(engine.DataR.e_var_num_lights > 0)
     {
-        LightObject **lights = e_var_lights;
+        LightObject **lights = (LightObject **)engine.DataR.e_var_lights;
 
-        for(int i=0;i < e_var_num_lights; i++)
+        for(int i=0;i < engine.DataR.e_var_num_lights; i++)
         {
             switch(lights[i]->type){
                 case ENGINE_LIGHT_TYPE_DIRECTIONAL:
@@ -158,21 +160,21 @@ void LightObjectSetSpecularColor(LightObject *lo, float r, float g, float b)
 
 void LightObjectDraw(LightObject *lo)
 {
-    LightObject **lights = e_var_lights;
+    LightObject **lights = (LightObject **)engine.DataR.e_var_lights;
 
-    if(e_var_num_lights > 0)
+    if(engine.DataR.e_var_num_lights > 0)
     {
-        for(int i=0; i < e_var_num_lights; i++)
+        for(int i=0; i < engine.DataR.e_var_num_lights; i++)
             if(lights[i] == lo)
                 return;
     }
 
-    if(e_var_num_lights + 1 > 32)
+    if(engine.DataR.e_var_num_lights + 1 > 32)
         return;
 
-    e_var_num_lights++;
+    engine.DataR.e_var_num_lights++;
 
-    e_var_lights = realloc(e_var_lights, e_var_num_lights * sizeof(LightObject* ));
-    e_var_lights[e_var_num_lights - 1] = lo;
+    engine.DataR.e_var_lights = realloc(engine.DataR.e_var_lights, engine.DataR.e_var_num_lights * sizeof(LightObject* ));
+    engine.DataR.e_var_lights[engine.DataR.e_var_num_lights - 1] = lo;
 
 }

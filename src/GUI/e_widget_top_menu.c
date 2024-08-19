@@ -3,6 +3,8 @@
 
 #include "Data/e_resource_data.h"
 
+extern ZEngine engine;
+
 int TopMenuWidgetFocus(EWidget *widget, void *entry, void *args)
 {
     EWidget *menu= widget;
@@ -123,8 +125,8 @@ void TopMenuWidgetResize(EWidgetTopMenu *top_menu)
         Transform2DSetPosition(&top_menu->top, 0, 0);
         Transform2DSetPosition(&top_menu->widget, 0, 20);
     }else{
-        Transform2DSetScale(&top_menu->widget, WIDTH, HEIGHT);
-        Transform2DSetScale(&top_menu->top, WIDTH, 20);
+        Transform2DSetScale(&top_menu->widget, engine.width, engine.height);
+        Transform2DSetScale(&top_menu->top, engine.width, 20);
         Transform2DSetPosition(&top_menu->top, 0, 0);
         Transform2DSetPosition(&top_menu->widget, 0, 0);
     }
@@ -159,7 +161,7 @@ int TopMenuWidgetAddMenu(EWidgetTopMenu *top_menu, char *name, DrawParam *dParam
 {
     top_menu->num_elems ++;
 
-    EWidgetButton *b_menu = calloc(1, sizeof(EWidgetButton));
+    EWidgetButton *b_menu = AllocateMemory(1, sizeof(EWidgetButton));
     ButtonWidgetInit(b_menu, name, dParam, &top_menu->top);
 
     Transform2DSetPosition(b_menu, (top_menu->num_elems - 1) * 240, 0);
@@ -181,7 +183,7 @@ void TopMenuWidgetAddItem(EWidgetTopMenu *top_menu, int num_menu, char *name, Dr
         return top_menu->list[num_menu].list;
     }
 
-    EWidgetList *l_menu = calloc(1, sizeof(EWidgetList));
+    EWidgetList *l_menu = AllocateMemory(1, sizeof(EWidgetList));
 
     EWidget *point;
 
@@ -191,7 +193,7 @@ void TopMenuWidgetAddItem(EWidgetTopMenu *top_menu, int num_menu, char *name, Dr
         point = top_menu->window;
 
     ListWidgetInit(l_menu, 110, 20, dParam, point);
-    ListWidgetSetColor(l_menu, (vec4){ 0.6, 0.6, 0.6, 1.0});
+    ListWidgetSetColor(l_menu, (vec3){ 0.6, 0.6, 0.6});
 
     vec2 pos = Transform2DGetPosition(top_menu->list[top_menu->num_elems - 1].button);
     Transform2DSetPosition(l_menu, pos.x, 40);

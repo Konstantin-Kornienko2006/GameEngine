@@ -1,6 +1,8 @@
 #ifndef E_TEXTURE_VARIABLES_H
 #define E_TEXTURE_VARIABLES_H
 
+#include "vulkan/vulkan.h"
+
 #include "engine_includes.h"
 
 #ifdef __cplusplus
@@ -10,7 +12,8 @@ extern "C"
 
 typedef enum{
     ENGINE_TEXTURE2D_FLAG_GENERATED = 0x1,
-    ENGINE_TEXTURE2D_FLAG_VIEW = 0x2
+    ENGINE_TEXTURE2D_FLAG_VIEW = 0x2,
+    ENGINE_TEXTURE2D_IS_FONT = 0x4
 } EngineTexture2DFlag;
 
 typedef struct{
@@ -25,18 +28,18 @@ typedef struct{
 } ImageFileData;
 
 typedef struct{
-    void *textureImage;
-    void *textureImageMemory;
-    void *textureImageView;
-    void *textureSampler;
+    VkImage image;
+    VkImageView image_view;
+    VkDeviceMemory memory;
+    VkSampler sampler;
     uint32_t textureType;
     uint32_t imageLayout;
     ImageFileData image_data;
-    uint32_t flags;
+    EngineTexture2DFlag flags;
 } Texture2D;
 
 typedef struct{
-    char path[2048];
+    char path[1024];
     Texture2D texture;
 } engine_buffered_image;
 

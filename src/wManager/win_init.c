@@ -214,15 +214,15 @@ int _wManagerInitWin32(void)
         SetProcessDPIAware();
 
     if (!createHelperWindow())
-        return GLFW_FALSE;*/
+        return ENGINE_FALSE;*/
 
     //Some hacks are needed to support Remote Desktop...
     /*initRemoteSession();
     if (_wMWindow.isRemoteSession && _wMWindow.blankCursor == NULL )
     {
-        _wManagerInputErrorWin32(GLFW_PLATFORM_ERROR,
+        _wManagerInputErrorWin32(ENGINE_PLATFORM_ERROR,
                              "Win32: Failed to create blank cursor for remote session.");
-        return GLFW_FALSE;
+        return ENGINE_FALSE;
     }
 
     _wManagerPollMonitorsWin32();*/

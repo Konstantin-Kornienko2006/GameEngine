@@ -18,7 +18,7 @@ typedef struct{
     EWidget widget;
     EWidgetText text;
     EWidgetImage image;
-    vec4 selfColor;
+    vec3 selfColor;
 } EWidgetButton;
 
 void ButtonWidgetInit(EWidgetButton *button, const char *text, DrawParam *dParam, EWidget *parent);

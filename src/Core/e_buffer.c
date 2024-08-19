@@ -1,4 +1,7 @@
+#include "Core/e_memory.h"
+#include "Core/e_device.h"
 #include "Core/e_buffer.h"
+#include "Core/e_blue_print.h"
 
 #include <vulkan/vulkan.h>
 
@@ -7,50 +10,19 @@
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
 
-void AcceptAllocBuffer(uint32_t type, void *buffer, void *buffer_memory)
-{
-    BufferStack *stack;
-
-    if(alloc_buffers_memory_head->node == NULL){
-        alloc_buffers_memory_head->next = calloc(1, sizeof(ChildStack));
-        alloc_buffers_memory_head->node = calloc(1, sizeof(BufferStack));
-
-        alloc_buffers_memory_head->next->before = alloc_buffers_memory_head;
-
-        stack = alloc_buffers_memory_head->node;
-        stack->some_buffer = buffer;
-        stack->some_memory = buffer_memory;
-        stack->type = type;
-    }
-    else{
-
-        ChildStack *child = alloc_buffers_memory_head->next;
-
-        while(child->next != NULL)
-        {
-            child = child->next;
-        }
-
-        child->next = calloc(1, sizeof(ChildStack));
-        child->next->before = child;
-        child->node = calloc(1, sizeof(BufferStack));
-
-        stack = child->node;
-        stack->some_buffer = buffer;
-        stack->some_memory = buffer_memory;
-        stack->type = type;
-    }
-}
+extern ZEngine engine;
 
 void BuffersCreateCommandPool() {
-    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(e_physicalDevice);
+    ZDevice *device = (ZDevice *)engine.device;
+
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(device->e_physicalDevice);
 
     VkCommandPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-    if (vkCreateCommandPool(e_device, &poolInfo, NULL, &commandPool) != VK_SUCCESS) {
+    if (vkCreateCommandPool(device->e_device, &poolInfo, NULL, (struct VkCommandPool_T **)&device->commandPool) != VK_SUCCESS) {
         printf("failed to create command pool!");
         exit(1);
     }
@@ -58,42 +30,46 @@ void BuffersCreateCommandPool() {
 }
 
 void BuffersCreateCommand(){
-    commandBuffers = (VkCommandBuffer *) calloc(imagesCount, sizeof(VkCommandBuffer));
+    ZDevice *device = (ZDevice *)engine.device;
 
+    device->commandBuffers = AllocateMemoryP(engine.imagesCount, sizeof(VkCommandBuffer), &device);
 
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = commandPool;
+    allocInfo.commandPool = device->commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t) imagesCount;
+    allocInfo.commandBufferCount = (uint32_t) engine.imagesCount;
 
-    if (vkAllocateCommandBuffers(e_device, &allocInfo, commandBuffers) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(device->e_device, &allocInfo, (struct VkCommandBuffer_T **)device->commandBuffers) != VK_SUCCESS) {
         printf("failed to allocate command buffers!");
         exit(1);
     }
 
 }
 
-int BuffersCreateVertex(vertexParam* vert) {
+int BuffersCreateVertex(struct VertexParam_T* vert) {
+    vertexParam *vertex = (vertexParam *)vert;
+
     //Выделение памяти
     VkDeviceSize bufferSize;
 
-    bufferSize = vert->typeSize * vert->verticesSize;
+    bufferSize = vertex->typeSize * vertex->verticesSize;
 
     if(bufferSize == 0)
         return 1;
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vert->vertexBuffer, &vert->vertexBufferMemory, ENGINE_BUFFER_ALLOCATE_VERTEX);
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vertex->buffer, ENGINE_BUFFER_ALLOCATE_VERTEX);
 
-    vert->bufferSize = bufferSize;
-    vert->extend = false;
+    vertex->bufferSize = bufferSize;
+    vertex->extend = false;
 
     return 0;
 }
 
-int BuffersCreateVertexInst(vertexParam* vert) {
+int BuffersCreateVertexInst(struct VertexParam_T* vert) {
+    vertexParam *vertex = (vertexParam *)vert;
 
-    if(vert->verticesSize >= MAX_VERTEX_COUNT)
+    if(vertex->verticesSize >= MAX_VERTEX_COUNT)
     {
         printf("Очень много вершин!\n");
         return 1;
@@ -102,165 +78,168 @@ int BuffersCreateVertexInst(vertexParam* vert) {
     //Выделение памяти
     VkDeviceSize bufferSize;
 
-    bufferSize = vert->typeSize * MAX_VERTEX_COUNT;
+    bufferSize = vertex->typeSize * MAX_VERTEX_COUNT;
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vert->vertexBuffer, &vert->vertexBufferMemory, ENGINE_BUFFER_ALLOCATE_VERTEX);
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vertex->buffer, ENGINE_BUFFER_ALLOCATE_VERTEX);
 
-    vert->bufferSize = bufferSize;
-    vert->extend = true;
+    vertex->bufferSize = bufferSize;
+    vertex->extend = true;
 
     return 0;
 }
 
-int BuffersUpdateVertex(vertexParam* vert) {
+int BuffersUpdateVertex(struct VertexParam_T* vert) {
+    vertexParam *vertex = (vertexParam *)vert;
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
+    ZDevice *device = (ZDevice *)engine.device;
+
+    BufferObject stagingBuffer;
     VkDeviceSize bufferSize;
 
-    bufferSize = vert->typeSize * vert->verticesSize;
+    bufferSize = vertex->typeSize * vertex->verticesSize;
 
-    if(!vert->extend){
-        if(bufferSize != vert->bufferSize)
-            return;
+    if(!vertex->extend){
+        if(bufferSize != vertex->bufferSize)
+            return 1;
     }
     else{
-        if(vert->verticesSize >= MAX_VERTEX_COUNT)
+        if(vertex->verticesSize >= MAX_VERTEX_COUNT)
         {
             printf("Очень много вершин!\n");
-            return;
+            return 1;
         }
     }
 
-    if(vert->extend)
-        if(bufferSize != vert->bufferSize)
-            return;
+    if(vertex->extend)
+        if(bufferSize != vertex->bufferSize)
+            return 1;
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory, ENGINE_BUFFER_ALLOCATE_STAGING);
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, ENGINE_BUFFER_ALLOCATE_STAGING);
 
     //Изменение памяти
     void* data;
-    vkMapMemory(e_device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memset(data, 0, vert->bufferSize);
-    memcpy(data, vert->vertices, (size_t) bufferSize);
-    vkUnmapMemory(e_device, stagingBufferMemory);
+    vkMapMemory(device->e_device, stagingBuffer.memory, 0, bufferSize, 0, &data);
+    memset(data, 0, vertex->bufferSize);
+    memcpy(data, vertex->vertices, (size_t) bufferSize);
+    vkUnmapMemory(device->e_device, stagingBuffer.memory);
 
     //-------------
 
-    BuffersCopy(stagingBuffer, vert->vertexBuffer, bufferSize);
+    BuffersCopy(&stagingBuffer, &vertex->buffer, bufferSize);
 
-    BuffersDestroyBuffer(stagingBuffer);
+    BuffersDestroyBuffer(&stagingBuffer);
 
-    if(vert->extend)
-        vert->bufferSize = bufferSize;
+    if(vertex->extend)
+        vertex->bufferSize = bufferSize;
 
     return 0;
 }
 
-int BuffersCreateIndex(indexParam* ind) {
+int BuffersCreateIndex(struct IndexParam_T* indx) {
+    indexParam *index = (indexParam *)indx;
 
-    VkDeviceSize bufferSize = ind->typeSize * ind->indexesSize;
+    VkDeviceSize bufferSize = index->typeSize * index->indexesSize;
 
     if(bufferSize == 0)
         return 1;
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &ind->indexBuffer, &ind->indexBufferMemory, ENGINE_BUFFER_ALLOCATE_INDEX);
-    ind->bufferSize = bufferSize;
-    ind->extend = false;
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &index->buffer, ENGINE_BUFFER_ALLOCATE_INDEX);
+    index->bufferSize = bufferSize;
+    index->extend = false;
 
     return 0;
 }
 
-int BuffersCreateIndexInst(indexParam* ind) {
+int BuffersCreateIndexInst(struct IndexParam_T* indx) {
+    indexParam *index = (indexParam *)indx;
 
-    if(ind->typeSize >= MAX_INDEX_COUNT)
+    if(index->typeSize >= MAX_INDEX_COUNT)
     {
         printf("Очень много индексов!\n");
-        return;
+        return 1;
     }
 
-    VkDeviceSize bufferSize = ind->typeSize * MAX_INDEX_COUNT;
+    VkDeviceSize bufferSize = index->typeSize * MAX_INDEX_COUNT;
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &ind->indexBuffer, &ind->indexBufferMemory, ENGINE_BUFFER_ALLOCATE_INDEX);
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &index->buffer, ENGINE_BUFFER_ALLOCATE_INDEX);
 
-    ind->bufferSize = bufferSize;
-    ind->extend = true;
+    index->bufferSize = bufferSize;
+    index->extend = true;
 
     return 0;
 }
 
-int BuffersUpdateIndex(indexParam* ind)
+int BuffersUpdateIndex(struct IndexParam_T* indx)
 {
+    indexParam *index = (indexParam *)indx;
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
+    ZDevice *device = (ZDevice *)engine.device;
 
+    BufferObject stagingBuffer;
     VkDeviceSize bufferSize;
 
-    bufferSize = ind->typeSize * ind->indexesSize;
+    bufferSize = index->typeSize * index->indexesSize;
 
-    if(!ind->extend){
-        if(bufferSize != ind->bufferSize)
-            return;
+    if(!index->extend){
+        if(bufferSize != index->bufferSize)
+            return 1;
     }
     else{
-        if(ind->indexesSize >= MAX_INDEX_COUNT)
+        if(index->indexesSize >= MAX_INDEX_COUNT)
         {
             printf("Очень много индексов!\n");
-            return;
+            return 1;
         }
     }
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory, ENGINE_BUFFER_ALLOCATE_STAGING);
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, ENGINE_BUFFER_ALLOCATE_STAGING);
 
     void* data;
-    vkMapMemory(e_device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memset(data, 0, ind->bufferSize);
-    memcpy(data, ind->indices, (size_t) bufferSize);
-    vkUnmapMemory(e_device, stagingBufferMemory);
+    vkMapMemory(device->e_device, stagingBuffer.memory, 0, bufferSize, 0, &data);
+    memset(data, 0, index->bufferSize);
+    memcpy(data, index->indices, (size_t) bufferSize);
+    vkUnmapMemory(device->e_device, stagingBuffer.memory);
 
-    BuffersCopy(stagingBuffer, ind->indexBuffer, bufferSize);
+    BuffersCopy(&stagingBuffer, &index->buffer, bufferSize);
 
-    BuffersDestroyBuffer(stagingBuffer);
+    BuffersDestroyBuffer(&stagingBuffer);
 
-    if(ind->extend)
-        ind->bufferSize = bufferSize;
+    if(index->extend)
+        index->bufferSize = bufferSize;
 
     return 0;
 }
 
-void BuffersCreateUniform(UniformStruct* uniform) {
+void BuffersCreateUniform(BufferContainer* uniform) {
 
-    uniform->uniformBuffers = (VkBuffer*) calloc(imagesCount, sizeof(VkBuffer));
-    uniform->uniformBuffersMemory = (VkDeviceMemory*) calloc(imagesCount, sizeof(VkDeviceMemory));
+    uniform->buffers = AllocateMemoryP(uniform->size, sizeof(BufferObject), uniform);
 
-    for (int i = 0; i < imagesCount; i++) {
-        BuffersCreate(uniform->size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &uniform->uniformBuffers[i], &uniform->uniformBuffersMemory[i], ENGINE_BUFFER_ALLOCATE_UNIFORM);
+    for (int i = 0; i < uniform->size; i++) {
+        BuffersCreate(uniform->type_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &uniform->buffers[i], ENGINE_BUFFER_ALLOCATE_UNIFORM);
     }
 }
 
-void BuffersCreateStorage(UniformStruct* uniform){
-    uniform->uniformBuffers = (VkBuffer*) calloc(imagesCount, sizeof(VkBuffer));
-    uniform->uniformBuffersMemory = (VkDeviceMemory*) calloc(imagesCount, sizeof(VkDeviceMemory));
+void BuffersCreateStorage(BufferContainer* uniform){
+    uniform->buffers = AllocateMemoryP(uniform->size, sizeof(BufferObject), uniform);
 
-    for (int i = 0; i < imagesCount; i++) {
-        BuffersCreate(uniform->size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &uniform->uniformBuffers[i], &uniform->uniformBuffersMemory[i], ENGINE_BUFFER_ALLOCATE_UNIFORM);
+    for (int i = 0; i < uniform->size; i++) {
+        BuffersCreate(uniform->type_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &uniform->buffers[i], ENGINE_BUFFER_ALLOCATE_UNIFORM);
     }
 }
 
-void BuffersCreateStorageVertex(UniformStruct* uniform){
-    uniform->uniformBuffers = (VkBuffer*) calloc(imagesCount, sizeof(VkBuffer));
-    uniform->uniformBuffersMemory = (VkDeviceMemory*) calloc(imagesCount, sizeof(VkDeviceMemory));
+void BuffersCreateStorageVertex(BufferContainer* uniform){
+    uniform->buffers = AllocateMemoryP(uniform->size, sizeof(BufferObject), uniform);
 
-    for (int i = 0; i < imagesCount; i++) {
-        BuffersCreate(uniform->size,VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &uniform->uniformBuffers[i], &uniform->uniformBuffersMemory[i], ENGINE_BUFFER_ALLOCATE_UNIFORM);
+    for (int i = 0; i < uniform->size; i++) {
+        BuffersCreate(uniform->type_size,VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &uniform->buffers[i], ENGINE_BUFFER_ALLOCATE_UNIFORM);
     }
 }
 
 uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+    ZDevice *device = (ZDevice *)engine.device;
 
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(e_physicalDevice, &memProperties);
+    vkGetPhysicalDeviceMemoryProperties(device->e_physicalDevice, &memProperties);
 
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
         if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
@@ -273,165 +252,193 @@ uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
 
 }
 
-void BuffersCreate(uint64_t size, uint32_t usage, uint32_t properties, void** buffer, void** bufferMemory, uint32_t type) {
+uint32_t alloc_counter_b = 0;
+
+void AcceptAllocBuffer(uint32_t type, BufferObject *buffer)
+{
+    buffer->type = type;
+
+    if(engine.cache.alloc_buffers_memory_head->node == NULL){
+        engine.cache.alloc_buffers_memory_head->next = calloc(1, sizeof(ChildStack));
+        engine.cache.alloc_buffers_memory_head->node = buffer;
+    }
+    else{
+
+        ChildStack *child = engine.cache.alloc_buffers_memory_head;
+
+        while(child->next != NULL)
+        {
+            child = child->next;
+        }
+
+        child->next = calloc(1, sizeof(ChildStack));
+        child->node = buffer;
+    }
+
+    alloc_counter_b ++;
+}
+
+void BuffersCreate(uint64_t size, uint32_t usage, uint32_t properties, BufferObject *buffer, uint32_t type) {
+    ZDevice *device = (ZDevice *)engine.device;
+
     VkBufferCreateInfo bufferInfo = {};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateBuffer(e_device, &bufferInfo, NULL, buffer) != VK_SUCCESS) {
+    if (vkCreateBuffer(device->e_device, &bufferInfo, NULL, &buffer->buffer) != VK_SUCCESS) {
         printf("failed to create buffer!");
         exit(1);
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(e_device, *buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(device->e_device, buffer->buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO; 
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(e_device, &allocInfo, NULL, bufferMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(device->e_device, &allocInfo, NULL, &buffer->memory) != VK_SUCCESS) {
         printf("failed to allocate buffer memory!");
         exit(1);
     }
 
-    vkBindBufferMemory(e_device, *buffer, *bufferMemory, 0);
+    vkBindBufferMemory(device->e_device, buffer->buffer, buffer->memory, 0);
 
-    AcceptAllocBuffer(type, *buffer, *bufferMemory);
+    AcceptAllocBuffer(type, buffer);    
+}
+
+void BuffersDestroyBuffer(BufferObject *buffer)
+{
+    if(buffer == NULL || buffer->buffer == NULL)
+        return;
+
+    ZDevice *device = (ZDevice *)engine.device;
+
+    BufferObject *curr = NULL;
+
+    ChildStack *child = engine.cache.alloc_buffers_memory_head;
+    ChildStack *before = NULL;
+
+    while(child != NULL)
+    {
+        curr = child->node;
+
+        if(curr == buffer)
+            break;
+
+        before = child;
+        child = child->next;
+    }
+
+    if(curr == NULL){
+        printf("Can't find this memory 0x%x\n", buffer);
+        return;
+    }
+
+    if(child->next != NULL){
+        vkDestroyBuffer(device->e_device, curr->buffer, NULL);
+        vkFreeMemory(device->e_device, curr->memory, NULL);
+        curr->buffer = VK_NULL_HANDLE;
+        curr->memory = VK_NULL_HANDLE;
+
+        if(before != NULL)
+            before->next = child->next;
+        else
+            engine.cache.alloc_buffers_memory_head = child->next;
+
+        free(child);
+        child = NULL;
+
+    }else{
+        
+        if(before != NULL){
+            free(child);
+            child = NULL;  
+        } 
+    }
+
+    buffer->buffer = VK_NULL_HANDLE;
+    buffer->memory = VK_NULL_HANDLE;
+    buffer->type = 0;
 }
 
 void BuffersClearAll()
 {
+    ChildStack *child = engine.cache.alloc_buffers_memory_head;
+    
+    if(child == NULL)
+        return;
 
-    ChildStack *child = alloc_buffers_memory_head;
-
-    BufferStack *stack = NULL;
-
+    ChildStack *next = NULL;
+    
     uint32_t counter = 0;
+       
+    counter = 0;
 
-    while(child->next != NULL)
-    {
-        stack = child->node;
+    child = engine.cache.alloc_buffers_memory_head;
 
-        BuffersDestroyBuffer(stack->some_buffer);
+    while(child != NULL){    
+        
+        next = child->next;
 
-        free(child->node);
-        child->node = NULL;
+        if(child->node != NULL)
+            counter ++;
 
-        child = child->next;
-
-        free(child->before);
-
-        counter ++;
+        if(child->node != NULL)
+            BuffersDestroyBuffer(child->node);
+            
+        child = next;
     }
-
-    if(child->node != NULL){
-        stack = child->node;
-
-        BuffersDestroyBuffer(stack->some_buffer);
-
-        free(child->node);
-        child->node = NULL;
-
-        counter++;
+    
+    if(engine.cache.alloc_buffers_memory_head != NULL){
+        free(engine.cache.alloc_buffers_memory_head);
+        engine.cache.alloc_buffers_memory_head = NULL;
     }
-
-    free(alloc_buffers_memory_head);
 
     if(counter > 0)
-        printf("Количество не очищенных буфферов : %i\n", counter);
+        printf("Autofree vkBuffers count : %i\n", counter);
 }
 
-void BuffersDestroyBuffer(void *buffer)
-{
-    BufferStack *stack = NULL;
-
-    ChildStack *child = alloc_buffers_memory_head;
-
-    while(child->next != NULL)
-    {
-
-        stack = child->node;
-
-        if(stack->some_buffer == buffer)
-            break;
-
-        child = child->next;
+void BuffersDestroyContainer(BufferContainer *container){
+    for (int i = 0; i < container->size; i++) {
+        BuffersDestroyBuffer(&container->buffers[i]);
     }
-
-    stack = child->node;
-
-    if(stack == NULL){
-        perror("Такой области памяти нет!\n");
-        return;
-    }
-
-    if(child->next != NULL && child->before != NULL)
-    {
-        ChildStack *next = child->next;
-        ChildStack *before = child->before;
-
-        vkDestroyBuffer(e_device, stack->some_buffer, NULL);
-        vkFreeMemory(e_device, stack->some_memory, NULL);
-        free(child->node);
-        child->node = NULL;
-
-        free(child);
-        next->before = before;
-        before->next = next;
-
-    }else if(child->next != NULL){
-        vkDestroyBuffer(e_device, stack->some_buffer, NULL);
-        vkFreeMemory(e_device, stack->some_memory, NULL);
-        free(child->node);
-        child->node = NULL;
-
-        child->next->before = NULL;
-        alloc_buffers_memory_head = child->next;
-        free(child);
-
-    }else if(child->before != NULL){
-        vkDestroyBuffer(e_device, stack->some_buffer, NULL);
-        vkFreeMemory(e_device, stack->some_memory, NULL);
-        free(child->node);
-        child->node = NULL;
-
-        child->before->next = NULL;
-
-        free(child);
-
-    }
+    FreeMemory(container->buffers);
+    container->buffers = NULL;
+    container->size = 0;
 }
 
-void BuffersCopy(void* srcBuffer, void* dstBuffer, uint64_t size) {
+void BuffersCopy(BufferObject *srcBuffer, BufferObject *dstBuffer, uint64_t size) {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
     VkBufferCopy copyRegion = {};
     copyRegion.srcOffset = 0; // Optional
     copyRegion.dstOffset = 0; // Optional
     copyRegion.size = size;
-    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+    vkCmdCopyBuffer(commandBuffer, srcBuffer->buffer, dstBuffer->buffer, 1, &copyRegion);
 
     endSingleTimeCommands(commandBuffer);
 }
 
-void BuffersRecreateUniform(Blueprints* blueprints){
+void BuffersRecreateUniform(struct  BluePrints_T *bPrints){
+
+    Blueprints *blueprints = (Blueprints *)bPrints;
 
     for(int i=0; i < blueprints->num_blue_print_packs;i++)
     {
         BluePrintPack *pack = &blueprints->blue_print_packs[i];
 
-        for(int i=0;i < pack->num_descriptors;i++){
-            BluePrintDescriptor *descriptor = &pack->descriptors[i];
+        for(int j=0;j < pack->num_descriptors;j++){
+            BluePrintDescriptor *descriptor = &pack->descriptors[j];
 
             if(descriptor->descrType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
             {
-                int sizer = descriptor->buffsize;
-                descriptor->uniform->size = sizer;
-                BuffersCreateUniform(descriptor->uniform);
+                descriptor->uniform.size = engine.imagesCount;
+                descriptor->uniform.type_size = descriptor->buffsize;
+                BuffersCreateUniform(&descriptor->uniform);
             }
         }
     }

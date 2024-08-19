@@ -1,5 +1,7 @@
 #include "GUI/e_widget_entry.h"
 
+#include "Core/e_window.h"
+
 #include "Tools/e_tools.h"
 
 #include "wManager/manager_includes.h"
@@ -7,6 +9,8 @@
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
 #include "Data/e_resource_export.h"
+
+extern ZEngine engine;
 
 bool e_ctrl_press = false, e_c_press = false, e_v_press = false, e_pasted = false, e_copied = false;
 
@@ -44,6 +48,8 @@ int EntryWidgetCharInput(EWidget* widget, uint32_t codepoint, void *arg){
 
 int EntryWidgetKeyPressInput(EWidget* widget, int key, void *arg){
 
+    ZWindow *window = (ZWindow *)engine.window;
+
     EWidgetEntry *temp = widget;
 
     if(key == ENGINE_KEY_BACKSPACE)
@@ -74,7 +80,7 @@ int EntryWidgetKeyPressInput(EWidget* widget, int key, void *arg){
     if(e_ctrl_press == true && e_v_press == true && !e_pasted)
     {
 
-        char *clipboard = wManagerGetClipboardString(e_window);
+        char *clipboard = wManagerGetClipboardString(window->e_window);
 
         uint32_t size = strlen(clipboard);
 
@@ -246,7 +252,7 @@ void EntryWidgetInit(EWidgetEntry *entry, int fontSize, DrawParam *dParam, EWidg
     memcpy(entry->widget.go.name, "Entry", 5);
     entry->widget.type = ENGINE_WIDGET_TYPE_ENTRY;
 
-    entry->widget.color = (vec4){0.7, 0.7, 0.7, 1.0f};
+    entry->widget.color = (vec3){0.7, 0.7, 0.7};
 
     TextWidgetInitDefault(&entry->text, fontSize, dParam, &entry->widget);
     Transform2DSetPosition(&entry->text, 0, 10 + (fontSize * 2) );

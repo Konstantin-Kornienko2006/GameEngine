@@ -4,6 +4,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include "Core/e_memory.h"
 #include "Core/e_camera.h"
 #include "Core/e_blue_print.h"
 
@@ -17,9 +18,11 @@
 #include "Data/e_resource_export.h"
 #include "Data/e_resource_shapes.h"
 
+extern ZEngine engine;
+
 void SkyObjectSkyBufferUpdate(SkyObject *so, BluePrintDescriptor *descriptor)
 {
-    Camera3D *cam = cam3D;
+    Camera3D *cam = (Camera3D *)engine.cam3D;
 
     double time = wManagerGetTime();
 
@@ -32,36 +35,36 @@ void SkyObjectSkyBufferUpdate(SkyObject *so, BluePrintDescriptor *descriptor)
     sb.dir_light.y = 0.3f;
     sb.dir_light.z = 0;
 
-    if(e_var_num_lights > 0)
+    if(engine.DataR.e_var_num_lights > 0)
     {
-        LightObject **lights = e_var_lights;
+        LightObject **lights = (LightObject **)engine.DataR.e_var_lights;
 
-        for(int i=0;i < e_var_num_lights; i++)
+        for(int i=0;i < engine.DataR.e_var_num_lights; i++)
         {
             if(lights[i]->type == ENGINE_LIGHT_TYPE_DIRECTIONAL)
                 sb.dir_light = lights[i]->direction;
         }
     }
 
-    DescriptorUpdate(descriptor, &sb, sizeof(sb));
+    DescriptorUpdate(descriptor, (char *)&sb, sizeof(sb));
 }
 
 void SkyObjectInit(SkyObject *so, DrawParam *dParam, EngineSkyType type)
 {
     memset(so, 0, sizeof(SkyObject));
 
-    GameObjectSetUpdateFunc(so, (void *)GameObject2DDefaultUpdate);
-    GameObjectSetDrawFunc(so, (void *)GameObject2DDefaultDraw);
-    GameObjectSetCleanFunc(so, (void *)GameObject2DClean);
-    GameObjectSetRecreateFunc(so, (void *)GameObject2DRecreate);
-    GameObjectSetDestroyFunc(so, (void *)GameObject2DDestroy);
+    GameObjectSetUpdateFunc((GameObject *)so, (void *)GameObject2DDefaultUpdate);
+    GameObjectSetDrawFunc((GameObject *)so, (void *)GameObject2DDefaultDraw);
+    GameObjectSetCleanFunc((GameObject *)so, (void *)GameObject2DClean);
+    GameObjectSetRecreateFunc((GameObject *)so, (void *)GameObject2DRecreate);
+    GameObjectSetDestroyFunc((GameObject *)so, (void *)GameObject2DDestroy);
 
-    Transform3DInit(&so->go.transform);
+    Transform2DInit(&so->go.transform);
     GraphicsObjectInit(&so->go.graphObj, ENGINE_VERTEX_TYPE_SKY);
 
     so->type = type;
 
-    SkyVertex *some_vertex = calloc(4, sizeof(SkyVertex));
+    SkyVertex *some_vertex = AllocateMemory(4, sizeof(SkyVertex));
     some_vertex[0].position.x = -1;
     some_vertex[0].position.y = -1;
     some_vertex[0].texture_uv.x = 0;
@@ -79,9 +82,9 @@ void SkyObjectInit(SkyObject *so, DrawParam *dParam, EngineSkyType type)
     some_vertex[3].texture_uv.x = 1;
     some_vertex[3].texture_uv.y = 0;
 
-    GraphicsObjectSetVertex(&so->go.graphObj, some_vertex, 4, sizeof(SkyVertex), projPlaneIndx, 6, sizeof(uint32_t));
+    GraphicsObjectSetVertex(&so->go.graphObj, (void *)some_vertex, 4, sizeof(SkyVertex), (uint32_t *)projPlaneIndx, 6, sizeof(uint32_t));
 
-    free(some_vertex);
+    FreeMemory(some_vertex);
 
     so->go.graphObj.num_shapes = 1;
 }
@@ -119,7 +122,7 @@ void SkyObjectAddDefault(SkyObject *so, void *render)
     setting.fromFile = 0;
     setting.vert_indx = 0;
 
-    GameObject2DAddSettingPipeline(so, nums, &setting);
+    GameObject2DAddSettingPipeline((GameObject2D *)so, nums, &setting);
 
     so->go.graphObj.blueprints.num_blue_print_packs ++;
 }

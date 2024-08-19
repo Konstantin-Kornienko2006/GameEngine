@@ -182,14 +182,14 @@ vec4 getValueV4(engine_gltf_anim_channel *channel, float time)
 void SetupMeshState(glTFStruct *glTF, cgltf_data *model) {
 
     glTF->num_anims = model->animations_count;
-    glTF->animations = calloc(model->animations_count, sizeof(engine_gltf_anim));
+    glTF->animations = AllocateMemory(model->animations_count, sizeof(engine_gltf_anim));
 
     for(int i=0;i < glTF->num_anims;i++ )
     {
         cgltf_animation* anim_gltf = &model->animations[i];
         engine_gltf_anim *animation = &glTF->animations[i];
 
-        animation->channels = calloc( anim_gltf->channels_count, sizeof(engine_gltf_anim_channel));
+        animation->channels = AllocateMemory( anim_gltf->channels_count, sizeof(engine_gltf_anim_channel));
         animation->num_channels = anim_gltf->channels_count;
 
         for(int j=0; j < anim_gltf->channels_count; j++)
@@ -199,7 +199,7 @@ void SetupMeshState(glTFStruct *glTF, cgltf_data *model) {
 
             engine_gltf_anim_channel *a_channel = &animation->channels[j];
 
-            a_channel->keyframes = calloc(sampler->output->count, sizeof(engine_gltf_anim_keyframe));
+            a_channel->keyframes = AllocateMemory(sampler->output->count, sizeof(engine_gltf_anim_keyframe));
             a_channel->num_keyframes = sampler->output->count;
 
             readKeyframeTimes(a_channel, channel);
@@ -209,7 +209,7 @@ void SetupMeshState(glTFStruct *glTF, cgltf_data *model) {
     }
 
     glTF->num_nodes = model->nodes_count;
-    glTF->nodes = calloc(glTF->num_nodes, sizeof(engine_gltf_node));
+    glTF->nodes = AllocateMemory(glTF->num_nodes, sizeof(engine_gltf_node));
 
     int iter = 0;
 
@@ -237,12 +237,12 @@ void SetupMeshState(glTFStruct *glTF, cgltf_data *model) {
 
             cgltf_mesh* mesh = node->mesh;
 
-            g_node->mesh = calloc(mesh->primitives_count, sizeof(engine_model_mesh *));
+            g_node->mesh = AllocateMemory(mesh->primitives_count, sizeof(engine_model_mesh *));
             g_node->num_mesh = mesh->primitives_count;
 
             for(int j=0;j < mesh->primitives_count;j++)
             {
-                g_node->mesh[j] = calloc(1, sizeof(engine_model_mesh));
+                g_node->mesh[j] = AllocateMemory(1, sizeof(engine_model_mesh));
 
                 engine_model_mesh *g_mesh = g_node->mesh[j];
 
@@ -259,7 +259,7 @@ void SetupMeshState(glTFStruct *glTF, cgltf_data *model) {
                     {
                         cgltf_image *image = texture->image;
 
-                        g_mesh->image = calloc(1, sizeof(GameObjectImage));
+                        g_mesh->image = AllocateMemory(1, sizeof(GameObjectImage));
 
                         if(image->uri != NULL)
                         {
@@ -278,9 +278,9 @@ void SetupMeshState(glTFStruct *glTF, cgltf_data *model) {
                                 name_point = image->buffer_view->name;
 
                             int size = strlen(glTF->name) + strlen(name_point);
-                            g_mesh->image->path = calloc( size + 1, sizeof(char));
+                            g_mesh->image->path = AllocateMemory( size + 1, sizeof(char));
                             ToolsAddStrings(g_mesh->image->path, size, glTF->name, name_point);
-                            g_mesh->image->buffer = calloc(image->buffer_view->size, sizeof(char));
+                            g_mesh->image->buffer = AllocateMemory(image->buffer_view->size, sizeof(char));
                             memcpy(g_mesh->image->buffer, image->buffer_view->buffer->data + image->buffer_view->offset, image->buffer_view->size);
                             g_mesh->image->size = image->buffer_view->size;
                         }
@@ -292,12 +292,12 @@ void SetupMeshState(glTFStruct *glTF, cgltf_data *model) {
                     {
                         cgltf_image *image = texture->image;
 
-                        g_mesh->normal = calloc(1, sizeof(GameObjectImage));
+                        g_mesh->normal = AllocateMemory(1, sizeof(GameObjectImage));
 
                         if(image->uri != NULL)
                         {
                             int size = strlen(glTF->path) + strlen(image->uri);
-                            g_mesh->normal->path = calloc( size + 1, sizeof(char));
+                            g_mesh->normal->path = AllocateMemory( size + 1, sizeof(char));
                             ToolsAddStrings(g_mesh->normal->path, size, glTF->path, image->uri);
                             g_mesh->normal->size = 0;
                             //g_mesh->image->buffer = ToolsLoadImageFromFile(&g_mesh->image->size, buff);
@@ -311,9 +311,9 @@ void SetupMeshState(glTFStruct *glTF, cgltf_data *model) {
                                 name_point = image->buffer_view->name;
 
                             int size = strlen(glTF->name) + strlen(name_point);
-                            g_mesh->normal->path = calloc( size + 1, sizeof(char));
+                            g_mesh->normal->path = AllocateMemory( size + 1, sizeof(char));
                             ToolsAddStrings(g_mesh->normal->path, size, glTF->name, name_point);
-                            g_mesh->normal->buffer = calloc(image->buffer_view->size, sizeof(char));
+                            g_mesh->normal->buffer = AllocateMemory(image->buffer_view->size, sizeof(char));
                             memcpy(g_mesh->normal->buffer, image->buffer_view->buffer->data + image->buffer_view->offset, image->buffer_view->size);
                             g_mesh->normal->size = image->buffer_view->size;
                         }
@@ -325,12 +325,12 @@ void SetupMeshState(glTFStruct *glTF, cgltf_data *model) {
                     {
                         cgltf_image *image = texture->image;
 
-                        g_mesh->specular = calloc(1, sizeof(GameObjectImage));
+                        g_mesh->specular = AllocateMemory(1, sizeof(GameObjectImage));
 
                         if(image->uri != NULL)
                         {
                             int size = strlen(glTF->path) + strlen(image->uri);
-                            g_mesh->specular->path = calloc( size + 1, sizeof(char));
+                            g_mesh->specular->path = AllocateMemory( size + 1, sizeof(char));
                             ToolsAddStrings(g_mesh->specular->path, size, glTF->path, image->uri);
                             g_mesh->specular->size = 0;
                             //g_mesh->image->buffer = ToolsLoadImageFromFile(&g_mesh->image->size, buff);
@@ -345,9 +345,9 @@ void SetupMeshState(glTFStruct *glTF, cgltf_data *model) {
                                 name_point = image->buffer_view->name;
 
                             int size = strlen(glTF->name) + strlen(name_point);
-                            g_mesh->specular->path = calloc( size + 1, sizeof(char));
+                            g_mesh->specular->path = AllocateMemory( size + 1, sizeof(char));
                             ToolsAddStrings(g_mesh->specular->path, size, glTF->name, name_point);
-                            g_mesh->specular->buffer = calloc(image->buffer_view->size, sizeof(char));
+                            g_mesh->specular->buffer = AllocateMemory(image->buffer_view->size, sizeof(char));
                             memcpy(g_mesh->specular->buffer, image->buffer_view->buffer->data + image->buffer_view->offset, image->buffer_view->size);
                             g_mesh->specular->size = image->buffer_view->size;
                         }
@@ -355,10 +355,10 @@ void SetupMeshState(glTFStruct *glTF, cgltf_data *model) {
                 }
 
                 g_mesh->num_indices = primitive->indices->count;
-                g_mesh->indices = (uint32_t *)calloc(g_mesh->num_indices, sizeof(uint32_t));
+                g_mesh->indices = (uint32_t *)AllocateMemory(g_mesh->num_indices, sizeof(uint32_t));
 
                 g_mesh->num_verts = primitive->attributes->data->count;
-                g_mesh->verts = (ModelVertex3D *)calloc(g_mesh->num_verts, sizeof(ModelVertex3D));
+                g_mesh->verts = (ModelVertex3D *)AllocateMemory(g_mesh->num_verts, sizeof(ModelVertex3D));
 
 
                 for(int v=0;v < g_mesh->num_verts; v++)
@@ -472,7 +472,7 @@ void SetupMeshState(glTFStruct *glTF, cgltf_data *model) {
         if(node->skin != NULL)
         {
             glTF->num_join_mats = node->skin->joints_count;
-            glTF->joint_mats = calloc(glTF->num_join_mats, sizeof(join_mat_struct));
+            glTF->joint_mats = AllocateMemory(glTF->num_join_mats, sizeof(join_mat_struct));
 
             cgltf_accessor *accessor = node->skin->inverse_bind_matrices;
 
@@ -627,7 +627,7 @@ void gltfModelMatrixUpdate(ModelObject3D *mo, ModelNode *node, BluePrintDescript
 
     imb.size = glTF->num_join_mats;
 
-    DescriptorUpdate(descriptor, &imb, sizeof(imb));
+    DescriptorUpdate(descriptor, (char)&imb, sizeof(imb));
 }
 
 void ModelglTFDestroy(ModelObject3D* mo){
@@ -643,62 +643,62 @@ void ModelglTFDestroy(ModelObject3D* mo){
 
             if(model->diffuse != NULL)
             {
-                free(model->diffuse->path);
+                FreeMemory(model->diffuse->path);
 
                 if(model->diffuse->size > 0)
-                    free(model->diffuse->buffer);
+                    FreeMemory(model->diffuse->buffer);
 
-                free(model->diffuse);
+                FreeMemory(model->diffuse);
             }
 
             if(model->specular != NULL)
             {
-                free(model->specular->path);
+                FreeMemory(model->specular->path);
 
                 if(model->specular->size > 0)
-                    free(model->specular->buffer);
+                    FreeMemory(model->specular->buffer);
 
-                free(model->specular);
+                FreeMemory(model->specular);
             }
 
             if(model->normal != NULL)
             {
-                free(model->normal->path);
+                FreeMemory(model->normal->path);
 
                 if(model->normal->size > 0)
-                    free(model->normal->buffer);
+                    FreeMemory(model->normal->buffer);
 
-                free(model->normal);
+                FreeMemory(model->normal);
             }
         }
 
-        free(mo->nodes[i].models);
+        FreeMemory(mo->nodes[i].models);
     }
 
     for(int i=0; i < glTF->num_anims;i++)
     {
         for(int j=0;j < glTF->animations[i].num_channels;j++)
         {
-            free(glTF->animations[i].channels[j].keyframes);
+            FreeMemory(glTF->animations[i].channels[j].keyframes);
         }
-        free(glTF->animations[i].channels);
+        FreeMemory(glTF->animations[i].channels);
     }
 
     for(int i=0; i < glTF->num_nodes;i++)
     {
         for(int j=0;j < glTF->nodes[i].num_mesh;j++)
         {
-            free(glTF->nodes[i].mesh[j]->instance_node_indices);
-            free(glTF->nodes[i].mesh[j]);
+            FreeMemory(glTF->nodes[i].mesh[j]->instance_node_indices);
+            FreeMemory(glTF->nodes[i].mesh[j]);
         }
-        free(glTF->nodes[i].mesh);
+        FreeMemory(glTF->nodes[i].mesh);
     }
 
-    free(glTF->nodes);
-    free(glTF->joint_mats);
-    free(glTF->animations);
-    free(glTF);
-    free(mo->nodes);
+    FreeMemory(glTF->nodes);
+    FreeMemory(glTF->joint_mats);
+    FreeMemory(glTF->animations);
+    FreeMemory(glTF);
+    FreeMemory(mo->nodes);
 }
 
 void Load3DglTFModel(void *ptr, char *path, char *name, uint8_t type, DrawParam *dParam){
@@ -707,16 +707,16 @@ void Load3DglTFModel(void *ptr, char *path, char *name, uint8_t type, DrawParam 
 
   Transform3DInit(&mo->transform);
 
-  GameObjectSetUpdateFunc(mo, (void *)ModelDefaultUpdate);
-  GameObjectSetDrawFunc(mo, (void *)ModelDefaultDraw);
-  GameObjectSetCleanFunc(mo, (void *)ModelClean);
-  GameObjectSetRecreateFunc(mo, (void *)ModelRecreate);
-  GameObjectSetDestroyFunc(mo, (void *)ModelglTFDestroy);
+  GameObjectSetUpdateFunc((GameObject *)mo, (void *)ModelDefaultUpdate);
+  GameObjectSetDrawFunc((GameObject *)mo, (void *)ModelDefaultDraw);
+  GameObjectSetCleanFunc((GameObject *)mo, (void *)ModelClean);
+  GameObjectSetRecreateFunc((GameObject *)mo, (void *)ModelRecreate);
+  GameObjectSetDestroyFunc((GameObject *)mo, (void *)ModelglTFDestroy);
 
   mo->self.obj_type = ENGINE_GAME_OBJECT_TYPE_3D;
   mo->self.flags = 0;
 
-  mo->obj = calloc(1, sizeof(glTFStruct));
+  mo->obj = AllocateMemory(1, sizeof(glTFStruct));
 
   glTFStruct *glTF = mo->obj;
 
@@ -726,7 +726,7 @@ void Load3DglTFModel(void *ptr, char *path, char *name, uint8_t type, DrawParam 
   ToolsAddStrings(some_file, 256, path, name);
 
   int len = strlen(name);
-  glTF->name = calloc(len + 1, sizeof(char));
+  glTF->name = AllocateMemory(len + 1, sizeof(char));
   memcpy(glTF->name, name, len);
   glTF->name[len] = '\0';
 
@@ -761,7 +761,7 @@ void Load3DglTFModel(void *ptr, char *path, char *name, uint8_t type, DrawParam 
       {
           SetupMeshState(glTF, data);
 
-          mo->nodes = (ModelNode *) calloc(glTF->num_meshes, sizeof(ModelNode));
+          mo->nodes = (ModelNode *) AllocateMemory(glTF->num_meshes, sizeof(ModelNode));
           mo->num_draw_nodes = glTF->num_meshes;
 
           int iter = 0;
@@ -776,7 +776,7 @@ void Load3DglTFModel(void *ptr, char *path, char *name, uint8_t type, DrawParam 
                   mo->nodes[iter].id_node = node->id_node;
 
 
-                  mo->nodes[iter].models = calloc(node->num_mesh, sizeof(ModelStruct));
+                  mo->nodes[iter].models = AllocateMemory(node->num_mesh, sizeof(ModelStruct));
                   mo->nodes[iter].num_models = node->num_mesh;
 
                   for(int j=0;j < node->num_mesh;j++)
@@ -792,12 +792,12 @@ void Load3DglTFModel(void *ptr, char *path, char *name, uint8_t type, DrawParam 
                       {
                           if(model->diffuse == NULL)
                           {
-                              model->diffuse = calloc(1, sizeof(GameObjectImage));
+                              model->diffuse = AllocateMemory(1, sizeof(GameObjectImage));
 
                               if(strlen(dParam->diffuse) != 0)
                               {
                                   int len = strlen(dParam->diffuse);
-                                  model->diffuse->path = calloc(len + 1, sizeof(char));
+                                  model->diffuse->path = AllocateMemory(len + 1, sizeof(char));
                                   memcpy(model->diffuse->path, dParam->diffuse, len);
                                   model->diffuse->path[len] = '\0';
                               }
@@ -805,12 +805,12 @@ void Load3DglTFModel(void *ptr, char *path, char *name, uint8_t type, DrawParam 
 
                           if(model->specular == NULL)
                           {
-                              model->specular = calloc(1, sizeof(GameObjectImage));
+                              model->specular = AllocateMemory(1, sizeof(GameObjectImage));
 
                               if(strlen(dParam->specular) != 0)
                               {
                                   int len = strlen(dParam->specular);
-                                  model->specular->path = calloc(len + 1, sizeof(char));
+                                  model->specular->path = AllocateMemory(len + 1, sizeof(char));
                                   memcpy(model->specular->path, dParam->specular, len);
                                   model->specular->path[len] = '\0';
                               }
@@ -818,12 +818,12 @@ void Load3DglTFModel(void *ptr, char *path, char *name, uint8_t type, DrawParam 
 
                           if(model->normal == NULL)
                           {
-                              model->normal = calloc(1, sizeof(GameObjectImage));
+                              model->normal = AllocateMemory(1, sizeof(GameObjectImage));
 
                               if(strlen(dParam->normal) != 0)
                               {
                                   int len = strlen(dParam->normal);
-                                  model->normal->path = calloc(len + 1, sizeof(char));
+                                  model->normal->path = AllocateMemory(len + 1, sizeof(char));
                                   memcpy(model->normal->path, dParam->normal, len);
                                   model->normal->path[len] = '\0';
                               }

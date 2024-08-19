@@ -11,6 +11,8 @@
 #include "Data/e_resource_shapes.h"
 #include "Data/e_resource_export.h"
 
+extern ZEngine engine;
+
 vec2 e_var_mouse, e_var_temp, e_var_tscale ;
 
 int WindowWidgetSetSize(EWidgetWindow* window, float x, float y)
@@ -114,7 +116,7 @@ int WindowWidgetResizeButton(EWidget* widget, void* entry, void *arg){
 
     Transform2DSetPosition(&window->top, 0, 0);
 
-    WindowWidgetSetSize(window, WIDTH, HEIGHT);
+    WindowWidgetSetSize(window, engine.width, engine.height);
 
     return 0;
 }
@@ -138,7 +140,7 @@ int WindowWidgetHideButton(EWidget* widget, void* entry, void *arg){
     window->wasHide = true;
 
     WindowWidgetSetSize(window, 100, 12);
-    Transform2DSetPosition(&widget->parent->go, 20, (HEIGHT * 2) - 40);
+    Transform2DSetPosition(&widget->parent->go, 20, (engine.height * 2) - 40);
 
     return 0;
 }
@@ -175,13 +177,13 @@ void InitTop(EWidget* widget, DrawParam *dParam, vec2 size, vec2 position){
     if(dParam != NULL)
         GraphicsObjectSetShadersPath(&widget->go.graphObj, dParam->vertShader, dParam->fragShader);
 
-    widget->go.image = calloc(1, sizeof(GameObjectImage));
+    widget->go.image = AllocateMemory(1, sizeof(GameObjectImage));
 
     if(dParam != NULL)
         if(strlen(dParam->second) != 0)
         {
             int len = strlen(dParam->second);
-            widget->go.image->path = calloc(len + 1, sizeof(char));
+            widget->go.image->path = AllocateMemory(len + 1, sizeof(char));
             memcpy(widget->go.image->path, dParam->second, len);
             widget->go.image->path[len] = '\0';
             //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
@@ -195,13 +197,13 @@ void InitTop(EWidget* widget, DrawParam *dParam, vec2 size, vec2 position){
 
     widget->widget_flags = ENGINE_FLAG_WIDGET_ACTIVE | ENGINE_FLAG_WIDGET_VISIBLE;
 
-    widget->callbacks.stack = (CallbackStruct *) calloc(MAX_GUI_CALLBACKS, sizeof(CallbackStruct));
+    widget->callbacks.stack = (CallbackStruct *) AllocateMemory(MAX_GUI_CALLBACKS, sizeof(CallbackStruct));
     widget->callbacks.size = 0;
 
     Transform2DSetScale(widget, size.x, size.y);
     Transform2DSetPosition(widget, position.x, position.y);
 
-    widget->color = (vec4){1, 1, 1, 1.0};
+    widget->color = (vec3){1, 1, 1};
     widget->transparent = 1.0f;
 
 }
@@ -247,7 +249,7 @@ void InitClose(EWidget* widget, DrawParam *dParam, vec2 size, EWidget *parent){
     WidgetAddDefault(widget, dParam->render);
     GameObject2DInitDraw(widget);
 
-    widget->color = (vec4){ 1.0f, 0.0f, 0.0f, 1.0f};
+    widget->color = (vec3){ 1.0f, 0.0f, 0.0f};
 
     Transform2DSetScale(widget, 10, 10);
     Transform2DSetPosition(widget, (size.x - 10) * 2 , 0);
@@ -259,7 +261,7 @@ void InitResize(EWidget* widget, DrawParam *dParam, vec2 size, EWidget *parent){
     WidgetAddDefault(widget, dParam->render);
     GameObject2DInitDraw(widget);
 
-    widget->color = (vec4){ 0.0f, 1.0f, 0.0f, 1.0};
+    widget->color = (vec3){ 0.0f, 1.0f, 0.0f};
 
     Transform2DSetScale(widget, 10, 10);
     Transform2DSetPosition(widget, (size.x - 20) * 2 , 0);
@@ -271,7 +273,7 @@ void InitHide(EWidget* widget, DrawParam *dParam, vec2 size, EWidget *parent){
     WidgetAddDefault(widget, dParam->render);
     GameObject2DInitDraw(widget);
 
-    widget->color = (vec4){ 0.0f, 0.0f, 1.0f, 1.0f};
+    widget->color = (vec3){ 0.0f, 0.0f, 1.0f};
 
     Transform2DSetScale(widget, 10, 10);
     Transform2DSetPosition(widget, (size.x - 30) * 2 , 0);
@@ -334,4 +336,8 @@ void WindowWidgetDraw(EWidgetWindow *ww){
 
 void WindowWidgetDestroy(EWidgetWindow *ww){
     WidgetDestroy(&ww->top);
+
+    FreeMemory(ww->top.go.image->path);
+    FreeMemory(ww->top.go.image);
+    FreeMemory(ww->top.callbacks.stack);
 }

@@ -17,7 +17,7 @@ BOOL GetErrorMessage(DWORD dwErrorCode, LPTSTR *pBuffer)
                                  NULL,
                                  dwErrorCode,
                                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                                 pBuffer,
+                                 (LPSTR)pBuffer,
                                  0,
                                  NULL);
     return (cchMsg > 0);

@@ -8,12 +8,15 @@
 #include "Core/e_camera.h"
 
 #include "Tools/e_math.h"
+#include "Tools/shader_builder.h"
 
 #include "Variabels/e_pipeline_variables.h"
 
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
 #include "Data/e_resource_export.h"
+
+extern ZEngine engine;
 
 typedef void (*Update_Descriptor2D)(GameObject2D* go, BluePrintDescriptor *descriptor);
 
@@ -25,7 +28,7 @@ void GameObject2DTransformBufferUpdate(GameObject2D *go, BluePrintDescriptor *de
     tbo.rotation = go->transform.rotation;
     tbo.scale = go->transform.scale;
 
-    DescriptorUpdate(descriptor, &tbo, sizeof(tbo));
+    DescriptorUpdate(descriptor, (char *)&tbo, sizeof(tbo));
 }
 
 void GameObject2DImageBuffer(GameObject2D *go, BluePrintDescriptor *descriptor)
@@ -37,7 +40,7 @@ void GameObject2DImageBuffer(GameObject2D *go, BluePrintDescriptor *descriptor)
     ibo.rotation.x = 0;
     ibo.rotation.y = 0;
 
-    DescriptorUpdate(descriptor, &ibo, sizeof(ibo));
+    DescriptorUpdate(descriptor, (char *)&ibo, sizeof(ibo));
 }
 
 void GameObject2DDefaultUpdate(GameObject2D* go) {
@@ -46,7 +49,7 @@ void GameObject2DDefaultUpdate(GameObject2D* go) {
     {
         BluePrintPack *pack = &go->graphObj.blueprints.blue_print_packs[i];
 
-        if(pack->render_point == current_render)
+        if(pack->render_point == engine.current_render)
         {
             for(int j=0;j < pack->num_descriptors;j++)
             {
@@ -68,7 +71,7 @@ void GameObject2DDefaultDraw(GameObject2D* go, void *command){
     {
         BluePrintPack *pack = &go->graphObj.blueprints.blue_print_packs[i];
 
-        if(pack->render_point == current_render)
+        if(pack->render_point == engine.current_render)
         {
             ShaderPack *pack = &go->graphObj.gItems.shader_packs[i];
 
@@ -81,19 +84,19 @@ void GameObject2DDefaultDraw(GameObject2D* go, void *command){
                 indexParam *iParam = &go->graphObj.shapes[settings->vert_indx].iParam;
 
                 if(settings->flags & ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW){
-                    vkCmdSetViewport(command, 0, 1, &settings->viewport);
-                    vkCmdSetScissor(command, 0, 1, &settings->scissor);
+                    vkCmdSetViewport(command, 0, 1, (const VkViewport *)&settings->viewport);
+                    vkCmdSetScissor(command, 0, 1, (const VkRect2D *)&settings->scissor);
                 }
 
-                VkBuffer vertexBuffers[] = {vParam->vertexBuffer};
+                VkBuffer vertexBuffers[] = {vParam->buffer.buffer};
                 VkDeviceSize offsets[] = {0};
 
                 vkCmdBindVertexBuffers(command, 0, 1, vertexBuffers, offsets);
-                vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].layout, 0, 1, &pack->descriptor.descr_sets[imageIndex], 0, NULL);
+                vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].layout, 0, 1, &pack->descriptor.descr_sets[engine.imageIndex], 0, NULL);
 
                 if(settings->flags & ENGINE_PIPELINE_FLAG_DRAW_INDEXED){
 
-                    vkCmdBindIndexBuffer(command, iParam->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+                    vkCmdBindIndexBuffer(command, iParam->buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
                     vkCmdDrawIndexed(command, iParam->indexesSize, 1, 0, 0, 0);
                 }else
                     vkCmdDraw(command, vParam->verticesSize, 1, 0, 0);
@@ -132,6 +135,8 @@ void GameObject2DClean(GameObject2D* go){
 
 void GameObject2DRecreate(GameObject2D* go){
 
+    GameObject2DClean(go);
+
     for(int i=0; i < go->graphObj.gItems.num_shader_packs;i++)
     {
         BluePrintPack *pack = &go->graphObj.blueprints.blue_print_packs[i];
@@ -142,12 +147,12 @@ void GameObject2DRecreate(GameObject2D* go){
         {
             settings[i].scissor.offset.x = 0;
             settings[i].scissor.offset.y = 0;
-            settings[i].scissor.extent.height = HEIGHT;
-            settings[i].scissor.extent.width = WIDTH;
+            settings[i].scissor.extent.height = engine.height;
+            settings[i].scissor.extent.width = engine.width;
             settings[i].viewport.x = 0;
             settings[i].viewport.y = 0;
-            settings[i].viewport.height = HEIGHT;
-            settings[i].viewport.width = WIDTH;
+            settings[i].viewport.height = engine.height;
+            settings[i].viewport.width = engine.width;
         }
     }
 
@@ -156,8 +161,8 @@ void GameObject2DRecreate(GameObject2D* go){
     GraphicsObjectCreateDrawItems(&go->graphObj);
     PipelineCreateGraphics(&go->graphObj);
 
-    Transform2DReposition(go);
-    Transform2DRescale(go);
+    Transform2DReposition((struct GameObject2D *)go);
+    Transform2DRescale((struct GameObject2D *)go);
 
 }
 
@@ -167,37 +172,42 @@ void GameObject2DDestroy(GameObject2D* go){
 
     if(go->image != NULL)
     {
-        free(go->image->path);
+        FreeMemory(go->image->path);
 
         if(go->image->size > 0)
-            free(go->image->buffer);
+            FreeMemory(go->image->buffer);
 
-        free(go->image);
+        FreeMemory(go->image);
     }
 
     for(int i=0; i < go->graphObj.num_shapes; i++)
     {
         if(go->graphObj.shapes[i].vParam.verticesSize)
-            free(go->graphObj.shapes[i].vParam.vertices);
+            FreeMemory(go->graphObj.shapes[i].vParam.vertices);
 
         if(go->graphObj.shapes[i].iParam.indexesSize)
-            free(go->graphObj.shapes[i].iParam.indices);
+            FreeMemory(go->graphObj.shapes[i].iParam.indices);
     }
 
+    FreeMemory(go->self.vert);
+    FreeMemory(go->self.frag);
 }
 
 void GameObject2DInit(GameObject2D* go)
 {
-    GameObjectSetUpdateFunc(go, (void *)GameObject2DDefaultUpdate);
-    GameObjectSetDrawFunc(go, (void *)GameObject2DDefaultDraw);
-    GameObjectSetCleanFunc(go, (void *)GameObject2DClean);
-    GameObjectSetRecreateFunc(go, (void *)GameObject2DRecreate);
-    GameObjectSetDestroyFunc(go, (void *)GameObject2DDestroy);
+    GameObjectSetUpdateFunc((GameObject *)go, (void *)GameObject2DDefaultUpdate);
+    GameObjectSetDrawFunc((GameObject *)go, (void *)GameObject2DDefaultDraw);
+    GameObjectSetCleanFunc((GameObject *)go, (void *)GameObject2DClean);
+    GameObjectSetRecreateFunc((GameObject *)go, (void *)GameObject2DRecreate);
+    GameObjectSetDestroyFunc((GameObject *)go, (void *)GameObject2DDestroy);
 
     go->self.obj_type = ENGINE_GAME_OBJECT_TYPE_2D;
 
     Transform2DInit(&go->transform);
     GraphicsObjectInit(&go->graphObj, ENGINE_VERTEX_TYPE_2D_OBJECT);
+
+    go->self.vert = AllocateMemory(1, sizeof(ShaderBuilder));
+    go->self.frag = AllocateMemory(1, sizeof(ShaderBuilder));
 
 }
 

@@ -21,7 +21,6 @@ int RollerMousePress(EWidget *widget, void *entry, void *args)
     roller->widget.color.x = roller->selfColor.x - 0.2f;
     roller->widget.color.y = roller->selfColor.y - 0.2f;
     roller->widget.color.z = roller->selfColor.z - 0.2f;
-    roller->widget.color.w = roller->selfColor.w;
 
     return 0;
 }
@@ -63,7 +62,7 @@ void RollerWidgetInit(EWidgetRoller *roller, DrawParam *dParam, EWidget *parent)
     memcpy(roller->widget.go.name, "Widget_Roller", 11);
     roller->widget.type = ENGINE_WIDGET_TYPE_ROLLER;
 
-    roller->widget.color = roller->selfColor = vec4_f(0.6, 0, 0, 1.0);
+    roller->widget.color = roller->selfColor = vec3_f(0.6, 0, 0);
     roller->source = NULL;
     WidgetConnect(roller, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, RollerMousePress, NULL);
     WidgetConnect(roller, ENGINE_WIDGET_TRIGGER_MOUSE_MOVE, RollerMouseMove, NULL);

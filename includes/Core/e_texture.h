@@ -2,9 +2,6 @@
 #define E_TEXTURE_H
 
 #include "Variabels/engine_includes.h"
-
-#include "e_blue_print.h"
-
 #include "Variabels/e_texture_variables.h"
 
 #include "Tools/e_tools.h"
@@ -12,6 +9,7 @@
 #define EMPTY_IMAGE_WIDTH 100
 #define EMPTY_IMAGE_HEIGHT 100
 
+struct BluePrintDescriptor_T;
 
 #ifdef __cplusplus
 extern "C"
@@ -35,9 +33,9 @@ int ImageResize(ImageFileData *data, uint32_t width, uint32_t height);
 
 Texture2D *TextureFindTexture(char *image);
 
-void TextureCreateImage(uint32_t width, uint32_t height, uint32_t mip_levels, uint32_t format, uint32_t tiling, uint32_t usage, uint32_t properties, uint32_t flags, void** image, void** imageMemory);
+void TextureCreateImage(uint32_t width, uint32_t height, uint32_t mip_levels, uint32_t format, uint32_t tiling, uint32_t usage, uint32_t properties, uint32_t flags, Texture2D *texture);
 
-int TextureImageCreate(GameObjectImage *image, BluePrintDescriptor *descriptor, bool from_file);
+int TextureImageCreate(GameObjectImage *image, struct BluePrintDescriptor_T *descriptor, bool from_file);
 
 void TextureGenerateMipmaps(Texture2D *texture);
 
@@ -47,16 +45,16 @@ void TextureCreateEmptyDefault(Texture2D *texture);
 void TextureCreateTextureImageView(Texture2D *texture, uint32_t type);
 
 void* TextureCreateImageViewCube(void* image, void **shadowCubeMapFaceImageViews, uint32_t format, uint32_t aspect_mask);
-void* TextureCreateImageView(void* image, uint32_t type, uint32_t format, uint32_t aspectFlags, uint32_t mip_levels) ;
+VkImageView TextureCreateImageView(VkImage image, uint32_t type, uint32_t format, uint32_t aspectFlags, uint32_t mip_levels) ;
 
 void TextureCreateSampler(void *sampler, uint32_t texture_type, uint32_t mip_levels);
 
-void TextureCreate( BluePrintDescriptor *descriptor, uint32_t type, GameObjectImage *image, bool from_file);
-void TextureCreateSpecific(BluePrintDescriptor *descriptor, uint32_t format, uint32_t width, uint32_t height);
+void TextureCreate( struct BluePrintDescriptor_T *descriptor, uint32_t type, GameObjectImage *image, bool from_file);
+void TextureCreateSpecific(struct BluePrintDescriptor_T *descriptor, uint32_t format, uint32_t width, uint32_t height);
 
-void TextureUpdate(BluePrintDescriptor *descriptor, void *in_data, uint32_t size_data, uint32_t offset);
+void TextureUpdate(struct BluePrintDescriptor_T *descriptor, void *in_data, uint32_t size_data, uint32_t offset);
 
-void TextureSetTexture(BluePrintDescriptor *descriptor, const char* path);
+void TextureSetTexture(struct BluePrintDescriptor_T *descriptor, const char* path);
 
 void ImageDestroyTexture(Texture2D* texture);
 

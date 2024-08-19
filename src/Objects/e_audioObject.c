@@ -3,6 +3,7 @@
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
+#include "Core/e_memory.h"
 #include "Core/e_camera.h"
 
 #include "Tools/e_math.h"
@@ -12,8 +13,8 @@
 
 void AudioObjectInit(AudioObject* ao)
 {
-    ao->object = calloc(1, sizeof(ma_engine));
-    ao->g_delayNode = calloc(1, sizeof(ma_delay_node));
+    ao->object = AllocateMemory(1, sizeof(ma_engine));
+    ao->g_delayNode = AllocateMemory(1, sizeof(ma_delay_node));
     ao->volume = 0.1f;
     ao->pan = 1.0f;
     ao->pitch = 1.0f;
@@ -33,7 +34,7 @@ void AudioObjectInit(AudioObject* ao)
     result = ma_delay_node_init(ma_engine_get_node_graph(ao->object), &delayNodeConfig, NULL, ao->g_delayNode);
     if (result != MA_SUCCESS) {
         printf("Failed to initialize delay node.");
-        return -1;
+        return;
     }
 
     /* Connect the output of the delay node to the input of the endpoint. */
@@ -47,7 +48,7 @@ void AudioObjectLoadFile(AudioObject* ao, const char* path)
     ao->num_sounds ++;
 
     ao->sounds = realloc(ao->sounds, ao->num_sounds * sizeof(ma_sound*));
-    ao->sounds[ao->num_sounds - 1] = calloc(1, sizeof(ma_sound));
+    ao->sounds[ao->num_sounds - 1] = AllocateMemory(1, sizeof(ma_sound));
 
     result = ma_sound_init_from_file(ao->object, path, 0, NULL, NULL, ao->sounds[ao->num_sounds - 1]);
 }
@@ -125,11 +126,11 @@ void AudioObjectDestroy(AudioObject* ao)
     {
         ma_sound_stop(ao->sounds[i]);
         ma_sound_uninit(ao->sounds[i]);
-        free(ao->sounds[i]);
+        FreeMemory(ao->sounds[i]);
     }
-    free(ao->sounds);
+    FreeMemory(ao->sounds);
 
     ma_engine_uninit(ao->object);
-    free(ao->object);
-    free(ao->g_delayNode);
+    FreeMemory(ao->object);
+    FreeMemory(ao->g_delayNode);
 }

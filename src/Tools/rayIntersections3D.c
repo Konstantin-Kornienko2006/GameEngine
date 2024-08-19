@@ -145,7 +145,7 @@ float Intersect3DRayTriangle(void* shape, InterRay3DParam *ray, vec3 *q){
     indexParam *iParam = &model->graphObj.shapes[0].iParam;
 
     if(vParam->verticesSize < 3)
-        return;
+        return 0;
 
     vec3 origPos = model->transform.position;
     vec3 scale = model->transform.scale;

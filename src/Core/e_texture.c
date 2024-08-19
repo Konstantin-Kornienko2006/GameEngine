@@ -2,6 +2,8 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
+#include "Core/e_memory.h"
+#include "Core/e_device.h"
 #include "Core/e_buffer.h"
 #include "Core/e_texture.h"
 #include "Core/e_blue_print.h"
@@ -20,6 +22,8 @@
 
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
+
+extern ZEngine engine;
 
 //Не корректно
 int ImageWriteFile(uint32_t indx)
@@ -77,17 +81,17 @@ int ImageSetTile(const char *path, char *data, uint32_t width, uint32_t height, 
 
     int res = ImageLoadFile(&f_data, 1);
     if(res)
-        printf("Ошибка загрузки изображения!\n");
+        printf("Error load image!\n");
 
     if(f_data.texChannels < 4)
     {
         free(f_data.data);
-        return;
+        return 1;
     }
 
     res = ImageResize(&f_data, tile_size, tile_size);
     if(res)
-        printf("Ошибка изменения размера!\n");
+        printf("Error when resize!\n");
 
     uint32_t iter_x = 0, iter_y = 0;
 
@@ -107,6 +111,8 @@ int ImageSetTile(const char *path, char *data, uint32_t width, uint32_t height, 
     }
 
     free(f_data.data);
+
+    return 0;
 }
 
 int ImageResize(ImageFileData *data, uint32_t width, uint32_t height)
@@ -128,6 +134,8 @@ int ImageResize(ImageFileData *data, uint32_t width, uint32_t height)
 }
 
 void ImageCreateEmpty(Texture2D *texture, uint32_t usage) {
+    ZDevice *device = (ZDevice *)engine.device;
+
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -143,32 +151,33 @@ void ImageCreateEmpty(Texture2D *texture, uint32_t usage) {
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(e_device, &imageInfo, NULL, &texture->textureImage) != VK_SUCCESS) {
+    if (vkCreateImage(device->e_device, &imageInfo, NULL, (VkImage *)&texture->image) != VK_SUCCESS) {
         printf("failed to create image!");
         exit(-1);
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(e_device, texture->textureImage, &memRequirements);
+    vkGetImageMemoryRequirements(device->e_device, texture->image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    if (vkAllocateMemory(e_device, &allocInfo, NULL, &texture->textureImageMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(device->e_device, &allocInfo, NULL, (VkDeviceMemory *)&texture->memory) != VK_SUCCESS) {
         printf("failed to allocate image memory!");
         exit(-1);
     }
 
-    vkBindImageMemory(e_device, texture->textureImage, texture->textureImageMemory, 0);
+    vkBindImageMemory(device->e_device, texture->image, texture->memory, 0);
 
 }
 
 void TextureCreateEmptyDefault(Texture2D *texture)
 {
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
+    ZDevice *device = (ZDevice *)engine.device;
+
+    BufferObject stagingBuffer;
 
     texture->textureType = VK_FORMAT_R8G8B8A8_SRGB;
     texture->image_data.texWidth = EMPTY_IMAGE_WIDTH;
@@ -177,49 +186,50 @@ void TextureCreateEmptyDefault(Texture2D *texture)
 
     VkDeviceSize bufferSize = EMPTY_IMAGE_HEIGHT * EMPTY_IMAGE_WIDTH * 4;
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory, ENGINE_BUFFER_ALLOCATE_STAGING);
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, ENGINE_BUFFER_ALLOCATE_STAGING);
 
     char some_data[bufferSize];
     memset(some_data, 0, bufferSize);
 
     uint32_t * data;
-    vkMapMemory(e_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    vkMapMemory(device->e_device, stagingBuffer.memory, 0, bufferSize, 0, (void **)&data);
     memcpy(data, some_data, bufferSize);
-    vkUnmapMemory(e_device, stagingBufferMemory);
+    vkUnmapMemory(device->e_device, stagingBuffer.memory);
 
     ImageCreateEmpty(texture, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-    ToolsTransitionImageLayout(texture->textureImage, texture->textureType, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
-    ToolsCopyBufferToImage(stagingBuffer, texture->textureImage, EMPTY_IMAGE_WIDTH, EMPTY_IMAGE_HEIGHT);
-    ToolsTransitionImageLayout(texture->textureImage, texture->textureType, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
+    ToolsTransitionImageLayout(texture->image, texture->textureType, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
+    ToolsCopyBufferToImage(stagingBuffer.buffer, texture->image, EMPTY_IMAGE_WIDTH, EMPTY_IMAGE_HEIGHT);
+    ToolsTransitionImageLayout(texture->image, texture->textureType, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
 
-    BuffersDestroyBuffer(stagingBuffer);
+    BuffersDestroyBuffer(&stagingBuffer);
 
 }
 
 void TextureCreateEmpty(Texture2D *texture)
 {
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
+    ZDevice *device = (ZDevice *)engine.device;
+
+    BufferObject stagingBuffer;
 
     VkDeviceSize bufferSize = texture->image_data.texWidth * texture->image_data.texHeight * 4;
 
     texture->image_data.mip_levels = 1;
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory, ENGINE_BUFFER_ALLOCATE_STAGING);
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, ENGINE_BUFFER_ALLOCATE_STAGING);
 
     uint32_t *data;
-    vkMapMemory(e_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    vkMapMemory(device->e_device, stagingBuffer.memory, 0, bufferSize, 0, (void **)&data);
     memset(data, 0, bufferSize);
-    vkUnmapMemory(e_device, stagingBufferMemory);
+    vkUnmapMemory(device->e_device, stagingBuffer.memory);
 
     ImageCreateEmpty(texture, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-    ToolsTransitionImageLayout(texture->textureImage, texture->textureType, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
-    ToolsCopyBufferToImage(stagingBuffer, texture->textureImage, texture->image_data.texWidth, texture->image_data.texHeight);
-    ToolsTransitionImageLayout(texture->textureImage, texture->textureType, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
+    ToolsTransitionImageLayout(texture->image, texture->textureType, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1);
+    ToolsCopyBufferToImage(stagingBuffer.buffer, texture->image, texture->image_data.texWidth, texture->image_data.texHeight);
+    ToolsTransitionImageLayout(texture->image, texture->textureType, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
 
-    BuffersDestroyBuffer(stagingBuffer);
+    BuffersDestroyBuffer(&stagingBuffer);
 }
 
 Texture2D *TextureFindTexture(char *path)
@@ -227,10 +237,10 @@ Texture2D *TextureFindTexture(char *path)
     if(path == NULL)
         return NULL;
 
-    engine_buffered_image *buff_images = e_var_images;
+    engine_buffered_image *buff_images = engine.DataR.e_var_images;
 
     char *temp;
-    for(int i=0;i < e_var_num_images;i++)
+    for(int i=0;i < engine.DataR.e_var_num_images;i++)
     {
         temp = buff_images[i].path;
         if(strstr(temp, path))
@@ -240,21 +250,25 @@ Texture2D *TextureFindTexture(char *path)
     return NULL;
 }
 
-int TextureImageCreate(GameObjectImage *image, BluePrintDescriptor *descriptor, bool from_file) {
+int TextureImageCreate(GameObjectImage *image, struct BluePrintDescriptor_T *descriptor, bool from_file) {
+
+    ZDevice *device = (ZDevice *)engine.device;
 
     Texture2D *temp_tex;
 
-    engine_buffered_image *images = e_var_images;
+    BluePrintDescriptor *descr = (BluePrintDescriptor *)descriptor;
+
+    engine_buffered_image *images = engine.DataR.e_var_images;
 
     if(image == NULL)
     {
-        descriptor->textures[descriptor->size] = &images[0].texture;
+        descr->textures[descr->size] = images[0].texture;
         return 0;
     }
 
     if(image->path == NULL && image->buffer == NULL)
     {
-        descriptor->textures[descriptor->size] = &images[0].texture;
+        descr->textures[descr->size] = images[0].texture;
         return 0;
     }
 
@@ -268,63 +282,66 @@ int TextureImageCreate(GameObjectImage *image, BluePrintDescriptor *descriptor, 
 
     if(temp_tex != NULL)
     {
-        descriptor->textures[descriptor->size] = TextureFindTexture(image->path);
+        descr->textures[descr->size] = *TextureFindTexture(image->path);
         return 0;
     }
 
     ImageLoadFile(&fileData, from_file);
 
     int len = strlen(image->path);
-    memset(images[e_var_num_images].path, 0, 2048);
-    memcpy(images[e_var_num_images].path, image->path, len);
-    images[e_var_num_images].texture.image_data = fileData;
-    images[e_var_num_images].texture.textureType = image->img_type; // VK_FORMAT_R8G8B8A8_SRGB;
+    memset(images[engine.DataR.e_var_num_images].path, 0, 2048);
+    memcpy(images[engine.DataR.e_var_num_images].path, image->path, len);
+    images[engine.DataR.e_var_num_images].texture.image_data = fileData;
+    images[engine.DataR.e_var_num_images].texture.textureType = image->img_type; // VK_FORMAT_R8G8B8A8_SRGB;
 
     VkDeviceSize imageSize = fileData.texWidth * fileData.texHeight * sizeof(float);
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
+    BufferObject stagingBuffer;
 
     uint32_t mip_levels = floor(log2(e_max(fileData.texWidth, fileData.texHeight)));
 
-    images[e_var_num_images].texture.image_data.mip_levels = mip_levels;
+    images[engine.DataR.e_var_num_images].texture.image_data.mip_levels = mip_levels;
 
     void* data;
 
     if (!fileData.data) {
         printf("failed to load texture image!");
 
-        descriptor->textures[descriptor->size] = &images[0].texture;
+        descr->textures[descr->size] = images[0].texture;
 
         return 0;
     }
 
-    BuffersCreate(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory, ENGINE_BUFFER_ALLOCATE_STAGING);
+    BuffersCreate(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, ENGINE_BUFFER_ALLOCATE_STAGING);
 
-    vkMapMemory(e_device, stagingBufferMemory, 0, imageSize, 0, &data);
+    vkMapMemory(device->e_device, stagingBuffer.memory, 0, imageSize, 0, &data);
     memcpy(data, fileData.data, imageSize);
-    vkUnmapMemory(e_device, stagingBufferMemory);
+    vkUnmapMemory(device->e_device, stagingBuffer.memory);
 
-    TextureCreateImage( fileData.texWidth, fileData.texHeight, mip_levels, images[e_var_num_images].texture.textureType, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, &images[e_var_num_images].texture.textureImage, &images[e_var_num_images].texture.textureImageMemory);
+    TextureCreateImage( fileData.texWidth, fileData.texHeight, mip_levels, images[engine.DataR.e_var_num_images].texture.textureType, 
+                        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+                        0, &images[engine.DataR.e_var_num_images].texture);
 
-    ToolsTransitionImageLayout(images[e_var_num_images].texture.textureImage, images[e_var_num_images].texture.textureType, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mip_levels);
-    ToolsCopyBufferToImage(stagingBuffer, images[e_var_num_images].texture.textureImage, fileData.texWidth, fileData.texHeight);
+    ToolsTransitionImageLayout(images[engine.DataR.e_var_num_images].texture.image, images[engine.DataR.e_var_num_images].texture.textureType, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mip_levels);
+    ToolsCopyBufferToImage(stagingBuffer.buffer, images[engine.DataR.e_var_num_images].texture.image, fileData.texWidth, fileData.texHeight);
     //ToolsTransitionImageLayout(images[e_var_num_images].texture.textureImage, images[e_var_num_images].texture.textureType, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mip_levels);
 
-    BuffersDestroyBuffer(stagingBuffer);
+    BuffersDestroyBuffer(&stagingBuffer);
 
-    TextureGenerateMipmaps(&images[e_var_num_images].texture);
+    TextureGenerateMipmaps(&images[engine.DataR.e_var_num_images].texture);
 
     return 1;
 }
 
 void TextureGenerateMipmaps(Texture2D *texture){
 
+    ZDevice *device = (ZDevice *)engine.device;
+
     VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(e_physicalDevice, texture->textureType, &formatProperties);
+    vkGetPhysicalDeviceFormatProperties(device->e_physicalDevice, texture->textureType, &formatProperties);
 
     if(!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)){
-        printf("Ошибка Mipmap\n");
+        printf("Error Mipmap\n");
         exit(1);
     }
 
@@ -333,7 +350,7 @@ void TextureGenerateMipmaps(Texture2D *texture){
     VkImageMemoryBarrier barrier;
     memset(&barrier, 0, sizeof(VkImageMemoryBarrier));
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.image = texture->textureImage;
+    barrier.image = texture->image;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -372,7 +389,7 @@ void TextureGenerateMipmaps(Texture2D *texture){
         blit.dstSubresource.baseArrayLayer = 0;
         blit.dstSubresource.layerCount = 1;
 
-        vkCmdBlitImage(commandBuffer, texture->textureImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture->textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+        vkCmdBlitImage(commandBuffer, texture->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
         barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -399,10 +416,12 @@ void TextureGenerateMipmaps(Texture2D *texture){
 }
 
 void TextureCreateTextureImageView(Texture2D *texture, uint32_t type) {
-    texture->textureImageView = TextureCreateImageView(texture->textureImage, type, texture->textureType, VK_IMAGE_ASPECT_COLOR_BIT, texture->image_data.mip_levels);
+    texture->image_view = TextureCreateImageView(texture->image, type, texture->textureType, VK_IMAGE_ASPECT_COLOR_BIT, texture->image_data.mip_levels);
 }
 
-void TextureCreateImage(uint32_t width, uint32_t height, uint32_t mip_levels, uint32_t format, uint32_t tiling, uint32_t usage, uint32_t properties, uint32_t flags, void** image, void** imageMemory) {
+void TextureCreateImage(uint32_t width, uint32_t height, uint32_t mip_levels, uint32_t format, uint32_t tiling, uint32_t usage, uint32_t properties, uint32_t flags, Texture2D *texture) {
+    ZDevice *device = (ZDevice *)engine.device;
+    
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -424,28 +443,30 @@ void TextureCreateImage(uint32_t width, uint32_t height, uint32_t mip_levels, ui
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.flags = flags;
 
-    if (vkCreateImage(e_device, &imageInfo, NULL, image) != VK_SUCCESS) {
+    if (vkCreateImage(device->e_device, &imageInfo, NULL, &texture->image) != VK_SUCCESS) {
         printf("failed to create image!");
         exit(-1);
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(e_device, *image, &memRequirements);
+    vkGetImageMemoryRequirements(device->e_device, texture->image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(e_device, &allocInfo, NULL, imageMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(device->e_device, &allocInfo, NULL, &texture->memory) != VK_SUCCESS) {
         printf("failed to allocate image memory!");
         exit(-1);
     }
 
-    vkBindImageMemory(e_device, *image, *imageMemory, 0);
+    vkBindImageMemory(device->e_device, texture->image, texture->memory, 0);
 }
 
-void* TextureCreateImageView(void* image, uint32_t type, uint32_t format, uint32_t aspectFlags, uint32_t mip_levels) {
+VkImageView TextureCreateImageView(VkImage image, uint32_t type, uint32_t format, uint32_t aspectFlags, uint32_t mip_levels) {
+    ZDevice *device = (ZDevice *)engine.device;
+
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
@@ -458,7 +479,7 @@ void* TextureCreateImageView(void* image, uint32_t type, uint32_t format, uint32
     viewInfo.subresourceRange.layerCount = 1;
 
     VkImageView imageView;
-    if (vkCreateImageView(e_device, &viewInfo, NULL, &imageView) != VK_SUCCESS) {
+    if (vkCreateImageView(device->e_device, &viewInfo, NULL, &imageView) != VK_SUCCESS) {
         printf("failed to create texture image view!");
         exit(1);
     }
@@ -467,10 +488,11 @@ void* TextureCreateImageView(void* image, uint32_t type, uint32_t format, uint32
 }
 
 void* TextureCreateImageViewCube(void* image, void **shadowCubeMapFaceImageViews, uint32_t format, uint32_t aspect_mask) {
+    ZDevice *device = (ZDevice *)engine.device;
 
-    VkImageView *some_views = shadowCubeMapFaceImageViews;
+    VkImageView *some_views = (VkImageView *)shadowCubeMapFaceImageViews;
 
-    VkImageViewCreateInfo *viewInfo = calloc(1, sizeof(VkImageViewCreateInfo));
+    VkImageViewCreateInfo *viewInfo = AllocateMemory(1, sizeof(VkImageViewCreateInfo));
     viewInfo->sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo->image = image;
     viewInfo->viewType = VK_IMAGE_VIEW_TYPE_CUBE; //VK_IMAGE_VIEW_TYPE_2D;
@@ -482,7 +504,7 @@ void* TextureCreateImageViewCube(void* image, void **shadowCubeMapFaceImageViews
     viewInfo->subresourceRange.layerCount = 6;
 
     VkImageView imageView;
-    if (vkCreateImageView(e_device, viewInfo, NULL, &imageView) != VK_SUCCESS) {
+    if (vkCreateImageView(device->e_device, viewInfo, NULL, &imageView) != VK_SUCCESS) {
         printf("failed to create texture image view!");
         exit(1);
     }
@@ -494,15 +516,16 @@ void* TextureCreateImageViewCube(void* image, void **shadowCubeMapFaceImageViews
     for (uint32_t i = 0; i < 6; i++)
     {
         viewInfo->subresourceRange.baseArrayLayer = i;
-        vkCreateImageView(e_device, viewInfo, NULL, &some_views[i]);
+        vkCreateImageView(device->e_device, viewInfo, NULL, &some_views[i]);
     }
 
-    free(viewInfo);
+    FreeMemory(viewInfo);
 
     return imageView;
 }
 
 void TextureCreateSampler(void *sampler, uint32_t texture_type, uint32_t mip_levels) {
+    ZDevice *device = (ZDevice *)engine.device;
 
     VkSamplerCreateInfo samplerInfo = {};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -524,7 +547,7 @@ void TextureCreateSampler(void *sampler, uint32_t texture_type, uint32_t mip_lev
     samplerInfo.anisotropyEnable = VK_TRUE;
 
     VkPhysicalDeviceProperties properties  ={};
-    vkGetPhysicalDeviceProperties(e_physicalDevice, &properties);
+    vkGetPhysicalDeviceProperties(device->e_physicalDevice, &properties);
 
     samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
     samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
@@ -535,7 +558,7 @@ void TextureCreateSampler(void *sampler, uint32_t texture_type, uint32_t mip_lev
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = mip_levels;
 
-    if (vkCreateSampler(e_device, &samplerInfo, NULL, sampler) != VK_SUCCESS) {
+    if (vkCreateSampler(device->e_device, &samplerInfo, NULL, sampler) != VK_SUCCESS) {
         printf("failed to create texture sampler!");
         exit(1);
     }
@@ -558,46 +581,47 @@ void TextureArrayInit(Blueprints *blueprints, uint32_t size)
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;*/
 }
 
-void TextureCreate(BluePrintDescriptor *descriptor, uint32_t type, GameObjectImage *image, bool from_file){
+void TextureCreate(struct BluePrintDescriptor_T *descriptor, uint32_t type, GameObjectImage *image, bool from_file){
+
+    BluePrintDescriptor *descr = (BluePrintDescriptor *)descriptor;
 
     int res = TextureImageCreate(image, descriptor, from_file);
 
-
     if(res)
     {
-        engine_buffered_image *images = e_var_images;
+        engine_buffered_image *images = engine.DataR.e_var_images;
 
-        Texture2D *texture = &images[e_var_num_images].texture;
+        Texture2D *texture = &images[engine.DataR.e_var_num_images].texture;
 
         texture->flags = 0;
 
         TextureCreateTextureImageView(texture, type);
-        TextureCreateSampler(&texture->textureSampler, texture->textureType, texture->image_data.mip_levels);
+        TextureCreateSampler(&texture->sampler, texture->textureType, texture->image_data.mip_levels);
 
-        descriptor->textures[descriptor->size] = texture;
-        descriptor->size ++;
+        descr->textures[descr->size] = *texture;
+        descr->size ++;
 
         image->imgHeight = texture->image_data.texHeight;
         image->imgWidth = texture->image_data.texWidth;
 
-        e_var_num_images ++;
+        engine.DataR.e_var_num_images ++;
     }else{
 
-        Texture2D *texture = descriptor->textures[descriptor->size];
+        Texture2D *texture = &descr->textures[descr->size];
 
         texture->flags = texture->flags;
 
-        descriptor->size ++;
+        descr->size ++;
 
         return;
     }
 }
 
-void TextureCreateSpecific(BluePrintDescriptor *descriptor, uint32_t format, uint32_t width, uint32_t height)
+void TextureCreateSpecific(struct BluePrintDescriptor_T *descriptor, uint32_t format, uint32_t width, uint32_t height)
 {
-    descriptor->textures[descriptor->size] = calloc(1, sizeof(Texture2D));
+    BluePrintDescriptor *descr = (BluePrintDescriptor *)descriptor;
 
-    Texture2D *texture = descriptor->textures[descriptor->size];
+    Texture2D *texture = &descr->textures[descr->size];
 
     texture->flags = ENGINE_TEXTURE2D_FLAG_GENERATED;
     texture->image_data.texWidth = width;
@@ -606,36 +630,40 @@ void TextureCreateSpecific(BluePrintDescriptor *descriptor, uint32_t format, uin
 
     TextureCreateEmpty(texture);
     TextureCreateTextureImageView(texture, VK_IMAGE_VIEW_TYPE_2D);
-    TextureCreateSampler(&texture->textureSampler, texture->textureType,  1);
+    TextureCreateSampler(&texture->sampler, texture->textureType,  1);
 
 }
 
-void TextureUpdate(BluePrintDescriptor *descriptor, void *in_data, uint32_t size_data, uint32_t offset)
+void TextureUpdate(struct BluePrintDescriptor_T *descriptor, void *in_data, uint32_t size_data, uint32_t offset)
 {
-    Texture2D *texture = descriptor->textures[0];
+    BluePrintDescriptor *descr = (BluePrintDescriptor *)descriptor;
 
-    VkBuffer stagingBuffer;
+    ZDevice *device = (ZDevice *)engine.device;
+
+    Texture2D *texture = &descr->textures[0];
+
+    BufferObject stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
     VkDeviceSize bufferSize = texture->image_data.texWidth * texture->image_data.texHeight * 4;
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory, ENGINE_BUFFER_ALLOCATE_STAGING);
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, ENGINE_BUFFER_ALLOCATE_STAGING);
 
     uint32_t *data;
-    vkMapMemory(e_device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    vkMapMemory(device->e_device, stagingBufferMemory, 0, bufferSize, 0, (void **)&data);
     memset(data, 0, bufferSize);
     memcpy(data + offset, in_data, size_data);
-    vkUnmapMemory(e_device, stagingBufferMemory);
+    vkUnmapMemory(device->e_device, stagingBufferMemory);
 
-    ToolsTransitionImageLayout(texture->textureImage, texture->textureType, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texture->image_data.mip_levels);
-    ToolsCopyBufferToImage(stagingBuffer, texture->textureImage, texture->image_data.texWidth, texture->image_data.texHeight);
-    ToolsTransitionImageLayout(texture->textureImage, texture->textureType, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, texture->image_data.mip_levels);
+    ToolsTransitionImageLayout(texture->image, texture->textureType, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, texture->image_data.mip_levels);
+    ToolsCopyBufferToImage(stagingBuffer.buffer, texture->image, texture->image_data.texWidth, texture->image_data.texHeight);
+    ToolsTransitionImageLayout(texture->image, texture->textureType, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, texture->image_data.mip_levels);
 
-    BuffersDestroyBuffer(stagingBuffer);
+    BuffersDestroyBuffer(&stagingBuffer);
 }
 
 //Не корректно
-void TextureSetTexture(BluePrintDescriptor *descriptor, const char* path){
+void TextureSetTexture(struct BluePrintDescriptor_T *descriptor, const char* path){
 
     /*ImageDestroyTexture(descriptor->textures);
 
@@ -650,11 +678,13 @@ void TextureSetTexture(BluePrintDescriptor *descriptor, const char* path){
 }
 
 void ImageDestroyTexture(Texture2D* texture){
+    ZDevice *device = (ZDevice *)engine.device;
 
-    vkDestroyImage(e_device, texture->textureImage, NULL);
-    vkFreeMemory(e_device, texture->textureImageMemory, NULL);
-    vkDestroySampler(e_device, texture->textureSampler, NULL);
-    vkDestroyImageView(e_device, texture->textureImageView, NULL);
+    vkFreeMemory(device->e_device, texture->memory, NULL);
+    vkDestroyImage(device->e_device, texture->image, NULL);
+    vkDestroySampler(device->e_device, texture->sampler, NULL);
+    vkDestroyImageView(device->e_device, texture->image_view, NULL);
 
-    free(texture->image_data.data);
+    if(!(texture->flags & ENGINE_TEXTURE2D_IS_FONT))
+        free(texture->image_data.data);
 }

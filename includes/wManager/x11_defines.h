@@ -207,7 +207,7 @@
 
         // The last received cursor position, regardless of source
         int             lastCursorPosX, lastCursorPosY;
-        // The last position the cursor was warped to by GLFW
+        // The last position the cursor was warped to by wManager
         int             warpCursorPosX, warpCursorPosY;
 
         // The time of the last KeyPress event per keycode, for discarding
@@ -223,7 +223,7 @@
         Window          helperWindowHandle;
         // Invisible cursor for hidden cursor mode
         Cursor          hiddenCursorHandle;
-        // Context for mapping window XIDs to _GLFWwindow pointers
+        // Context for mapping window XIDs to _wManagerwindow pointers
         XContext        context;
         // XIM input method
         XIM             im;
@@ -237,9 +237,9 @@
         char*           clipboardString;
         // Key name string
         char            keynames[ENGINE_KEY_LAST + 1][5];
-        // X11 keycode to GLFW key LUT
+        // X11 keycode to wManager key LUT
         short int       keycodes[256];
-        // GLFW key to X11 keycode LUT
+        // wManager key to X11 keycode LUT
         short int       scancodes[ENGINE_KEY_LAST + 1];
         // Where to place the cursor when re-enabled
         double          restoreCursorPosX, restoreCursorPosY;

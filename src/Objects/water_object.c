@@ -19,7 +19,7 @@ void WaterObjectUpdateBuffer(GameObject3D* go, BluePrintDescriptor *descriptor)
 
     wb.time = time;
 
-    DescriptorUpdate(descriptor, &wb, sizeof(wb));
+    DescriptorUpdate(descriptor, (char *)&wb, sizeof(wb));
 }
 
 
@@ -44,14 +44,14 @@ void WaterObjectSetDefaultDescriptor(WaterObject *water, DrawParam *dParam)
     setting.fromFile = 0;
     setting.vert_indx = 0;
 
-    GameObject3DAddSettingPipeline(water, nums, &setting);
+    GameObject3DAddSettingPipeline((GameObject3D *)water, nums, &setting);
 
     water->go.graphObj.blueprints.num_blue_print_packs ++;
 }
 
 void WaterObjectInit(WaterObject *water, DrawParam *dParam, uint32_t size){
 
-    GameObject3DInit(water);
+    GameObject3DInit((GameObject3D *)water);
 
     vertexParam vParam;
     indexParam iParam;
@@ -60,14 +60,14 @@ void WaterObjectInit(WaterObject *water, DrawParam *dParam, uint32_t size){
 
     GraphicsObjectSetVertex(&water->go.graphObj, vParam.vertices, vParam.verticesSize, sizeof(Vertex3D), iParam.indices, iParam.indexesSize, sizeof(uint32_t));
 
-    free(vParam.vertices);
-    free(iParam.indices);
+    FreeMemory(vParam.vertices);
+    FreeMemory(iParam.indices);
 
-    GameObject3DInitTextures(water, dParam);
+    GameObject3DInitTextures((GameObject3D *)water, dParam);
 }
 
 void WaterObjectInitDefault(WaterObject *water, DrawParam *dParam, uint32_t size){
     WaterObjectInit(water, dParam, size);
     WaterObjectSetDefaultDescriptor(water, dParam);
-    GameObject3DInitDraw(water);
+    GameObject3DInitDraw((GameObject3D *)water);
 }

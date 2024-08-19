@@ -1,6 +1,9 @@
 #include "Objects/gameObject.h"
 
 #include "Core/engine.h"
+#include "Core/e_device.h"
+
+extern ZEngine engine;
 
 void GameObjectSetInitFunc(GameObject *go, void *func){
     go->InitPoint = func;
@@ -32,9 +35,7 @@ void GameObjectInit(GameObject* go){
     if(go == NULL)
         return;
 
-    void (*init)(GameObject* go) = go->InitPoint;
-
-    init(go);
+    go->InitPoint(go);
 }
 
 void GameObjectUpdate(GameObject* go) {
@@ -42,25 +43,22 @@ void GameObjectUpdate(GameObject* go) {
     if(go == NULL)
         return;
 
-    void (*update)(GameObject* go) = go->UpdatePoint;
-
-    if(update == NULL)
+    if(go->UpdatePoint == NULL)
         return;
 
-    update(go);
+    go->UpdatePoint(go);
 }
 
-void GameObjectDraw(GameObject* go, void *command) {
+void GameObjectDraw(GameObject* go) {
+
+    ZDevice *device = (ZDevice *)engine.device;
 
     if(go == NULL)
         return;
 
-    void (*draw)(GameObject* go, void *cmd) = go->DrawPoint;
+    GameObjectUpdate(go);
 
-    if(draw == NULL)
-        return;
-
-    draw(go, command);
+    go->DrawPoint(go, device->commandBuffers[engine.imageIndex]);
 }
 
 void GameObjectClean(GameObject* go){
@@ -68,9 +66,7 @@ void GameObjectClean(GameObject* go){
     if(go == NULL)
         return;
 
-    void (*update)(GameObject* go) = go->CleanPoint;
-
-    update(go);
+    go->CleanPoint(go);
 }
 
 void GameObjectRecreate(GameObject* go){
@@ -78,9 +74,7 @@ void GameObjectRecreate(GameObject* go){
     if(go == NULL)
         return;
 
-    void (*recreate)(GameObject* go) = go->RecreatePoint;
-
-    recreate(go);
+    go->RecreatePoint(go);
 }
 
 void GameObjectDestroy(GameObject* go){

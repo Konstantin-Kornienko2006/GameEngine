@@ -669,7 +669,7 @@ void _wManagerGetWindowFrameSizeX11(wManagerWindow* window,
         XEvent event;
         double timeout = 0.5;
 
-        // Ensure _NET_FRAME_EXTENTS is set, allowing glfwGetWindowFrameSize to
+        // Ensure _NET_FRAME_EXTENTS is set, allowing wManagerGetWindowFrameSize to
         // function before the window is mapped
         sendEventToWM(window, wX11->NET_REQUEST_FRAME_EXTENTS,
                       0, 0, 0, 0, 0);
@@ -1329,7 +1329,7 @@ static int translateState(int state)
     return mods;
 }
 
-// Translates an X11 key code to a GLFW key token
+// Translates an X11 key code to a wManager key token
 //
 static int translateKey(int scancode)
 {
@@ -1618,7 +1618,7 @@ static void processEvent(XEvent *event)
             {
                 // HACK: Do not report the key press events duplicated by XIM
                 //       Duplicate key releases are filtered out implicitly by
-                //       the GLFW key repeat logic in _wManagerInputKey
+                //       the wManager key repeat logic in _wManagerInputKey
                 //       A timestamp per key is used to handle simultaneous keys
                 // NOTE: Always allow the first event for each key through
                 //       (the server never sends a timestamp of zero)
@@ -1826,7 +1826,7 @@ static void processEvent(XEvent *event)
             if (x != ((wManagerX11 *)window->WindowData)->warpCursorPosX ||
                 y != ((wManagerX11 *)window->WindowData)->warpCursorPosY)
             {
-                // The cursor was moved by something other than GLFW
+                // The cursor was moved by something other than wManager
 
                 if (window->cursorMode == ENGINE_CURSOR_DISABLED)
                 {
@@ -2208,8 +2208,8 @@ void _wManagerPollEventsX11(void)
     wManagerX11 *wX11 = _wMWindow.WindowData;
 
 #if defined(ENGINE_BUILD_LINUX_JOYSTICK)
-    if (_glfw.joysticksInitialized)
-        _glfwDetectJoystickConnectionLinux();
+    if (_wManager.joysticksInitialized)
+        _wManagerDetectJoystickConnectionLinux();
 #endif
     XPending(wX11->display);
 
@@ -2231,7 +2231,7 @@ void _wManagerPollEventsX11(void)
         _wManagerGetWindowSizeX11(window, &width, &height);
 
         // NOTE: Re-center the cursor only if it has moved since the last call,
-        //       to avoid breaking glfwWaitEvents with MotionNotify
+        //       to avoid breaking wManagerWaitEvents with MotionNotify
         if (x11->lastCursorPosX != width / 2 ||
             x11->lastCursorPosY != height / 2)
         {
@@ -2259,8 +2259,8 @@ uint32_t waitForAnyEvent(double* timeout)
     };
 
 #if defined(ENGINE_BUILD_LINUX_JOYSTICK)
-    if (_glfw.joysticksInitialized)
-        fds[count++] = (struct pollfd) { _glfw.linjs.inotify, POLLIN };
+    if (_wManager.joysticksInitialized)
+        fds[count++] = (struct pollfd) { _wManager.linjs.inotify, POLLIN };
 #endif
 
     while (!XPending(wX11->display))
@@ -2472,7 +2472,7 @@ uint32_t createNativeWindow(wManagerWindow* window,
         }
     }*/
 
-    // Declare the WM protocols supported by GLFW
+    // Declare the WM protocols supported by wManager
     {
         Atom protocols[] =
         {
@@ -2568,12 +2568,12 @@ uint32_t createNativeWindow(wManagerWindow* window,
             else if (strlen(wndconfig->title))
                 hint->res_name = (char*) wndconfig->title;
             else
-                hint->res_name = (char*) "glfw-application";
+                hint->res_name = (char*) "wManager-application";
 
             if (strlen(wndconfig->title))
                 hint->res_class = (char*) wndconfig->title;
             else
-                hint->res_class = (char*) "GLFW-Application";
+                hint->res_class = (char*) "wManager-Application";
         }
 
         XSetClassHint(wX11->display, x11->handle, hint);
@@ -2614,21 +2614,21 @@ uint32_t _wManagerCreateWindowX11(wManagerWindow* window,
     {
         if (ctxconfig->source == ENGINE_NATIVE_CONTEXT_API)
         {
-            if (!_glfwInitGLX())
+            if (!_wManagerInitGLX())
                 return false;
-            if (!_glfwChooseVisualGLX(wndconfig, ctxconfig, fbconfig, &visual, &depth))
+            if (!_wManagerChooseVisualGLX(wndconfig, ctxconfig, fbconfig, &visual, &depth))
                 return false;
         }
         else if (ctxconfig->source == ENGINE_EGL_CONTEXT_API)
         {
-            if (!_glfwInitEGL())
+            if (!_wManagerInitEGL())
                 return false;
-            if (!_glfwChooseVisualEGL(wndconfig, ctxconfig, fbconfig, &visual, &depth))
+            if (!_wManagerChooseVisualEGL(wndconfig, ctxconfig, fbconfig, &visual, &depth))
                 return false;
         }
         else if (ctxconfig->source == ENGINE_OSMESA_CONTEXT_API)
         {
-            if (!_glfwInitOSMesa())
+            if (!_wManagerInitOSMesa())
                 return false;
         }
     }*/
@@ -2646,21 +2646,21 @@ uint32_t _wManagerCreateWindowX11(wManagerWindow* window,
     {
         if (ctxconfig->source == ENGINE_NATIVE_CONTEXT_API)
         {
-            if (!_glfwCreateContextGLX(window, ctxconfig, fbconfig))
+            if (!_wManagerCreateContextGLX(window, ctxconfig, fbconfig))
                 return false;
         }
         else if (ctxconfig->source == ENGINE_EGL_CONTEXT_API)
         {
-            if (!_glfwCreateContextEGL(window, ctxconfig, fbconfig))
+            if (!_wManagerCreateContextEGL(window, ctxconfig, fbconfig))
                 return false;
         }
         else if (ctxconfig->source == ENGINE_OSMESA_CONTEXT_API)
         {
-            if (!_glfwCreateContextOSMesa(window, ctxconfig, fbconfig))
+            if (!_wManagerCreateContextOSMesa(window, ctxconfig, fbconfig))
                 return false;
         }
 
-        if (!_glfwRefreshContextAttribs(window, ctxconfig))
+        if (!_wManagerRefreshContextAttribs(window, ctxconfig))
             return false;
     }*/
 
@@ -2669,7 +2669,7 @@ uint32_t _wManagerCreateWindowX11(wManagerWindow* window,
 
     /*if (window->monitor)
     {
-        _glfwShowWindowX11(window);
+        _wManagerShowWindowX11(window);
         updateWindowMode(window);
         acquireMonitor(window);
 

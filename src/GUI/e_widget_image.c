@@ -8,11 +8,13 @@
 
 #include "Tools/e_math.h"
 
+extern ZEngine engine;
+
 void ImageWidgetUpdate(EWidgetImage* img, BluePrintDescriptor *descriptor) {
 
     vec2 offset = {0, 0};
     if(img->widget.parent != NULL){
-        offset = v2_div(img->widget.parent->offset, (vec2){ WIDTH, HEIGHT});
+        offset = v2_div(img->widget.parent->offset, (vec2){ engine.width, engine.height});
         img->widget.position = v2_add(v2_add(v2_add(img->widget.go.transform.position, img->widget.parent->position), offset), v2_divs(img->widget.go.transform.scale, 2));
     }
     else{
@@ -36,7 +38,7 @@ void ImageWidgetUpdate(EWidgetImage* img, BluePrintDescriptor *descriptor) {
 
 void ImageWidgetCreateQuad(EWidgetImage *wi)
 {
-    Vertex2D *verts = calloc(4, sizeof(Vertex2D));
+    Vertex2D *verts = AllocateMemory(4, sizeof(Vertex2D));
 
     float size = 0.5f;
 
@@ -65,7 +67,7 @@ void ImageWidgetCreateQuad(EWidgetImage *wi)
         verts[i].color = (vec3){ 1, 1, 1};
     }
 
-    uint32_t *tIndx = calloc(6, sizeof(uint32_t));
+    uint32_t *tIndx = AllocateMemory(6, sizeof(uint32_t));
 
     uint32_t indx[] = {
       0, 1, 2, 2, 3, 0
@@ -86,20 +88,20 @@ void ImageWidgetInit(EWidgetImage *img, char *image_path, EWidget *parent){
 
     ImageWidgetCreateQuad(img);
 
-    img->widget.go.image = calloc(1, sizeof(GameObjectImage));
+    img->widget.go.image = AllocateMemory(1, sizeof(GameObjectImage));
 
     if(strlen(image_path) != 0)
     {
-        img->widget.go.image->path = calloc(256, sizeof(char));
+        img->widget.go.image->path = AllocateMemory(256, sizeof(char));
         memset(img->widget.go.image->path, 0, 256);
         int len = strlen(image_path);
-        img->widget.go.image->path = calloc(len + 1, sizeof(char));
+        img->widget.go.image->path = AllocateMemory(len + 1, sizeof(char));
         memcpy(img->widget.go.image->path, image_path, len);
         img->widget.go.image->path[len] = '\0';
         //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
     }
 
-    img->widget.color = (vec4){0.4, 0.1, 0.1, 1.0};
+    img->widget.color = (vec3){0.4, 0.1, 0.1};
 
     img->widget.offset.x = 0;
     img->widget.offset.y = 0;
@@ -109,7 +111,7 @@ void ImageWidgetInit(EWidgetImage *img, char *image_path, EWidget *parent){
 
     img->widget.widget_flags = ENGINE_FLAG_WIDGET_VISIBLE;
 
-    img->widget.callbacks.stack = (CallbackStruct *) calloc(MAX_GUI_CALLBACKS, sizeof(CallbackStruct));
+    img->widget.callbacks.stack = (CallbackStruct *) AllocateMemory(MAX_GUI_CALLBACKS, sizeof(CallbackStruct));
     img->widget.callbacks.size = 0;
 
 }

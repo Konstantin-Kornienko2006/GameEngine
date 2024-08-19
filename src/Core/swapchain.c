@@ -2,29 +2,36 @@
 
 #include <vulkan/vulkan.h>
 
+#include "Core/e_memory.h"
+#include "Core/e_device.h"
+#include "Core/e_window.h"
+
+#include "Objects/render_texture.h"
+
 #include "Variabels/e_device_variables.h"
 
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
 
-void querySwapChainSupport(void* arg, SwapChainSupportDetails* details) {
+extern ZEngine engine;
 
-    VkPhysicalDevice *device = arg;
+void querySwapChainSupport(VkPhysicalDevice device, SwapChainSupportDetails* details) {
+    ZWindow *window = (ZWindow *)engine.window;
 
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details->capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, window->surface, (VkSurfaceCapabilitiesKHR  *)&details->capabilities);
 
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &details->sizeFormats, NULL);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, window->surface, &details->sizeFormats, NULL);
 
     if (details->sizeFormats != 0) {
-        details->formats = (VkSurfaceFormatKHR* ) calloc(details->sizeFormats, sizeof(VkSurfaceFormatKHR));
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &details->sizeFormats, details->formats);
+        details->formats = AllocateMemory(details->sizeFormats, sizeof(VkSurfaceFormatKHR));
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, window->surface, &details->sizeFormats, (VkSurfaceFormatKHR *)details->formats);
     }
 
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &details->sizeModes, NULL);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, (VkSurfaceKHR)window->surface, &details->sizeModes, NULL);
 
     if (details->sizeModes != 0) {
-        details->presentModes = (VkPresentModeKHR*) calloc(details->sizeModes, sizeof(VkPresentModeKHR));
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &details->sizeModes, details->presentModes);
+        details->presentModes = (VkPresentModeKHR*) AllocateMemory(details->sizeModes, sizeof(VkPresentModeKHR));
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, window->surface, &details->sizeModes, details->presentModes);
     }
 
 }
@@ -40,9 +47,7 @@ EDSurfaceFormatKHR chooseSwapSurfaceFormat(const EDSurfaceFormatKHR* availableFo
     return availableFormats[0];
 }
 
-uint32_t chooseSwapPresentMode(const void** arg, uint32_t sizeModes) {
-
-    VkPresentModeKHR* availablePresentModes = arg;
+uint32_t chooseSwapPresentMode(const VkPresentModeKHR *availablePresentModes, uint32_t sizeModes) {
 
     for (int i=0; i < sizeModes;i++) {
         if (availablePresentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
@@ -59,7 +64,7 @@ EIExtent2D chooseSwapExtent(const EISurfaceCapabilitiesKHR capabilities) {
         return capabilities.currentExtent;
     } else {
 
-        VkExtent2D actualExtent = { WIDTH, HEIGHT };
+        VkExtent2D actualExtent = { engine.width, engine.height };
 
         actualExtent.width = clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
         actualExtent.height = clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
@@ -69,35 +74,38 @@ EIExtent2D chooseSwapExtent(const EISurfaceCapabilitiesKHR capabilities) {
 }
 
 void SwapChainCreate() {
+    ZDevice *device = (ZDevice *)engine.device;
+    ZWindow *window = (ZWindow *)engine.window;
+    ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
 
     SwapChainSupportDetails swapChainSupport;
 
-    querySwapChainSupport(e_physicalDevice, &swapChainSupport);
+    querySwapChainSupport(device->e_physicalDevice, &swapChainSupport);
 
     EDSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats, swapChainSupport.sizeFormats);
     VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, swapChainSupport.sizeModes);
     EIExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
 
-    imagesCount = swapChainSupport.capabilities.minImageCount + 1;
+    engine.imagesCount = swapChainSupport.capabilities.minImageCount + 1;
 
-    if (swapChainSupport.capabilities.maxImageCount > 0 && imagesCount > swapChainSupport.capabilities.maxImageCount) {
-        imagesCount = swapChainSupport.capabilities.maxImageCount;
+    if (swapChainSupport.capabilities.maxImageCount > 0 && engine.imagesCount > swapChainSupport.capabilities.maxImageCount) {
+        engine.imagesCount = swapChainSupport.capabilities.maxImageCount;
     }
 
     VkSwapchainCreateInfoKHR createInfo;
     memset(&createInfo, 0, sizeof(VkSwapchainCreateInfoKHR));
 
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = surface;
+    createInfo.surface = window->surface;
 
-    createInfo.minImageCount = imagesCount;
+    createInfo.minImageCount = engine.imagesCount;
     createInfo.imageFormat = surfaceFormat.format;
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
     createInfo.imageExtent = *(VkExtent2D*)&extent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    QueueFamilyIndices indices = findQueueFamilies(e_physicalDevice);
+    QueueFamilyIndices indices = findQueueFamilies(device->e_physicalDevice);
     uint32_t queueFamilyIndices[] = {indices.graphicsFamily, indices.presentFamily};
 
     if (indices.graphicsFamily != indices.presentFamily) {
@@ -115,26 +123,101 @@ void SwapChainCreate() {
 
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if (vkCreateSwapchainKHR(e_device, &createInfo, NULL, &swapChain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(device->e_device, &createInfo, NULL, (VkSwapchainKHR *)&swapchain->swapChain) != VK_SUCCESS) {
         printf("failed to create swap chain!");
         exit(1);
     }
 
-    vkGetSwapchainImagesKHR(e_device, swapChain, &imagesCount, NULL);
-    swapChainImages = (VkImage *) calloc(imagesCount, sizeof(VkImage));
-    vkGetSwapchainImagesKHR(e_device, swapChain, &imagesCount, swapChainImages);
+    vkGetSwapchainImagesKHR(device->e_device, swapchain->swapChain, &engine.imagesCount, NULL);
+    swapchain->swapChainImages = AllocateMemory(engine.imagesCount, sizeof(VkImage));
+    vkGetSwapchainImagesKHR(device->e_device, swapchain->swapChain, &engine.imagesCount, (VkImage *)swapchain->swapChainImages);
 
-    swapChainImageFormat = surfaceFormat.format;
-    swapChainExtent = *(EIExtent2D*)&extent;
+    swapchain->swapChainImageFormat = surfaceFormat.format;
+    swapchain->swapChainExtent = extent;
 
+    
+    if (swapChainSupport.sizeFormats != 0) {
+        FreeMemory(swapChainSupport.formats);
+    }
+
+    if (swapChainSupport.sizeModes != 0) {
+        FreeMemory(swapChainSupport.presentModes);
+    }
 }
 
 void SwapChainCreateImageViews() {
+    ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
 
-    swapChainImageViews = (VkImageView *) calloc(imagesCount, sizeof(VkImageView));
+    swapchain->swapChainImageViews = AllocateMemory(engine.imagesCount, sizeof(VkImageView));
 
-    for (size_t i = 0; i < imagesCount; i++) {
-        swapChainImageViews[i] = TextureCreateImageView(swapChainImages[i], VK_IMAGE_VIEW_TYPE_2D, swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+    for (size_t i = 0; i < engine.imagesCount; i++) {
+        swapchain->swapChainImageViews[i] = TextureCreateImageView(swapchain->swapChainImages[i], VK_IMAGE_VIEW_TYPE_2D, swapchain->swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
     }
+}
+
+
+void RecreateSwapChain() {
+
+    ZWindow *window = (ZWindow *)engine.window;
+    ZDevice *device = (ZDevice *)engine.device;
+
+    wManagerGetFramebufferSize(window->e_window, &engine.width, &engine.height);
+
+    while (engine.width == 0 || engine.height == 0) {
+        wManagerGetFramebufferSize(window->e_window, &engine.width, &engine.height);
+        wManagerWaitEvents();
+    }
+
+    engine.diffSize.x =  1;
+    engine.diffSize.y =  1;
+
+    vkDeviceWaitIdle(device->e_device);
+
+    CleanupSwapChain();
+    
+    for(int i=0; i < engine.gameObjects.size;i++)
+    {
+        GameObjectClean(engine.gameObjects.objects[i]);
+    }
+        
+    SwapChainCreate();
+    SwapChainCreateImageViews();
+    PipelineCreateRenderPass();
+    ToolsCreateDepthResources();
+
+    for(int i=0;i < engine.renders.size;i++)
+    {
+        RenderTextureRecreate(engine.renders.objects[i]);
+    }
+        
+    for(int i=0; i < engine.gameObjects.size;i++)
+    {
+        GameObjectRecreate(engine.gameObjects.objects[i]);
+    }
+
+    BuffersCreateCommand();    
+}
+
+void CleanupSwapChain() {
+
+    ZDevice *device = (ZDevice *)engine.device;
+    ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
+
+    vkFreeCommandBuffers(device->e_device, device->commandPool, engine.imagesCount, (const VkCommandBuffer *) device->commandBuffers);
+    FreeMemory(device->commandBuffers);
+    device->commandBuffers = NULL;
+
+    vkDestroyRenderPass(device->e_device, renderPass, NULL);
+
+    for (size_t i = 0; i < engine.imagesCount; i++) {
+        vkDestroyImageView(device->e_device, swapchain->swapChainImageViews[i], NULL);
+    }
+    FreeMemory(swapchain->swapChainImages);
+    FreeMemory(swapchain->swapChainImageViews);
+    swapchain->swapChainImageViews = NULL;
+
+    ImageDestroyTexture(&swapchain->depth_texture);
+
+    vkDestroySwapchainKHR(device->e_device, swapchain->swapChain, NULL);
 
 }

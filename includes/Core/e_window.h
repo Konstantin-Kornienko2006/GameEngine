@@ -1,6 +1,8 @@
 #ifndef WINENGINE_H
 #define WINENGINE_H
 
+#include "wManager/window_manager.h"
+
 #include "Variabels/engine_includes.h"
 #include "e_debuger.h"
 
@@ -9,11 +11,19 @@ extern "C"
 {
 #endif
 
+typedef struct{
+    void* instance;
+    void* surface;
+
+    wManagerWindow *e_window;
+
+} ZWindow;
+
 bool checkValidationLayerSupport();
 
 const char** getRequiredExtensions();
 
-void initWindow();
+void InitWindow();
 
 static void framebufferResizeCallback(void* window, int width, int height);
 

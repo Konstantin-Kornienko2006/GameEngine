@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include "Core/e_memory.h"
 #include "Core/e_blue_print.h"
 #include "Core/pipeline.h"
 
@@ -537,7 +538,7 @@ void MarchingCubeObjectSetGridValue(float *grid, uint32_t size, int x, int y, in
 
 void MarchingCubeObjectInit(MarchingCubeObject *mco, float *grid, uint32_t size, float isolevel)
 {
-    GameObject3DInit(mco);
+    GameObject3DInit((GameObject3D *)mco);
 
     mco->grid = grid;
     mco->isolevel = isolevel;
@@ -548,8 +549,8 @@ void MarchingCubeObjectInit(MarchingCubeObject *mco, float *grid, uint32_t size,
 
     uint32_t buff_size = UINT16_MAX;
 
-    vParam.vertices = calloc(buff_size, sizeof(Vertex3D));
-    iParam.indices = calloc(buff_size * 3, sizeof(uint32_t));
+    vParam.vertices = AllocateMemory(buff_size, sizeof(Vertex3D));
+    iParam.indices = AllocateMemory(buff_size * 3, sizeof(uint32_t));
 
     VertextIterator vi;
     memset(&vi, 0, sizeof(VertextIterator));
@@ -561,8 +562,8 @@ void MarchingCubeObjectInit(MarchingCubeObject *mco, float *grid, uint32_t size,
     else
         GraphicsObjectSetVertex(&mco->go.graphObj, vParam.vertices, vi.v_index, sizeof(Vertex3D), iParam.indices, vi.i_index, sizeof(uint32_t));
 
-    free(vParam.vertices);
-    free(iParam.indices);
+    FreeMemory(vParam.vertices);
+    FreeMemory(iParam.indices);
 
 }
 
@@ -587,7 +588,7 @@ void MarchingCubeObjectSetDefaultDescriptor(MarchingCubeObject *mco, DrawParam *
     //setting.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     //setting.flags &= ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED);
 
-    GameObject3DAddSettingPipeline(mco, nums, &setting);
+    GameObject3DAddSettingPipeline((GameObject3D *)mco, nums, &setting);
 
     mco->go.graphObj.blueprints.num_blue_print_packs ++;
 }
@@ -597,5 +598,5 @@ void MarchingCubeObjectDefaultInit(MarchingCubeObject *mco, float *grid, uint32_
     MarchingCubeObjectInit(mco, grid, size, isolevel);
     MarchingCubeObjectSetDefaultDescriptor(mco, dParam);
 
-    GameObject3DInitDraw(mco);
+    GameObject3DInitDraw((GameObject3D *)mco);
 }

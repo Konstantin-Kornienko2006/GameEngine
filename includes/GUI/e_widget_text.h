@@ -3,7 +3,7 @@
 
 #include "Variabels/engine_includes.h"
 
-#include "Objects/textObject.h"
+#include "Objects/text_object.h"
 #include "Objects/gameObject2D.h"
 
 #include "e_widget.h"

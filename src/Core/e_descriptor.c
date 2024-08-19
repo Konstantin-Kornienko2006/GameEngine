@@ -1,3 +1,5 @@
+#include "Core/e_device.h"
+#include "Core/e_memory.h"
 #include "Core/e_descriptor.h"
 
 #include <vulkan/vulkan.h>
@@ -12,18 +14,18 @@
 
 #include "Data/e_resource_engine.h"
 
+extern ZEngine engine;
+
 void DescriptorAcceptStack(ShaderDescriptor *descriptor)
 {
-    if(alloc_descriptor_head->node == NULL){
-        alloc_descriptor_head->next = calloc(1, sizeof(ChildStack));
+    if(engine.cache.alloc_descriptor_head->node == NULL){
+        engine.cache.alloc_descriptor_head->next = calloc(1, sizeof(ChildStack));
 
-        alloc_descriptor_head->next->before = alloc_descriptor_head;
-
-        alloc_descriptor_head->node = descriptor;
+        engine.cache.alloc_descriptor_head->node = descriptor;
     }
     else{
 
-        ChildStack *child = alloc_descriptor_head->next;
+        ChildStack *child = engine.cache.alloc_descriptor_head->next;
 
         while(child->next != NULL)
         {
@@ -31,143 +33,144 @@ void DescriptorAcceptStack(ShaderDescriptor *descriptor)
         }
 
         child->next = calloc(1, sizeof(ChildStack));
-        child->next->before = child;
-
         child->node = descriptor;
     }
 }
 
 void DescriptorClearAll()
 {
-    ChildStack *child = alloc_descriptor_head;
+    ChildStack *child = engine.cache.alloc_descriptor_head;
+    ChildStack *next = NULL;
+    
+    if(child == NULL)
+        return;
 
     uint32_t counter = 0;
 
-    while(child->next != NULL)
+    while(child != NULL)
     {
+        next = child->next;
+
+        if(child->node != NULL)
+            counter ++;
+
         if(child->node != NULL)
             DescriptorDestroy(child->node);
-
-        child->node = NULL;
-
-        child = child->next;
-
-        free(child->before);
-
-        counter ++;
+            
+        child = next;
     }
 
-    if(child->node != NULL){
-
-        DescriptorDestroy(child->node);
-
-        child->node = NULL;
-
-        counter++;
+    if(engine.cache.alloc_descriptor_head != NULL){
+        free(engine.cache.alloc_descriptor_head);
+        engine.cache.alloc_descriptor_head = NULL;
     }
-
-    free(alloc_descriptor_head);
 
     if(counter > 0)
-        printf("Количество не очищенных дескрипторов : %i\n", counter);
+        printf("Autofree descriptors count : %i\n", counter);
 
 }
 
 void DescriptorDestroy(ShaderDescriptor *descriptor)
 {
-    ChildStack *child = alloc_descriptor_head;
+    if(descriptor == NULL || descriptor->descr_pool == VK_NULL_HANDLE)
+        return;
 
-    while(child->next != NULL)
+    ZDevice *device = (ZDevice *)engine.device;
+
+    ChildStack *child = engine.cache.alloc_descriptor_head;
+    ShaderDescriptor *curr = NULL;    
+    ChildStack *before = NULL;
+
+    while(child != NULL)
     {
-        if(child->node == descriptor)
-            break;
+        curr = child->node;
 
+        if(curr != NULL){
+            if(child->node == descriptor)
+                break; 
+        }
+
+        before = child;
         child = child->next;
     }
 
-    if(child->next != NULL && child->before != NULL)
-    {
-        ChildStack *next = child->next;
-        ChildStack *before = child->before;
+    if(curr == NULL){
+        printf("Can't find this memory : 0x%x\n");
+        return;
+    }
 
-        vkFreeDescriptorSets(e_device, descriptor->descr_pool, imagesCount, descriptor->descr_sets);
-        vkDestroyDescriptorPool(e_device, descriptor->descr_pool, NULL);
-        vkDestroyDescriptorSetLayout(e_device, descriptor->descr_set_layout, NULL);
+    if(child->next != NULL){
+        vkFreeDescriptorSets(device->e_device, descriptor->descr_pool, engine.imagesCount, descriptor->descr_sets);
+        vkDestroyDescriptorPool(device->e_device, descriptor->descr_pool, NULL);
+        vkDestroyDescriptorSetLayout(device->e_device, descriptor->descr_set_layout, NULL);
+        FreeMemory(descriptor->descr_sets);
         child->node = NULL;
+        
+        descriptor->descr_pool = VK_NULL_HANDLE;
+        descriptor->descr_set_layout = VK_NULL_HANDLE;
+        descriptor->descr_sets = VK_NULL_HANDLE;
 
+        if(before != NULL)
+            before->next = child->next;
+        else
+            engine.cache.alloc_descriptor_head = child->next;
+            
         free(child);
-        next->before = before;
-        before->next = next;
-
-    }else if(child->next != NULL){
-        vkFreeDescriptorSets(e_device, descriptor->descr_pool, imagesCount, descriptor->descr_sets);
-        vkDestroyDescriptorPool(e_device, descriptor->descr_pool, NULL);
-        vkDestroyDescriptorSetLayout(e_device, descriptor->descr_set_layout, NULL);
-        child->node = NULL;
-
-        child->next->before = NULL;
-        alloc_descriptor_head = child->next;
-        free(child);
-
-    }else if(child->before != NULL){
-        vkFreeDescriptorSets(e_device, descriptor->descr_pool, imagesCount, descriptor->descr_sets);
-        vkDestroyDescriptorPool(e_device, descriptor->descr_pool, NULL);
-        vkDestroyDescriptorSetLayout(e_device, descriptor->descr_set_layout, NULL);
-        child->node = NULL;
-
-        child->before->next = NULL;
-
-        free(child);
-
+        child = NULL;
     }
 
 }
 
 void DescriptorUpdateIndex(BluePrintDescriptor *descriptor, char *data, uint32_t size_data, uint32_t index){
 
-    VkBuffer stagingBuffer;
+    BufferObject stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
-    BuffersCreate(descriptor->uniform->size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory, ENGINE_BUFFER_ALLOCATE_STAGING);
+    BuffersCreate(descriptor->uniform.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, ENGINE_BUFFER_ALLOCATE_STAGING);
 
-    BuffersCopy(stagingBuffer,  descriptor->uniform->uniformBuffers[index], descriptor->uniform->size);
+    BuffersCopy(&stagingBuffer,  &descriptor->uniform.buffers[index], descriptor->uniform.size);
 
-    BuffersDestroyBuffer(stagingBuffer);
+    BuffersDestroyBuffer(&stagingBuffer);
 }
 
 void DescriptorUpdate(BluePrintDescriptor *descriptor, char *data, uint32_t size_data)
 {
+    ZDevice *device = (ZDevice *)engine.device;
+
+    if(descriptor->uniform.size == 0)
+        return;
+
     void *point;
-    vkMapMemory(e_device, descriptor->uniform->uniformBuffersMemory[imageIndex], 0, size_data, 0, &point);
+    vkMapMemory(device->e_device, descriptor->uniform.buffers[engine.imageIndex].memory, 0, size_data, 0, &point);
     memcpy(point, data, size_data);
-    vkUnmapMemory(e_device, descriptor->uniform->uniformBuffersMemory[imageIndex]);
+    vkUnmapMemory(device->e_device, descriptor->uniform.buffers[engine.imageIndex].memory);
 }
 
-void DescriptorSetImage(VkWriteDescriptorSet* descriptorWrites, void *descr_set, uint32_t bind_indx, uint32_t array_size, Texture2D *texture, BluePrintDescriptor *blueprint_descriptor)
+void DescriptorSetImage(VkWriteDescriptorSet* descriptorWrites, void *descr_set, uint32_t bind_indx, uint32_t array_size, BluePrintDescriptor *blueprint_descriptor)
 {
-    descriptorWrites->pImageInfo = calloc(array_size, sizeof(VkDescriptorImageInfo));
+    descriptorWrites->pImageInfo = AllocateMemoryP(array_size, sizeof(VkDescriptorImageInfo), descriptorWrites);
 
-    VkDescriptorImageInfo* imageInfo = descriptorWrites->pImageInfo;
+    VkDescriptorImageInfo* imageInfo = (VkDescriptorImageInfo *)descriptorWrites->pImageInfo;
 
-    Texture2D **textures = blueprint_descriptor->textures;
+    Texture2D *textures = (Texture2D *)blueprint_descriptor->textures;
 
     for(int i=0;i < array_size;i++)
     {
 
         if((blueprint_descriptor->flags & ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE) && (blueprint_descriptor->flags & ENGINE_BLUE_PRINT_FLAG_ARRAY_IMAGE)){
-            imageInfo[i].imageView = textures[i]->textureImageView;
-            imageInfo[i].sampler = textures[i]->textureSampler;
-            imageInfo[i].imageLayout = textures[i]->imageLayout == 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : textures[i]->imageLayout;
+            imageInfo[i].imageView = textures[i].image_view;
+            imageInfo[i].sampler = textures[i].sampler;
+            imageInfo[i].imageLayout = textures[i].imageLayout == 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : textures[i].imageLayout;
         }
         else if(blueprint_descriptor->flags & ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE){
-            imageInfo[i].imageView = texture->textureImageView;
-            imageInfo[i].sampler = texture->textureSampler;
-            imageInfo[i].imageLayout = texture->imageLayout == 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : texture->imageLayout;
+            imageInfo[i].imageView = textures[0].image_view;
+            imageInfo[i].sampler = textures[0].sampler;
+            imageInfo[i].imageLayout = textures[0].imageLayout == 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : textures[i].imageLayout;
         }
         else{
-            imageInfo[i].imageView = texture[i].textureImageView;
-            imageInfo[i].sampler = texture[i].textureSampler;
-            imageInfo[i].imageLayout = texture[i].imageLayout == 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : texture[i].imageLayout;
+            imageInfo[i].imageView = textures[i].image_view;
+            imageInfo[i].sampler = textures[i].sampler;
+            imageInfo[i].imageLayout = textures[i].imageLayout == 0 ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : textures[i].imageLayout;
         }
 
     }
@@ -182,13 +185,13 @@ void DescriptorSetImage(VkWriteDescriptorSet* descriptorWrites, void *descr_set,
 
 void DescriptorSetBuffer(VkWriteDescriptorSet* descriptorWrites, void *descr_set, uint32_t bind_indx, void *uniform_buffer, BluePrintDescriptor *blueprint_descriptor)
 {
-    descriptorWrites->pBufferInfo = calloc(1, sizeof(VkDescriptorBufferInfo));
+    descriptorWrites->pBufferInfo = AllocateMemoryP(1, sizeof(VkDescriptorBufferInfo), descriptorWrites);
 
-    VkDescriptorBufferInfo *bufferInfo = descriptorWrites->pBufferInfo;
+    VkDescriptorBufferInfo *bufferInfo = (VkDescriptorBufferInfo *)descriptorWrites->pBufferInfo;
 
     bufferInfo->buffer = uniform_buffer;//юнибавер
     bufferInfo->offset = 0;
-    bufferInfo->range = blueprint_descriptor->uniform->size;//размер юниформ бафера
+    bufferInfo->range = blueprint_descriptor->uniform.size;//размер юниформ бафера
 
     descriptorWrites->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptorWrites->dstSet = descr_set;
@@ -200,9 +203,11 @@ void DescriptorSetBuffer(VkWriteDescriptorSet* descriptorWrites, void *descr_set
 
 void DescriptorCreate(ShaderDescriptor *descriptor, BluePrintDescriptor *descriptors, Blueprints *blueprints, size_t num_descr, size_t num_frame) {
 
+    ZDevice *device = (ZDevice *)engine.device;
+
     //Создаем параметры дескриптора
     {
-        VkDescriptorSetLayoutBinding* bindings = (VkDescriptorSetLayoutBinding *) calloc(num_descr, sizeof(VkDescriptorSetLayoutBinding));
+        VkDescriptorSetLayoutBinding* bindings = (VkDescriptorSetLayoutBinding *) AllocateMemoryP(num_descr, sizeof(VkDescriptorSetLayoutBinding), &engine);
 
         for(int i=0;i<num_descr;i++)
         {
@@ -218,18 +223,18 @@ void DescriptorCreate(ShaderDescriptor *descriptor, BluePrintDescriptor *descrip
         layoutInfo.bindingCount = num_descr;
         layoutInfo.pBindings = bindings;
 
-        if (vkCreateDescriptorSetLayout(e_device, &layoutInfo, NULL, &descriptor->descr_set_layout) != VK_SUCCESS) {
+        if (vkCreateDescriptorSetLayout(device->e_device, &layoutInfo, NULL, (VkDescriptorSetLayout *)&descriptor->descr_set_layout) != VK_SUCCESS) {
             printf("failed to create descriptor set layout!");
             exit(1);
         }
 
-        free(bindings);
+        FreeMemory(bindings);
         bindings = NULL;
     }
 
     //Создаем пулл дескрипторов для шейдера
     {
-        VkDescriptorPoolSize* poolSizes = (VkDescriptorPoolSize *) calloc(num_descr, sizeof(VkDescriptorPoolSize));
+        VkDescriptorPoolSize* poolSizes = (VkDescriptorPoolSize *) AllocateMemoryP(num_descr, sizeof(VkDescriptorPoolSize), &engine);
 
         for(int i=0;i < num_descr; i++)
         {
@@ -245,18 +250,18 @@ void DescriptorCreate(ShaderDescriptor *descriptor, BluePrintDescriptor *descrip
         poolInfo.maxSets = num_frame;
         poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
-        if (vkCreateDescriptorPool(e_device, &poolInfo, NULL, &descriptor->descr_pool) != VK_SUCCESS) {
+        if (vkCreateDescriptorPool(device->e_device, &poolInfo, NULL, (VkDescriptorPool *) &descriptor->descr_pool) != VK_SUCCESS) {
             printf("failed to create descriptor pool!");
             exit(1);
         }
 
-        free(poolSizes);
+        FreeMemory(poolSizes);
         poolSizes = NULL;
 
         //Создаем сами дескрипторы
         //-------------------------
         //Создаем идентичные друг другу сеты дескрипторов
-        VkDescriptorSetLayout* layouts = (VkDescriptorSetLayout*) calloc(num_frame, sizeof(VkDescriptorSetLayout));
+        VkDescriptorSetLayout* layouts = (VkDescriptorSetLayout*) AllocateMemoryP(num_frame, sizeof(VkDescriptorSetLayout), &engine);
         for(int i=0; i < num_frame;i++)
         {
             layouts[i] = descriptor->descr_set_layout;
@@ -268,17 +273,17 @@ void DescriptorCreate(ShaderDescriptor *descriptor, BluePrintDescriptor *descrip
         allocInfo.descriptorSetCount = num_frame;
         allocInfo.pSetLayouts = layouts;
 
-        descriptor->descr_sets = (VkDescriptorSet*) calloc(num_frame, sizeof(VkDescriptorSet));
-        if (vkAllocateDescriptorSets(e_device, &allocInfo, descriptor->descr_sets) != VK_SUCCESS) {
+        descriptor->descr_sets = AllocateMemoryP(num_frame, sizeof(VkDescriptorSet), descriptor);
+        if (vkAllocateDescriptorSets(device->e_device, &allocInfo, (VkDescriptorSet *) descriptor->descr_sets) != VK_SUCCESS) {
             printf("failed to allocate descriptor sets!");
             exit(1);
         }
 
-        free(layouts);
+        FreeMemory(layouts);
         layouts = NULL;
     }
 
-    VkWriteDescriptorSet* descriptorWrites = (VkWriteDescriptorSet *) calloc(num_descr, sizeof(VkWriteDescriptorSet));
+    VkWriteDescriptorSet* descriptorWrites = (VkWriteDescriptorSet *) AllocateMemory(num_descr, sizeof(VkWriteDescriptorSet));
 
     //-------------------------------------------------
     //Дескрипторы для всех изображений
@@ -291,28 +296,28 @@ void DescriptorCreate(ShaderDescriptor *descriptor, BluePrintDescriptor *descrip
 
                 //Дескриптор Юнибафферов
 
-                DescriptorSetBuffer(&descriptorWrites[j], descriptor->descr_sets[i], j, blueprint_descriptor->uniform->uniformBuffers[i], blueprint_descriptor);
+                DescriptorSetBuffer(&descriptorWrites[j], descriptor->descr_sets[i], j, blueprint_descriptor->uniform.buffers[i].buffer, blueprint_descriptor);
 
              }else if(blueprint_descriptor->descrType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || blueprint_descriptor->descrType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE){
 
                 //Дескриптор Изображений для шейдера
-                Texture2D **textures = blueprint_descriptor->textures;
+                Texture2D *textures = (Texture2D *)blueprint_descriptor->textures;
 
                 //Если изображение еденичное и является массивом
                 if((blueprint_descriptor->flags & ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE) && (blueprint_descriptor->flags & ENGINE_BLUE_PRINT_FLAG_ARRAY_IMAGE))
                 {
 
-                    DescriptorSetImage(&descriptorWrites[j], descriptor->descr_sets[i], j, blueprint_descriptor->size, textures[0], blueprint_descriptor);
+                    DescriptorSetImage(&descriptorWrites[j], descriptor->descr_sets[i], j, blueprint_descriptor->size,blueprint_descriptor);
 
                 //Если изображение еденичное
                 }else if(blueprint_descriptor->flags & ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE){
 
-                    DescriptorSetImage(&descriptorWrites[j], descriptor->descr_sets[i], j, 1, textures[0], blueprint_descriptor);
+                    DescriptorSetImage(&descriptorWrites[j], descriptor->descr_sets[i], j, 1, blueprint_descriptor);
 
                 //Просто массив изображений
                 }else{
 
-                    DescriptorSetImage(&descriptorWrites[j], descriptor->descr_sets[i], j, blueprint_descriptor->size, textures[i], blueprint_descriptor);
+                    DescriptorSetImage(&descriptorWrites[j], descriptor->descr_sets[i], j, blueprint_descriptor->size, blueprint_descriptor);
 
                 }
 
@@ -323,23 +328,22 @@ void DescriptorCreate(ShaderDescriptor *descriptor, BluePrintDescriptor *descrip
 
         //--------------------------------------
 
-        vkUpdateDescriptorSets(e_device, num_descr, descriptorWrites, 0, NULL);
+        vkUpdateDescriptorSets(device->e_device, num_descr, descriptorWrites, 0, NULL);
 
         for(int i=0;i<num_descr; i++)
         {
             BluePrintDescriptor *blueprint_descriptor = &descriptors[i];
             if(blueprint_descriptor->descrType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-                free(descriptorWrites[i].pImageInfo);
+                FreeMemory((void *)descriptorWrites[i].pImageInfo);
             else
-                free(descriptorWrites[i].pBufferInfo);
+                FreeMemory((void *)descriptorWrites[i].pBufferInfo);
         }
     }
 
     DescriptorAcceptStack(descriptor);
 
-
     //--------------------------------------
 
-    free(descriptorWrites);
+    FreeMemory(descriptorWrites);
     descriptorWrites = NULL;
 }

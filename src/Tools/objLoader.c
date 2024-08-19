@@ -200,14 +200,14 @@ char* mmap_file(size_t* len, const char* filename) {
     fd = fopen(filename, "r");
     if (fd == NULL) {
         printf("File Not Found!\n");
-        return -1;
+        return 0;
     }
 
 
     fseek(fd, 0L, SEEK_END);
     size = ftell(fd);
 
-    char *buff = (char *)calloc(size, sizeof(char));
+    char *buff = (char *)AllocateMemory(size, sizeof(char));
 
     fseek(fd, 0L, SEEK_SET);
 
@@ -248,38 +248,38 @@ void DestroyOBJModel(ModelObject3D *mo){
     tinyobj_attrib_free(&obj->attrib);
     tinyobj_shapes_free(obj->shapes,  obj->num_shapes);
     tinyobj_materials_free(obj->materials, obj->num_materials);
-    free(mo->obj);
+    FreeMemory(mo->obj);
 
     GraphicsObjectDestroy(&mo->nodes[0].models[0].graphObj);
 
     if(mo->nodes[0].models->diffuse != NULL)
     {
-        free(mo->nodes[0].models->diffuse->path);
+        FreeMemory(mo->nodes[0].models->diffuse->path);
 
         if(mo->nodes[0].models->diffuse->size > 0)
-            free(mo->nodes[0].models->diffuse->buffer);
+            FreeMemory(mo->nodes[0].models->diffuse->buffer);
 
-        free(mo->nodes[0].models->diffuse);
+        FreeMemory(mo->nodes[0].models->diffuse);
     }
 
     if(mo->nodes[0].models->specular != NULL)
     {
-        free(mo->nodes[0].models->specular->path);
+        FreeMemory(mo->nodes[0].models->specular->path);
 
         if(mo->nodes[0].models->specular->size > 0)
-            free(mo->nodes[0].models->specular->buffer);
+            FreeMemory(mo->nodes[0].models->specular->buffer);
 
-        free(mo->nodes[0].models->specular);
+        FreeMemory(mo->nodes[0].models->specular);
     }
 
     if(mo->nodes[0].models->normal != NULL)
     {
-        free(mo->nodes[0].models->normal->path);
+        FreeMemory(mo->nodes[0].models->normal->path);
 
         if(mo->nodes[0].models->normal->size > 0)
-            free(mo->nodes[0].models->normal->buffer);
+            FreeMemory(mo->nodes[0].models->normal->buffer);
 
-        free(mo->nodes[0].models->normal);
+        FreeMemory(mo->nodes[0].models->normal);
     }
 }
 
@@ -287,23 +287,23 @@ void Load3DObjModel(ModelObject3D * mo, char *filepath, DrawParam *dParam){
 
   Transform3DInit(&mo->transform);
 
-  GameObjectSetUpdateFunc(mo, (void *)ModelDefaultUpdate);
-  GameObjectSetDrawFunc(mo, (void *)ModelDefaultDraw);
-  GameObjectSetCleanFunc(mo, (void *)ModelClean);
-  GameObjectSetRecreateFunc(mo, (void *)ModelRecreate);
-  GameObjectSetDestroyFunc(mo, (void *)DestroyOBJModel);
+  GameObjectSetUpdateFunc((GameObject *)mo, (void *)ModelDefaultUpdate);
+  GameObjectSetDrawFunc((GameObject *)mo, (void *)ModelDefaultDraw);
+  GameObjectSetCleanFunc((GameObject *)mo, (void *)ModelClean);
+  GameObjectSetRecreateFunc((GameObject *)mo, (void *)ModelRecreate);
+  GameObjectSetDestroyFunc((GameObject *)mo, (void *)DestroyOBJModel);
 
-  mo->obj = (OBJStruct *) calloc(1, sizeof(OBJStruct));
+  mo->obj = (OBJStruct *) AllocateMemory(1, sizeof(OBJStruct));
 
   OBJStruct *obj = mo->obj;
 
   unsigned int flags = TINYOBJ_FLAG_TRIANGULATE;
   tinyobj_parse_obj(&obj->attrib, &obj->shapes, &obj->num_materials, &obj->materials, &obj->num_materials, filepath, (void *)get_file_data, NULL, flags);
 
-  mo->nodes = calloc(1, sizeof(ModelNode));
+  mo->nodes = AllocateMemory(1, sizeof(ModelNode));
   mo->num_draw_nodes = 1;
 
-  mo->nodes[0].models = calloc(1, sizeof(ModelStruct));
+  mo->nodes[0].models = AllocateMemory(1, sizeof(ModelStruct));
   mo->nodes[0].num_models = 1;
 
   ModelStruct *model = &mo->nodes[0].models[0];
@@ -312,8 +312,8 @@ void Load3DObjModel(ModelObject3D * mo, char *filepath, DrawParam *dParam){
 
   model->graphObj.gItems.perspective = true;
 
-  model->graphObj.shapes[0].vParam.vertices = (ModelVertex3D *) calloc(obj->attrib.num_face_num_verts * 3, sizeof(ModelVertex3D));
-  model->graphObj.shapes[0].iParam.indices = (uint32_t *) calloc(obj->attrib.num_face_num_verts * 3, sizeof(uint32_t));
+  model->graphObj.shapes[0].vParam.vertices = (ModelVertex3D *) AllocateMemory(obj->attrib.num_face_num_verts * 3, sizeof(ModelVertex3D));
+  model->graphObj.shapes[0].iParam.indices = (uint32_t *) AllocateMemory(obj->attrib.num_face_num_verts * 3, sizeof(uint32_t));
 
   ParseSomeStruct(mo, model->graphObj.shapes[0].vParam.vertices );
 
@@ -330,12 +330,12 @@ void Load3DObjModel(ModelObject3D * mo, char *filepath, DrawParam *dParam){
   {
       if(model->diffuse == NULL)
       {
-          model->diffuse = calloc(1, sizeof(GameObjectImage));
+          model->diffuse = AllocateMemory(1, sizeof(GameObjectImage));
 
           if(strlen(dParam->diffuse) != 0)
           {
               int len = strlen(dParam->diffuse);
-              model->diffuse->path = calloc(len + 1, sizeof(char));
+              model->diffuse->path = AllocateMemory(len + 1, sizeof(char));
               memcpy(model->diffuse->path, dParam->diffuse, len);
               model->diffuse->path[len] = '\0';
           }
@@ -343,12 +343,12 @@ void Load3DObjModel(ModelObject3D * mo, char *filepath, DrawParam *dParam){
 
       if(model->specular == NULL)
       {
-          model->specular = calloc(1, sizeof(GameObjectImage));
+          model->specular = AllocateMemory(1, sizeof(GameObjectImage));
 
           if(strlen(dParam->specular) != 0)
           {
               int len = strlen(dParam->specular);
-              model->specular->path = calloc(len + 1, sizeof(char));
+              model->specular->path = AllocateMemory(len + 1, sizeof(char));
               memcpy(model->specular->path, dParam->specular, len);
               model->specular->path[len] = '\0';
           }
@@ -356,12 +356,12 @@ void Load3DObjModel(ModelObject3D * mo, char *filepath, DrawParam *dParam){
 
       if(model->normal == NULL)
       {
-          model->normal = calloc(1, sizeof(GameObjectImage));
+          model->normal = AllocateMemory(1, sizeof(GameObjectImage));
 
           if(strlen(dParam->normal) != 0)
           {
               int len = strlen(dParam->normal);
-              model->normal->path = calloc(len + 1, sizeof(char));
+              model->normal->path = AllocateMemory(len + 1, sizeof(char));
               memcpy(model->normal->path, dParam->normal, len);
               model->normal->path[len] = '\0';
           }

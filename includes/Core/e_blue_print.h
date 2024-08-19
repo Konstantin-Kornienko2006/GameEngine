@@ -1,8 +1,10 @@
 #ifndef E_BLUE_PRINT_H
 #define E_BLUE_PRINT_H
 
-#include "Variabels/engine_includes.h"
+#include "Core/e_buffer.h"
+#include "Core/e_texture.h"
 
+#include "Variabels/engine_includes.h"
 #include "Variabels/e_pipeline_variables.h"
 
 typedef enum{
@@ -13,17 +15,11 @@ typedef enum{
 } EngineBluePrintFlag;
 
 typedef struct{
-    void** uniformBuffers;
-    void** uniformBuffersMemory;
-    uint32_t size;
-} UniformStruct;
-
-typedef struct{
     void *update;
-    void **textures;
+    Texture2D *textures;
     uint32_t num_textures;
     uint32_t max_textures;
-    UniformStruct *uniform;
+    BufferContainer uniform;
     uint32_t descrType;
     uint32_t descrCount;
     uint32_t stageflag;
@@ -58,7 +54,7 @@ typedef struct{
 
 void BluePrintAddPushConstant(Blueprints *blueprints, uint32_t indx_pack, uint64_t size, uint32_t stage, uint32_t offset);
 
-BluePrintDescriptor *BluePrintAddExistUniformStorage(Blueprints *blueprints, uint32_t indx_pack, uint32_t flags, UniformStruct *uniform, void *update_func, uint32_t layer_indx);
+BluePrintDescriptor *BluePrintAddExistUniformStorage(Blueprints *blueprints, uint32_t indx_pack, uint32_t flags, BufferContainer uniform, void *update_func, uint32_t layer_indx);
 BluePrintDescriptor *BluePrintAddUniformStorage(Blueprints *blueprints, uint32_t indx_pack, uint64_t size, uint32_t flags, void *update_func, uint32_t layer_indx);
 void BluePrintAddUniformObject(Blueprints *blueprints, uint32_t indx_pack, uint64_t size, uint32_t flags, void *update_func, uint32_t layer_indx);
 
@@ -72,5 +68,7 @@ void BluePrintAddTextureImageArray(Blueprints *blueprints, uint32_t indx_pack, G
 
 BluePrintDescriptor *BluePrintAddExistTextureImage(Blueprints *blueprints, uint32_t indx_pack, void *texture);
 BluePrintDescriptor *BluePrintAddTextureImage(Blueprints *blueprints, uint32_t indx_pack, GameObjectImage *image, uint32_t stage_bit);
+
+void BluePrintClearAll(Blueprints *blueprints);
 
 #endif // E_BLUE_PRINT_H

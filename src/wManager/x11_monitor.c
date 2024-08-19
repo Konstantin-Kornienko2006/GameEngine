@@ -11,7 +11,7 @@ void _wManagerPollMonitorsX11(void)
     if (wX11->randr.available && !wX11->randr.monitorBroken)
     {
         int disconnectedCount, screenCount = 0;
-        _GLFWmonitor** disconnected = NULL;
+        _wManagermonitor** disconnected = NULL;
         XineramaScreenInfo* screens = NULL;
         XRRScreenResources* sr = XRRGetScreenResourcesCurrent(wX11->display,
                                                               wX11->root);
@@ -21,13 +21,13 @@ void _wManagerPollMonitorsX11(void)
         if (wX11->xinerama.available)
             screens = XineramaQueryScreens(wX11->display, &screenCount);
 
-        disconnectedCount = _glfw.monitorCount;
+        disconnectedCount = _wManager.monitorCount;
         if (disconnectedCount)
         {
-            disconnected = _glfw_calloc(_glfw.monitorCount, sizeof(_GLFWmonitor*));
+            disconnected = _wManager_calloc(_wManager.monitorCount, sizeof(_wManagermonitor*));
             memcpy(disconnected,
-                   _glfw.monitors,
-                   _glfw.monitorCount * sizeof(_GLFWmonitor*));
+                   _wManager.monitors,
+                   _wManager.monitorCount * sizeof(_wManagermonitor*));
         }
 
         for (int i = 0;  i < sr->noutput;  i++)
@@ -79,7 +79,7 @@ void _wManagerPollMonitorsX11(void)
                 heightMM = (int) (ci->height * 25.4f / 96.f);
             }
 
-            _GLFWmonitor* monitor = _glfwAllocMonitor(oi->name, widthMM, heightMM);
+            _wManagermonitor* monitor = _wManagerAllocMonitor(oi->name, widthMM, heightMM);
             monitor->x11.output = sr->outputs[i];
             monitor->x11.crtc   = oi->crtc;
 
@@ -96,11 +96,11 @@ void _wManagerPollMonitorsX11(void)
             }
 
             if (monitor->x11.output == primary)
-                type = _GLFW_INSERT_FIRST;
+                type = _ENGINE_INSERT_FIRST;
             else
-                type = _GLFW_INSERT_LAST;
+                type = _ENGINE_INSERT_LAST;
 
-            _glfwInputMonitor(monitor, GLFW_CONNECTED, type);
+            _wManagerInputMonitor(monitor, ENGINE_CONNECTED, type);
 
             XRRFreeOutputInfo(oi);
             XRRFreeCrtcInfo(ci);
@@ -114,18 +114,18 @@ void _wManagerPollMonitorsX11(void)
         for (int i = 0;  i < disconnectedCount;  i++)
         {
             if (disconnected[i])
-                _glfwInputMonitor(disconnected[i], GLFW_DISCONNECTED, 0);
+                _wManagerInputMonitor(disconnected[i], ENGINE_DISCONNECTED, 0);
         }
 
-        _glfw_free(disconnected);
+        _wManager_free(disconnected);
     }
     else
     {
         const int widthMM = DisplayWidthMM(wX11->display, wX11->screen);
         const int heightMM = DisplayHeightMM(wX11->display, wX11->screen);
 
-        _glfwInputMonitor(_glfwAllocMonitor("Display", widthMM, heightMM),
-                          GLFW_CONNECTED,
-                          _GLFW_INSERT_FIRST);
+        _wManagerInputMonitor(_wManagerAllocMonitor("Display", widthMM, heightMM),
+                          ENGINE_CONNECTED,
+                          _ENGINE_INSERT_FIRST);
     }*/
 }

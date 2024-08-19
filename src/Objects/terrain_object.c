@@ -18,6 +18,8 @@
 #include "Data/e_resource_engine.h"
 #include "Data/e_resource_export.h"
 
+extern ZEngine engine;
+
 void TerrainObjectMakeDefaultParams(TerrainParam *tParam, uint32_t texture_width, uint32_t texture_height, uint32_t height_map_size)
 {
     tParam->size_patch = 256;
@@ -62,15 +64,15 @@ void TerrainObjectDescriptorTextureUpdate(TerrainObject *to, BluePrintDescriptor
 
     tb.multi_size = to->t_t_param.texture_scale;
 
-    DescriptorUpdate(descriptor, &tb, sizeof(tb));
+    DescriptorUpdate(descriptor, (char *)&tb, sizeof(tb));
 }
 
 enum side { LEFT = 0, RIGHT = 1, TOP = 2, BOTTOM = 3, BACK = 4, FRONT = 5 };
 
 void TerrainObjectDescriptorTesselationUpdate(TerrainObject *to, BluePrintDescriptor *descriptor)
 {
-    Camera3D* cam = (Camera3D*) cam3D;
-    RenderTexture *render = current_render;
+    Camera3D* cam = (Camera3D*) engine.cam3D;
+    RenderTexture *render = engine.current_render;
 
     TesselationBuffer tb;
     memset(&tb, 0, sizeof(TesselationBuffer));
@@ -80,7 +82,7 @@ void TerrainObjectDescriptorTesselationUpdate(TerrainObject *to, BluePrintDescri
     tb.tessellatedEdgeSize = 20.0f;
 
     tb.lightPos.y = -0.5f - tb.displacementFactor; // todo: Not uesed yet
-    tb.viewportDim = vec2_f((float)WIDTH, (float)HEIGHT);
+    tb.viewportDim = vec2_f((float)engine.width, (float)engine.height);
 
     mat4 proj = m4_perspective(render->width, render->height, 60.0f, 0.1f, 512.0f);
     mat4 view = m4_look_at(cam->position, v3_add(cam->position, cam->rotation), vec3_f(0.0f,1.0f, 0.0f));
@@ -123,12 +125,12 @@ void TerrainObjectDescriptorTesselationUpdate(TerrainObject *to, BluePrintDescri
         tb.frustumPlanes[i] = v4_normalize(tb.frustumPlanes[i]);
     }
 
-    DescriptorUpdate(descriptor, &tb, sizeof(tb));
+    DescriptorUpdate(descriptor, (char *)&tb, sizeof(tb));
 }
 
 void TearrainDefaultDestroy(TerrainObject *to)
 {
-    free(to->height_map);
+    FreeMemory(to->height_map);
 
     GraphicsObjectDestroy(&to->go.graphObj);
 }
@@ -183,7 +185,7 @@ void TerrainObjectGenerateTerrainHeightTextureMap(TerrainObject *to)
 {
     uint32_t size_texture = to->t_t_param.height_map_scale * to->t_t_param.height_map_scale;
 
-    to->height_map = calloc(size_texture, sizeof(uint16_t));
+    to->height_map = AllocateMemory(size_texture, sizeof(uint16_t));
 
     uint16_t *heightMap = to->height_map;
 
@@ -230,7 +232,7 @@ void TerrainObjectGenerateTerrainHeights(TerrainObject *to)
 
     int iter = 0;
 
-    to->height_map = calloc(vParam->verticesSize, sizeof(TerrainVertex));
+    to->height_map = AllocateMemory(vParam->verticesSize, sizeof(TerrainVertex));
 
     for(int i = 0;i < to->width; i++)
     {
@@ -304,24 +306,24 @@ void TerrainObjectSetShadowDefaultDescriptor(TerrainObject *to, DrawParam *dPara
     BluePrintAddUniformObject(&to->go.graphObj.blueprints, nums, sizeof(SpotLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorSpotLightsUpdate, 0);
     BluePrintAddUniformObject(&to->go.graphObj.blueprints, nums, sizeof(LightStatusBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DLigtStatusBufferUpdate, 0);
 
-    RenderTexture **renders = dir_shadow_array;
+    RenderTexture **renders = engine.DataR.dir_shadow_array;
 
-    if(num_dir_shadows > 1)
-        BluePrintAddRenderImageArray(&to->go.graphObj.blueprints, nums, renders, num_dir_shadows);
+    if(engine.DataR.num_dir_shadows > 1)
+        BluePrintAddRenderImageArray(&to->go.graphObj.blueprints, nums, renders, engine.DataR.num_dir_shadows);
     else
         BluePrintAddRenderImage(&to->go.graphObj.blueprints, nums, renders[0]);
 
-    renders = point_shadow_array;
+    renders = engine.DataR.point_shadow_array;
 
-    if(num_point_shadows > 1)
-        BluePrintAddRenderImageArray(&to->go.graphObj.blueprints, nums, renders, num_point_shadows);
+    if(engine.DataR.num_point_shadows > 1)
+        BluePrintAddRenderImageArray(&to->go.graphObj.blueprints, nums, renders, engine.DataR.num_point_shadows);
     else
         BluePrintAddRenderImage(&to->go.graphObj.blueprints, nums, renders[0]);
 
-    renders = spot_shadow_array;
+    renders = engine.DataR.spot_shadow_array;
 
-    if(num_spot_shadows > 1)
-        BluePrintAddRenderImageArray(&to->go.graphObj.blueprints, nums, renders, num_spot_shadows);
+    if(engine.DataR.num_spot_shadows > 1)
+        BluePrintAddRenderImageArray(&to->go.graphObj.blueprints, nums, renders, engine.DataR.num_spot_shadows);
     else
         BluePrintAddRenderImage(&to->go.graphObj.blueprints, nums, renders[0]);
 
@@ -353,7 +355,7 @@ void TerrainObjectSetShadowDefaultDescriptor(TerrainObject *to, DrawParam *dPara
     setting.fromFile = 0;
     setting.vert_indx = 0;
 
-    GameObject3DAddSettingPipeline(to, nums, &setting);
+    GameObject3DAddSettingPipeline((GameObject3D *)to, nums, &setting);
 
     to->go.graphObj.blueprints.num_blue_print_packs ++;
 }
@@ -426,7 +428,7 @@ void TerrainObjectAddDefault(TerrainObject *to, DrawParam *dParam)
     setting.flags |= ENGINE_PIPELINE_FLAG_TESSELLATION_CONTROL_SHADER | ENGINE_PIPELINE_FLAG_TESSELLATION_EVALUATION_SHADER | ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE;
     setting.flags &= ~(ENGINE_PIPELINE_FLAG_ALPHA);
 
-    GameObject3DAddSettingPipeline(to, nums, &setting);
+    GameObject3DAddSettingPipeline((GameObject3D *)to, nums, &setting);
 
     to->go.graphObj.blueprints.num_blue_print_packs ++;
 
@@ -449,11 +451,11 @@ float TerrainObjectGetHeight(TerrainObject *to, uint32_t x, uint32_t y)
 }
 void TerrainObjectInit(TerrainObject *to, DrawParam *dParam, TerrainParam *tParam)
 {
-    GameObjectSetUpdateFunc(to, (void *)GameObject3DDefaultUpdate);
-    GameObjectSetDrawFunc(to, (void *)GameObject3DDefaultDraw);
-    GameObjectSetCleanFunc(to, (void *)GameObject3DClean);
-    GameObjectSetRecreateFunc(to, (void *)GameObject3DRecreate);
-    GameObjectSetDestroyFunc(to, (void *)TearrainDefaultDestroy);
+    GameObjectSetUpdateFunc((GameObject *)to, (void *)GameObject3DDefaultUpdate);
+    GameObjectSetDrawFunc((GameObject *)to, (void *)GameObject3DDefaultDraw);
+    GameObjectSetCleanFunc((GameObject *)to, (void *)GameObject3DClean);
+    GameObjectSetRecreateFunc((GameObject *)to, (void *)GameObject3DRecreate);
+    GameObjectSetDestroyFunc((GameObject *)to, (void *)TearrainDefaultDestroy);
 
     to->go.self.obj_type = ENGINE_GAME_OBJECT_TYPE_3D;
 
@@ -479,19 +481,19 @@ void TerrainObjectInit(TerrainObject *to, DrawParam *dParam, TerrainParam *tPara
 
     GraphicsObjectSetVertex(&to->go.graphObj, vParam.vertices, vParam.verticesSize, sizeof(TerrainVertex), iParam.indices, iParam.indexesSize, sizeof(uint32_t));
 
-    free(vParam.vertices);
-    free(iParam.indices);
+    FreeMemory(vParam.vertices);
+    FreeMemory(iParam.indices);
 
     if((to->flags & ENGINE_TERRIAN_FLAGS_GENERATE_HEIGHTS_OLD))
         TerrainObjectGenerateTerrainHeights(to);
 
-    to->go.images = calloc(tParam->t_t_param.num_textures + 1, sizeof(GameObjectImage));
+    to->go.images = AllocateMemory(tParam->t_t_param.num_textures + 1, sizeof(GameObjectImage));
     to->go.num_images = tParam->t_t_param.num_textures + 1;
 
     if(strlen(tParam->texture_map) != 0)
     {
         int len = strlen(tParam->texture_map);
-        to->heightMap.path = calloc(len + 1, sizeof(char));
+        to->heightMap.path = AllocateMemory(len + 1, sizeof(char));
         memcpy(to->heightMap.path, tParam->texture_map, len);
         to->heightMap.path[len] = '\0';
         //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
@@ -502,7 +504,7 @@ void TerrainObjectInit(TerrainObject *to, DrawParam *dParam, TerrainParam *tPara
         if(strlen(tParam->textures[i]) != 0)
         {
             int len = strlen(tParam->textures[i]);
-            to->go.images[i + 1].path = calloc(len + 1, sizeof(char));
+            to->go.images[i + 1].path = AllocateMemory(len + 1, sizeof(char));
             memcpy(to->go.images[i + 1].path, tParam->textures[i], len);
             to->go.images[i + 1].path[len] = '\0';
             //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
@@ -514,20 +516,20 @@ void TerrainObjectInit(TerrainObject *to, DrawParam *dParam, TerrainParam *tPara
 
 void TerrainObjectApplyShadows(TerrainObject *to, DrawParam *dParam)
 {
-    RenderTexture **renders = dir_shadow_array;
+    RenderTexture **renders = engine.DataR.dir_shadow_array;
 
-    for(int i=0;i < num_dir_shadows;i++)
-        GameObject3DAddShadowDescriptor(to, ENGINE_LIGHT_TYPE_DIRECTIONAL, renders[i], i);
+    for(int i=0;i < engine.DataR.num_dir_shadows;i++)
+        GameObject3DAddShadowDescriptor((GameObject3D *)to, ENGINE_LIGHT_TYPE_DIRECTIONAL, renders[i], i);
 
-    renders = point_shadow_array;
+    renders = engine.DataR.point_shadow_array;
 
-    for(int i=0;i < num_point_shadows;i++)
-        GameObject3DAddOmiShadow(to, renders[i], i);
+    for(int i=0;i < engine.DataR.num_point_shadows;i++)
+        GameObject3DAddOmiShadow((GameObject3D *)to, renders[i], i);
 
-    renders = spot_shadow_array;
+    renders = engine.DataR.spot_shadow_array;
 
-    for(int i=0;i < num_spot_shadows;i++)
-        GameObject3DAddShadowDescriptor(to, ENGINE_LIGHT_TYPE_SPOT, renders[i], i);
+    for(int i=0;i < engine.DataR.num_spot_shadows;i++)
+        GameObject3DAddShadowDescriptor((GameObject3D *)to, ENGINE_LIGHT_TYPE_SPOT, renders[i], i);
 
     TerrainObjectSetShadowDefaultDescriptor(to, dParam);
 }
@@ -542,7 +544,7 @@ void TerrainObjectDefaultInit(TerrainObject *to, DrawParam *dParam, TerrainParam
     else
         TerrainObjectAddDefault(to, dParam);
 
-    GameObject3DInitDraw(to);
+    GameObject3DInitDraw((GameObject3D *)to);
 }
 
 void TerrainObjectAddTextureRender(TerrainObject *to, void *render)

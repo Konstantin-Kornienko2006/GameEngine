@@ -146,7 +146,7 @@ typedef struct wManagerInfo{
 
 int wManagerVulkanInit();
 
-void wManagerInit();
+int wManagerInit();
 
 int wManagerCreateWindow(wManagerWindow *window, int width, int height, const char* app_name);
 void wManagerDestroyWindow(wManagerWindow *window);

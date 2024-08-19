@@ -1,7 +1,7 @@
 #ifndef MANAGER_INCLUDES_H
 #define MANAGER_INCLUDES_H
 
-#if defined(_WIN32)
+#if defined(_WIN32_)
  #define APIENTRY __stdcall
 #else
     #define APIENTRY
@@ -366,17 +366,17 @@ typedef struct _wManagerPlatform
     void (*setCursorMode)(wManagerWindow*,int);
     void (*setRawMouseMotion)(wManagerWindow*,uint32_t);
     uint32_t (*rawMouseMotionSupported)(void);
-    //uint32_t (*createCursor)(_GLFWcursor*,const GLFWimage*,int,int);
-    //uint32_t (*createStandardCursor)(_GLFWcursor*,int);
-    //void (*destroyCursor)(_GLFWcursor*);
-    //void (*setCursor)(wManagerWindow*,_GLFWcursor*);
+    //uint32_t (*createCursor)(_wManagercursor*,const wManagerimage*,int,int);
+    //uint32_t (*createStandardCursor)(_wManagercursor*,int);
+    //void (*destroyCursor)(_wManagercursor*);
+    //void (*setCursor)(wManagerWindow*,_wManagercursor*);
     const char* (*getScancodeName)(int);
     int (*getKeyScancode)(int);
     void (*setClipboardString)(const char*);
     const char* (*getClipboardString)(void);
     //uint32_t (*initJoysticks)(void);
     //void (*terminateJoysticks)(void);
-    //uint32_t (*pollJoystick)(_GLFWjoystick*,int);
+    //uint32_t (*pollJoystick)(_wManagerjoystick*,int);
     //const char* (*getMappingName)(void);
     //void (*updateGamepadGUID)(char*);
     // monitor
@@ -392,7 +392,7 @@ typedef struct _wManagerPlatform
     uint32_t (*createWindow)(wManagerWindow*,const _wManagerwndconfig*,const _wManagerfbconfig*);
     void (*destroyWindow)(wManagerWindow*);
     void (*setWindowTitle)(wManagerWindow*,const char*);
-    //void (*setWindowIcon)(wManagerWindow*,int,const GLFWimage*);
+    //void (*setWindowIcon)(wManagerWindow*,int,const wManagerimage*);
     void (*getWindowPos)(wManagerWindow*,int*,int*);
     void (*setWindowPos)(wManagerWindow*,int,int);
     void (*getWindowSize)(wManagerWindow*,int*,int*);

@@ -7,11 +7,13 @@
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
 
+extern ZEngine engine;
+
 bool checkValidationLayerSupport(){
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, NULL);
 
-    VkLayerProperties* availableLayers = (VkLayerProperties*) malloc(layerCount * sizeof(VkLayerProperties));
+    VkLayerProperties* availableLayers = (VkLayerProperties*) AllocateMemory(layerCount, sizeof(VkLayerProperties));
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers);
 
     bool layerFound;
@@ -33,7 +35,7 @@ bool checkValidationLayerSupport(){
             return false;
     }
 
-    free(availableLayers);
+    FreeMemory(availableLayers);
 
     return true;
 
@@ -41,47 +43,49 @@ bool checkValidationLayerSupport(){
 
 const char** getRequiredExtensions(){
 
-    const char** extensions = wManagerGetRequiredInstanceExtensions(&wManagerExtensionCount);
+    const char** extensions = wManagerGetRequiredInstanceExtensions(&engine.wManagerExtensionCount);
 
     if(enableValidationLayers)
-        wManagerExtensionCount ++;
+        engine.wManagerExtensionCount ++;
 
-    const char** wManagerExtensions = (const char **) calloc(wManagerExtensionCount, sizeof(char *));
+    const char** wManagerExtensions = (const char **) AllocateMemory(engine.wManagerExtensionCount, sizeof(char *));
 
-    int tempIter = enableValidationLayers ? wManagerExtensionCount - 1 : wManagerExtensionCount;
+    int tempIter = enableValidationLayers ? engine.wManagerExtensionCount - 1 : engine.wManagerExtensionCount;
 
     for(int i=0; i < tempIter; i++)
         wManagerExtensions[i] = extensions[i];
 
     if(enableValidationLayers)
-        wManagerExtensions[wManagerExtensionCount - 1] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+        wManagerExtensions[engine.wManagerExtensionCount - 1] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 
     return wManagerExtensions;
 
 }
 
-void initWindow(){
+void InitWindow(){
+    ZWindow *window = (ZWindow *)engine.window;
 
     wManagerInit();
-
-    wManagerWindowHint(ENGINE_RESIZABLE, false);
-    if(!wManagerCreateWindow(e_window, WIDTH, HEIGHT, app_name)){
+    //wManagerWindowHint(ENGINE_RESIZABLE, false);
+    if(!wManagerCreateWindow(window->e_window, engine.width, engine.height, engine.app_name)){
         wManagerTerminate();
+        printf("Error when create window!\n");
         exit(0);
     }
 
-    wManagerSetFramebufferSizeCallback(e_window, framebufferResizeCallback);
+    wManagerSetFramebufferSizeCallback(window->e_window, (wManagerFrameBufferSizeFun)framebufferResizeCallback);
 
 }
 
 static void framebufferResizeCallback(void* window, int width, int height) {
 
-    if(framebufferwasResized)
-        framebufferResized = true;
+    if(engine.framebufferwasResized)
+        engine.framebufferResized = true;
 
 }
 
 void createInstance(){
+    ZWindow *window = (ZWindow *)engine.window;
 
     if(enableValidationLayers && !checkValidationLayerSupport()){
         printf("validation layers requested, but not available\n");
@@ -110,7 +114,7 @@ void createInstance(){
         createInfo.enabledLayerCount = num_valid_layers;
         createInfo.ppEnabledLayerNames = validationLayers;
 
-        populateDebugMessengerCreateInfo(&debugInfo);
+        populateDebugMessengerCreateInfo((EdDebugUtilsMessengerCreateInfoEXT *)&debugInfo);
 
         createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugInfo;
     } else {
@@ -121,22 +125,21 @@ void createInstance(){
 
     const char** wManagerExtensions = getRequiredExtensions();
 
-    createInfo.enabledExtensionCount = wManagerExtensionCount;
+    createInfo.enabledExtensionCount = engine.wManagerExtensionCount;
     createInfo.ppEnabledExtensionNames = wManagerExtensions;
 
-    if(vkCreateInstance(&createInfo, NULL, &instance)){
+    if(vkCreateInstance(&createInfo, NULL, (VkInstance *) &window->instance)){
         printf("Failed to create instance\n");
         exit(1);
     }
 
-    free(wManagerExtensions);
+    FreeMemory(wManagerExtensions);
 }
 
 void createSurface() {
+    ZWindow *window = (ZWindow *)engine.window;
 
-    wManagerWindow *window = e_window;
-
-    if (wManagerCreateWindowSurface(instance, window, NULL, &surface) != VK_SUCCESS) {
+    if (wManagerCreateWindowSurface(window->instance, window->e_window, NULL, (VkSurfaceKHR *) &window->surface) != VK_SUCCESS) {
         printf("failed to create window surface!");
         exit(1);
     }
@@ -146,8 +149,8 @@ vec2 getWindowSize()
 {
     vec2 size;
 
-    size.x = WIDTH * diffSize.x;
-    size.y = HEIGHT * diffSize.y;
+    size.x = engine.width  * engine.diffSize.x;
+    size.y = engine.height * engine.diffSize.y;
 
     return size;
 }

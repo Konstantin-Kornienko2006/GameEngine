@@ -19,15 +19,17 @@ typedef enum{
     ENGINE_GAME_OBJECT_TYPE_3D
 } GameObjectType;
 
-typedef struct {
-    void *InitPoint;
-    void *UpdatePoint;
-    void *DrawPoint;
-    void *CleanPoint;
-    void *RecreatePoint;
-    void *DestroyPoint;
+typedef struct GameObject{
+    void (*InitPoint)(struct GameObject* go);
+    void (*UpdatePoint)(struct GameObject* go);
+    void (*DrawPoint)(struct GameObject* go, void *cmd);
+    void (*CleanPoint)(struct GameObject* go);
+    void (*RecreatePoint)(struct GameObject* go);
+    void (*DestroyPoint)(struct GameObject* go);
     uint32_t obj_type;
     uint32_t flags;
+    void *vert;
+    void *frag;
 } GameObject;
 
 void GameObjectSetInitFunc(GameObject *go, void *func);
@@ -39,7 +41,7 @@ void GameObjectSetDestroyFunc(GameObject *go, void *func);
 
 void GameObjectInit(GameObject* go);
 void GameObjectUpdate(GameObject* go) ;
-void GameObjectDraw(GameObject* go, void *command);
+void GameObjectDraw(GameObject* go);
 void GameObjectClean(GameObject* go);
 void GameObjectRecreate(GameObject* go);
 void GameObjectDestroy(GameObject* go);

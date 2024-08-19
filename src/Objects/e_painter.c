@@ -10,6 +10,8 @@
 #include "Data/e_resource_engine.h"
 #include "Data/e_resource_export.h"
 
+extern ZEngine engine;
+
 PaintDrawFunc some_func;
 
 vec4 brush_color = {1, 1, 1, 1};
@@ -29,14 +31,14 @@ void PainterObjectPainterBufferUpdate(EPainter *painter, BluePrintDescriptor *de
     pb.position = painter->go.transform.position;
     pb.size = painter->go.transform.scale;
 
-    DescriptorUpdate(descriptor, &pb, sizeof(pb));
+    DescriptorUpdate(descriptor, (char *)&pb, sizeof(pb));
 }
 
 void PainterObjectDrawObjectsBufferUpdate(EPainter *painter, BluePrintDescriptor *descriptor)
 {
     some_func(painter);
 
-    DescriptorUpdate(descriptor, &painter->drawObjects, sizeof(painter->drawObjects));;
+    DescriptorUpdate(descriptor, (char *)&painter->drawObjects, sizeof(painter->drawObjects));;
 
     memset(&painter->drawObjects, 0, sizeof(painter->drawObjects));
 }
@@ -46,9 +48,9 @@ void PainterObjectInit(EPainter *painter)
     memset(painter, 0, sizeof(EPainter));
     memcpy(painter->go.name, "Painter", 7);
 
-    GameObject2DInit(painter);
+    GameObject2DInit((GameObject2D *)painter);
 
-    GraphicsObjectSetVertex(&painter->go.graphObj, projPlaneVert, 4, sizeof(Vertex2D), projPlaneIndx, 6, sizeof(uint32_t));
+    GraphicsObjectSetVertex(&painter->go.graphObj, (void **)projPlaneVert, 4, sizeof(Vertex2D), (void **)projPlaneIndx, 6, sizeof(uint32_t));
 }
 
 void PainterObjectAddDefault(EPainter *painter, void *render)
@@ -80,7 +82,7 @@ void PainterObjectInitDefault(EPainter *painter, DrawParam *dParam)
 {
     PainterObjectInit(painter);
     PainterObjectAddDefault(painter, dParam->render);
-    GameObject2DInitDraw(painter);
+    GameObject2DInitDraw((GameObject2D *)painter);
 }
 
 void PainterObjectSetPaintFunc(PaintDrawFunc paint_func)
@@ -100,10 +102,10 @@ void PainterObjectMakeRectangle(EPainter *painter, float x, float y, float width
     int size = painter->drawObjects.size;
     painter->drawObjects.objs[size].type = ENGINE_PAINTER_TYPE_BOX;
     painter->drawObjects.objs[size].color = brush_color;
-    painter->drawObjects.objs[size].position.x = x / WIDTH;
-    painter->drawObjects.objs[size].position.y = y / HEIGHT;
-    painter->drawObjects.objs[size].size.x = width / WIDTH;
-    painter->drawObjects.objs[size].size.y = height / HEIGHT;
+    painter->drawObjects.objs[size].position.x = x / engine.width;
+    painter->drawObjects.objs[size].position.y = y / engine.height;
+    painter->drawObjects.objs[size].size.x = width / engine.width;
+    painter->drawObjects.objs[size].size.y = height / engine.height;
     painter->drawObjects.objs[size].transparent = 1.0;
 
     painter->drawObjects.size ++;
@@ -114,8 +116,8 @@ void PainterObjectMakeCircle(EPainter *painter, float x, float y, float radius)
     int size = painter->drawObjects.size;
     painter->drawObjects.objs[size].type = ENGINE_PAINTER_TYPE_CIRCLE;
     painter->drawObjects.objs[size].color = brush_color;
-    painter->drawObjects.objs[size].position.x = x / WIDTH;
-    painter->drawObjects.objs[size].position.y = y / HEIGHT;
+    painter->drawObjects.objs[size].position.x = x / engine.width;
+    painter->drawObjects.objs[size].position.y = y / engine.height;
     painter->drawObjects.objs[size].radius = radius / 1000;
     painter->drawObjects.objs[size].transparent = 1.0;
 
@@ -128,10 +130,10 @@ void PainterObjectMakeOrientedBox(EPainter *painter, float x, float y, float wid
     int size = painter->drawObjects.size;
     painter->drawObjects.objs[size].type = ENGINE_PAINTER_TYPE_ORIENTED_BOX;
     painter->drawObjects.objs[size].color = brush_color;
-    painter->drawObjects.objs[size].position.x = x / WIDTH;
-    painter->drawObjects.objs[size].position.y = y / HEIGHT;
-    painter->drawObjects.objs[size].size.x = width / WIDTH;
-    painter->drawObjects.objs[size].size.y = height / HEIGHT;
+    painter->drawObjects.objs[size].position.x = x / engine.width;
+    painter->drawObjects.objs[size].position.y = y / engine.height;
+    painter->drawObjects.objs[size].size.x = width / engine.width;
+    painter->drawObjects.objs[size].size.y = height / engine.height;
     painter->drawObjects.objs[size].angle = angle;
     painter->drawObjects.objs[size].transparent = 1.0;
 
@@ -144,10 +146,10 @@ void PainterObjectMakeSegment(EPainter *painter, float x, float y, float x2, flo
     int size = painter->drawObjects.size;
     painter->drawObjects.objs[size].type = ENGINE_PAINTER_TYPE_SEGMENT;
     painter->drawObjects.objs[size].color = brush_color;
-    painter->drawObjects.objs[size].position.x = x / WIDTH;
-    painter->drawObjects.objs[size].position.y = y / HEIGHT;
-    painter->drawObjects.objs[size].size.x = x2 / WIDTH;
-    painter->drawObjects.objs[size].size.y = y2 / HEIGHT;
+    painter->drawObjects.objs[size].position.x = x / engine.width;
+    painter->drawObjects.objs[size].position.y = y / engine.height;
+    painter->drawObjects.objs[size].size.x = x2 / engine.width;
+    painter->drawObjects.objs[size].size.y = y2 / engine.height;
     painter->drawObjects.objs[size].radius = radius / 1000;
 
     painter->drawObjects.objs[size].transparent = 1.0;

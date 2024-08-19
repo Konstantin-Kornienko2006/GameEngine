@@ -2,6 +2,8 @@
 
 #include "Data/e_resource_data.h"
 
+extern ZEngine engine;
+
 void Camera2DInit(Camera2D *cam){
 
     memset(cam, 0, sizeof(Camera2D));
@@ -36,21 +38,21 @@ void Camera3DSetViewAngle(Camera3D *cam, double angle)
     cam->view_angle = angle;
 }
 
-void Camera3DSetViewNear(Camera3D *cam, double near)
+void Camera3DSetViewNear(Camera3D *cam, double v_near)
 {
-    cam->view_near = near;
+    cam->view_near = v_near;
 }
 
 void Camera3DSetActive(Camera3D *cam){
-    cam3D = cam;
+    engine.cam3D = cam;
 }
 
 void Camera2DSetActive(Camera2D *cam){
-    cam2D = cam;
+    engine.cam2D = cam;
 }
 
 void Camera3DSetRotation(float x, float y, float z){
-    Camera3D* cam = (Camera3D*)cam3D;
+    Camera3D* cam = (Camera3D*)engine.cam3D;
 
     cam->rotation.x = x;
     cam->rotation.y = y;
@@ -58,20 +60,20 @@ void Camera3DSetRotation(float x, float y, float z){
 }
 
 vec3 Camera3DGetRotation(){
-    Camera3D* cam = (Camera3D*)cam3D;
+    Camera3D* cam = (Camera3D*)engine.cam3D;
 
     return cam->rotation;
 }
 
 void Camera2DSetPosition(float x, float y){
-    Camera2D* cam = (Camera2D*)cam2D;
+    Camera2D* cam = (Camera2D*)engine.cam2D;
 
     cam->position.x = x;
     cam->position.y = y;
 }
 
 void Camera3DSetPosition(float x, float y, float z){
-    Camera3D* cam = (Camera3D*)cam3D;
+    Camera3D* cam = (Camera3D*)engine.cam3D;
 
     cam->position.x = x;
     cam->position.y = y;
@@ -79,26 +81,26 @@ void Camera3DSetPosition(float x, float y, float z){
 }
 
 vec2 Camera2DGetPosition(){
-    Camera2D* cam = (Camera2D*)cam2D;
+    Camera2D* cam = (Camera2D*)engine.cam2D;
 
     return cam->position;
 }
 
 vec3 Camera3DGetPosition(){
-    Camera3D* cam = (Camera3D*)cam3D;
+    Camera3D* cam = (Camera3D*)engine.cam3D;
 
     return cam->position;
 }
 
 void Camera2DSetScale(float x, float y){
-    Camera2D* cam = (Camera2D*)cam2D;
+    Camera2D* cam = (Camera2D*)engine.cam2D;
 
     cam->scale.x = x;
     cam->scale.y = y;
 }
 
 void Camera3DSetScale(float x, float y, float z){
-    Camera3D* cam = (Camera3D*)cam3D;
+    Camera3D* cam = (Camera3D*)engine.cam3D;
 
     cam->scale.x = x;
     cam->scale.y = y;

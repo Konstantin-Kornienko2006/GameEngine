@@ -1,12 +1,16 @@
 #include "wManager/window_manager.h"
 #include "wManager/input_manager.h"
 
+#include "Core/e_window.h"
+
 #include <stdbool.h>
 
 #define USER_DEFAULT_SCREEN_DPI 96
 
 wManagerWindow _wMWindow;
 extern wManagerInfo _wMInfo;
+
+extern ZEngine engine;
 
 #include "Data/e_resource_engine.h"
 
@@ -82,8 +86,10 @@ void wManagerSetTime(double time)
             (uint64_t) (time * _wManagerPlatformGetTimerFrequency());
 }
 
-void wManagerInit(){
-    e_window = calloc(1, sizeof(wManagerWindow));
+int wManagerInit(){
+    ZWindow *window = (ZWindow *)engine.window;
+
+    window->e_window = calloc(1, sizeof(wManagerWindow));
 
     memset(&_wMInfo, 0, sizeof(wManagerInfo));
 
@@ -98,13 +104,13 @@ void wManagerInit(){
         _wManagerConnectX11(&e_window->platform);
     #elif _WIN_
 
-        e_window->WindowData = calloc(1, sizeof(wManagerWin));
+        window->e_window->WindowData = calloc(1, sizeof(wManagerWin));
         _wMWindow.WindowData = calloc(1, sizeof(wManagerWin));
 
         extern int32_t _wManagerConnectWin32(_wManagerPlatform* platform);
 
         _wManagerConnectWin32(&_wMWindow.platform);
-        _wManagerConnectWin32(&e_window->platform);
+        _wManagerConnectWin32(&window->e_window->platform);
     #endif
 
 
@@ -118,10 +124,12 @@ void wManagerInit(){
     _wMWindow.time_offset = _wManagerPlatformGetTimerValue();
 
     wManagerDefaultWindowHints(&_wMWindow);
-    wManagerDefaultWindowHints(e_window);
+    wManagerDefaultWindowHints(window->e_window);
 
     createKeyTables(_wMWindow.WindowData);
-    createKeyTables(e_window->WindowData);
+    createKeyTables(window->e_window->WindowData);
+
+    return true;
 }
 
 uint32_t wManagerWindowIsClosed(){
@@ -286,7 +294,7 @@ void wManagerSetMouseButtonCallback(wManagerWindow *window, wManagerMouseButtonF
 
 void wManagerSetCursorPosCallback(wManagerWindow *window, wManagerCursorPosFun callback)
 {
-    window->callbacks.cursorPos = callback;
+    window->callbacks.cursorPos = (wManagerCursorPos)callback;
 }
 
 void wManagerGetFramebufferSize(wManagerWindow *window, int *width, int *height)
@@ -306,10 +314,12 @@ void wManagerWaitEvents()
 
 void wManagerTerminate()
 {
-    free(e_window->WindowData);
+    ZWindow *window = (ZWindow *)engine.window;
+
+    free(window->e_window->WindowData);
     free(_wMWindow.WindowData);
 
-    free(e_window);
+    free(window->e_window);
 }
 
 const char **wManagerGetRequiredInstanceExtensions(int *counter)
@@ -452,7 +462,7 @@ void wManagerDestroyWindow(wManagerWindow* window)
 
     // Unlink window from global linked list
     /*{
-        _GLFWwindow** prev = &_wMWindow.windowListHead;
+        _wManagerWindow** prev = &_wMWindow.windowListHead;
 
         while (*prev != window)
             prev = &((*prev)->next);
@@ -476,7 +486,7 @@ int wManagerCreateWindow(wManagerWindow *window, int width, int height, const ch
     if (!_wMWindow.platform.createWindow(window, &wndconfig, &fbconfig))
     {
         wManagerDestroyWindow((wManagerWindow*) window);
-        return NULL;
+        return 0;
     }
 }
 

@@ -1,7 +1,7 @@
 #ifndef WIN_DEFINES_H
 #define WIN_DEFINES_H
 
-#if defined(_WIN32)
+#if defined(_WIN32_)
  #define APIENTRY __stdcall
 #else
  #define APIENTRY
@@ -11,9 +11,7 @@
     #include <wManager/manager_includes.h>
 
     #include <windows.h>
-    #include <versionhelpers.h>
-    #include <dwmapi.h>
-
+	
     #include <vulkan/vulkan.h>
 
     #include <stdint.h>
@@ -87,8 +85,8 @@
     typedef BOOL (WINAPI * PFN_wglMakeCurrent)(HDC,HGLRC);
     typedef BOOL (WINAPI * PFN_wglShareLists)(HGLRC,HGLRC);
 
-    #define ENGINE_WIN32_TLS_STATE            _GLFWtlsWin32     win32;
-    #define ENGINE_WIN32_MUTEX_STATE          _GLFWmutexWin32   win32;
+    #define ENGINE_WIN32_TLS_STATE            _wManagerWtlsWin32     win32;
+    #define ENGINE_WIN32_MUTEX_STATE          _wManagermutexWin32   win32;
 
     typedef struct _wManagerMonitorWin32
     {
@@ -173,7 +171,7 @@
         // The last received high surrogate when decoding pairs of UTF-16 messages
         WCHAR               highSurrogate;
 
-        RAWINPUT*           rawInput;
+        void*           rawInput;
         int                 rawInputSize;
         UINT                mouseTrailSize;
 
@@ -184,8 +182,8 @@
         double virtualCursorPosX, virtualCursorPosY;
         double lastCursorPosX , lastCursorPosY;
 
-        struct wManagerWindow* capturedCursorWindow;
-        struct wManagerWindow* disabledCursorWindow;
+        wManagerWindow* capturedCursorWindow;
+        wManagerWindow* disabledCursorWindow;
     } wManagerWin;
 
     typedef VkFlags VkWin32SurfaceCreateFlagsKHR;

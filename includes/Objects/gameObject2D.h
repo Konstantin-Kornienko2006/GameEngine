@@ -9,6 +9,7 @@
 #include "Core/graphicsObject.h"
 #include "Core/e_transform.h"
 
+
 #include "gameObject.h"
 
 
@@ -22,6 +23,7 @@ typedef struct{
     GraphicsObject graphObj;
     Transform2D transform;
     GameObjectImage *image;
+    uint32_t num_images;
     char name[256];
 } GameObject2D;
 

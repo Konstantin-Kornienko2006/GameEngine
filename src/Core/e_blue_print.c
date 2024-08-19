@@ -1,4 +1,7 @@
+#include "Core/e_device.h"
 #include "Core/e_buffer.h"
+#include "Core/e_memory.h"
+#include "Core/swapchain.h"
 #include "Core/e_texture.h"
 #include "Core/e_blue_print.h"
 #include "Core/graphicsObject.h"
@@ -9,20 +12,22 @@
 
 #include "Data/e_resource_engine.h"
 
+extern ZEngine engine;
+
 void BluePrintInit()
 {
 
 }
 
-BluePrintDescriptor *BluePrintAddExistUniformStorage(Blueprints *blueprints, uint32_t indx_pack, uint32_t flags, UniformStruct *uniform, void *update_func, uint32_t layer_indx)
+BluePrintDescriptor *BluePrintAddExistUniformStorage(Blueprints *blueprints, uint32_t indx_pack, uint32_t flags, BufferContainer uniform, void *update_func, uint32_t layer_indx)
 {
 
     BluePrintPack *pack = &blueprints->blue_print_packs[indx_pack];
 
     if(blueprints->blue_print_packs[indx_pack].num_descriptors + 1 >= MAX_UNIFORMS)
     {
-        printf("Слишком много декрипторов!\n");
-        return;
+        printf("Too much descriptors!\n");
+        return NULL;
     }
     BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[indx_pack].descriptors[blueprints->blue_print_packs[indx_pack].num_descriptors];
 
@@ -31,7 +36,7 @@ BluePrintDescriptor *BluePrintAddExistUniformStorage(Blueprints *blueprints, uin
     descriptor->descrCount = 1;
     descriptor->size = 1;
     descriptor->stageflag = flags;
-    descriptor->buffsize = uniform->size;
+    descriptor->buffsize = uniform.size;
     descriptor->image = NULL;
     descriptor->update = update_func;
     descriptor->indx_layer = layer_indx;
@@ -48,14 +53,13 @@ BluePrintDescriptor *BluePrintAddUniformStorage(Blueprints *blueprints, uint32_t
 
     if(blueprints->blue_print_packs[indx_pack].num_descriptors + 1 >= MAX_UNIFORMS)
     {
-        printf("Слишком много декрипторов!\n");
-        return;
+        printf("Too much descriptors!\n");
+        return NULL;
     }
 
     BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[indx_pack].descriptors[blueprints->blue_print_packs[indx_pack].num_descriptors];
 
-    descriptor->uniform = calloc(1, sizeof(UniformStruct));
-    descriptor->uniform->size = size;
+    descriptor->uniform.size = size;
     descriptor->descrType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     descriptor->descrCount = 1;
     descriptor->size = 1;
@@ -65,7 +69,7 @@ BluePrintDescriptor *BluePrintAddUniformStorage(Blueprints *blueprints, uint32_t
     descriptor->update = update_func;
     descriptor->indx_layer = layer_indx;
 
-    BuffersCreateStorage(descriptor->uniform);
+    BuffersCreateStorage(&descriptor->uniform);
 
     blueprints->blue_print_packs[indx_pack].num_descriptors ++;
 
@@ -78,8 +82,8 @@ BluePrintDescriptor *BluePrintAddExistTextureImage(Blueprints *blueprints, uint3
 
     if(pack->num_descriptors + 1 > MAX_UNIFORMS)
     {
-        printf("Слишком много декрипторов!\n");
-        return;
+        printf("Too much descriptors!\n");
+        return NULL;
     }
 
     BluePrintDescriptor *descriptor = &pack->descriptors[pack->num_descriptors];
@@ -112,14 +116,14 @@ void BluePrintAddUniformObject(Blueprints *blueprints, uint32_t indx_pack, uint6
 
     if(blueprints->blue_print_packs[indx_pack].num_descriptors + 1 >= MAX_UNIFORMS)
     {
-        printf("Слишком много декрипторов!\n");
+        printf("Too much descriptors!\n");
         return;
     }
 
     BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[indx_pack].descriptors[blueprints->blue_print_packs[indx_pack].num_descriptors];
 
-    descriptor->uniform = calloc(1, sizeof(UniformStruct));
-    descriptor->uniform->size = size;
+    descriptor->uniform.type_size = size;
+    descriptor->uniform.size = engine.imagesCount;
     descriptor->descrType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptor->descrCount = 1;
     descriptor->size = 1;
@@ -130,7 +134,7 @@ void BluePrintAddUniformObject(Blueprints *blueprints, uint32_t indx_pack, uint6
     descriptor->indx_layer = layer_indx;
 
 
-    BuffersCreateUniform(descriptor->uniform);
+    BuffersCreateUniform(&descriptor->uniform);
 
     blueprints->blue_print_packs[indx_pack].num_descriptors ++;
 }
@@ -142,28 +146,28 @@ void BluePrintAddRenderImageArray(Blueprints *blueprints, uint32_t indx_pack, vo
     uint32_t nums = blueprints->blue_print_packs[indx_pack].num_descriptors;
     BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[indx_pack].descriptors[nums];
 
-    descriptor->textures = calloc(imagesCount, sizeof(Texture2D*));
+    descriptor->textures = AllocateMemoryP(engine.imagesCount, sizeof(Texture2D*), blueprints);
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptor->descrCount = size;
     descriptor->size = size;
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor->flags = 0;
 
-    Texture2D **textures = descriptor->textures;
+    Texture2D **textures = (Texture2D **)descriptor->textures;
 
-    for(int i=0;i < imagesCount;i++)
+    for(int i=0;i < engine.imagesCount;i++)
     {
-        textures[i] = calloc(size, sizeof(Texture2D));
+        textures[i] = AllocateMemoryP(size, sizeof(Texture2D), blueprints);
 
         for(int j=0;j < size; j++)
         {
             if(renders[j]->flags & ENGINE_RENDER_FLAG_ONE_SHOT)
             {
-                textures[i][j].textureImageView = renders[j]->frames[0].view;
-                textures[i][j].textureSampler = renders[j]->frames[0].sampler;
+                textures[i][j].image_view = renders[j]->frames[0].render_texture.image_view;
+                textures[i][j].sampler = renders[j]->frames[0].render_texture.sampler;
             }else{
-                textures[i][j].textureImageView = renders[j]->frames[i].view;
-                textures[i][j].textureSampler = renders[j]->frames[i].sampler;
+                textures[i][j].image_view = renders[j]->frames[i].render_texture.image_view;
+                textures[i][j].sampler = renders[j]->frames[i].render_texture.sampler;
             }
         }
     }
@@ -173,33 +177,35 @@ void BluePrintAddRenderImageArray(Blueprints *blueprints, uint32_t indx_pack, vo
 
 void BluePrintAddRenderImageVector(Blueprints *blueprints, uint32_t indx_pack, void *obj, uint32_t size)
 {
+    ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
+
     RenderTexture **renders = obj;
 
     uint32_t nums = blueprints->blue_print_packs[indx_pack].num_descriptors;
     BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[indx_pack].descriptors[nums];
 
-    descriptor->textures = calloc(imagesCount, sizeof(Texture2D*));
+    descriptor->textures = AllocateMemoryP(engine.imagesCount, sizeof(Texture2D*), blueprints);
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptor->descrCount = size;
     descriptor->size = size;
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor->flags = 0;
 
-    Texture2D **textures = descriptor->textures;
+    Texture2D **textures = (Texture2D **)descriptor->textures;
 
-    for(int i=0;i < imagesCount;i++)
+    for(int i=0;i < engine.imagesCount;i++)
     {
-        textures[i] = calloc(size, sizeof(Texture2D));
+        textures[i] = AllocateMemoryP(size, sizeof(Texture2D), blueprints);
 
         for(int j=0;j < size; j++)
         {
             if(renders[j]->flags & ENGINE_RENDER_FLAG_ONE_SHOT)
             {
-                textures[i][j].textureImageView = TextureCreateImageView(renders[j]->frames[0].image, VK_IMAGE_VIEW_TYPE_2D_ARRAY, renders[j]->type == ENGINE_RENDER_TYPE_DEPTH ? findDepthFormat() : swapChainImageFormat, renders[j]->type == ENGINE_RENDER_TYPE_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, 1);
-                textures[i][j].textureSampler = renders[j]->frames[0].sampler;
+                textures[i][j].image_view = TextureCreateImageView(renders[j]->frames[0].render_texture.image, VK_IMAGE_VIEW_TYPE_2D_ARRAY, renders[j]->type == ENGINE_RENDER_TYPE_DEPTH ? findDepthFormat() : swapchain->swapChainImageFormat, renders[j]->type == ENGINE_RENDER_TYPE_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, 1);
+                textures[i][j].sampler = renders[j]->frames[0].render_texture.sampler;
             }else{
-                textures[i][j].textureImageView = TextureCreateImageView(renders[j]->frames[i].image, VK_IMAGE_VIEW_TYPE_2D_ARRAY, renders[j]->type == ENGINE_RENDER_TYPE_DEPTH ? findDepthFormat() : swapChainImageFormat, renders[j]->type == ENGINE_RENDER_TYPE_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, 1);
-                textures[i][j].textureSampler = renders[j]->frames[i].sampler;
+                textures[i][j].image_view = TextureCreateImageView(renders[j]->frames[i].render_texture.image, VK_IMAGE_VIEW_TYPE_2D_ARRAY, renders[j]->type == ENGINE_RENDER_TYPE_DEPTH ? findDepthFormat() : swapchain->swapChainImageFormat, renders[j]->type == ENGINE_RENDER_TYPE_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, 1);
+                textures[i][j].sampler = renders[j]->frames[i].render_texture.sampler;
             }
             textures[i][j].flags |= ENGINE_TEXTURE2D_FLAG_VIEW;
         }
@@ -215,26 +221,26 @@ void BluePrintAddRenderImageCube(Blueprints *blueprints, uint32_t indx_pack, uin
     uint32_t nums = blueprints->blue_print_packs[indx_pack].num_descriptors;
     BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[indx_pack].descriptors[nums];
 
-    descriptor->textures = calloc(imagesCount, sizeof(Texture2D*));
+    descriptor->textures = AllocateMemoryP(engine.imagesCount, sizeof(Texture2D*), blueprints);
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptor->descrCount = 1;
     descriptor->size = 1;
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor->flags = 0;
 
-    Texture2D **textures = descriptor->textures;
+    Texture2D **textures = (Texture2D **)descriptor->textures;
 
-    for(int i=0;i < imagesCount;i++)
+    for(int i=0;i < engine.imagesCount;i++)
     {
-        textures[i] = calloc(1, sizeof(Texture2D));
+        textures[i] = AllocateMemoryP(1, sizeof(Texture2D), blueprints);
 
         if(render->flags & ENGINE_RENDER_FLAG_ONE_SHOT)
         {
-            textures[i][0].textureImageView = render->frames[0].shadowCubeMapFaceImageViews[indx_cube];
-            textures[i][0].textureSampler = render->frames[0].sampler;
+            textures[i][0].image_view = render->frames[0].shadowCubeMapFaceImageViews[indx_cube];
+            textures[i][0].sampler = render->frames[0].render_texture.sampler;
         }else{
-            textures[i][0].textureImageView = render->frames[i].shadowCubeMapFaceImageViews[indx_cube];
-            textures[i][0].textureSampler = render->frames[i].sampler;
+            textures[i][0].image_view = render->frames[i].shadowCubeMapFaceImageViews[indx_cube];
+            textures[i][0].sampler = render->frames[i].render_texture.sampler;
         }
         textures[i][0].flags = 0;
 
@@ -250,28 +256,25 @@ void BluePrintAddRenderImage(Blueprints *blueprints, uint32_t indx_pack, void *o
     uint32_t nums = blueprints->blue_print_packs[indx_pack].num_descriptors;
     BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[indx_pack].descriptors[nums];
 
-    descriptor->textures = calloc(imagesCount, sizeof(Texture2D*));
+    descriptor->textures = AllocateMemoryP(engine.imagesCount, sizeof(Texture2D), blueprints);
+    descriptor->num_textures = engine.imagesCount;
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptor->descrCount = 1;
     descriptor->size = 1;
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor->flags = 0;
 
-    Texture2D **textures = descriptor->textures;
-
-    for(int i=0;i < imagesCount;i++)
+    for(int i=0;i < engine.imagesCount;i++)
     {
-        textures[i] = calloc(1, sizeof(Texture2D));
-
         if(render->flags & ENGINE_RENDER_FLAG_ONE_SHOT)
         {
-            textures[i][0].textureImageView = render->frames[0].view;
-            textures[i][0].textureSampler = render->frames[0].sampler;
+            descriptor->textures[i].image_view = render->frames[0].render_texture.image_view;
+            descriptor->textures[i].sampler = render->frames[0].render_texture.sampler;
         }else{
-            textures[i][0].textureImageView = render->frames[i].view;
-            textures[i][0].textureSampler = render->frames[i].sampler;
+            descriptor->textures[i].image_view = render->frames[i].render_texture.image_view;
+            descriptor->textures[i].sampler = render->frames[i].render_texture.sampler;
         }
-        textures[i][0].flags = 0;
+        descriptor->textures[i].flags = 0;
 
     }
 
@@ -287,15 +290,16 @@ BluePrintDescriptor *BluePrintAddTextureImage(Blueprints *blueprints, uint32_t i
 
     if(pack->num_descriptors + 1 > MAX_UNIFORMS)
     {
-        printf("Слишком много декрипторов!\n");
-        return;
+        printf("Too much descriptors!\n");
+        return NULL;
     }
 
     BluePrintDescriptor *descriptor = &pack->descriptors[pack->num_descriptors];
 
     descriptor->image = image;
     descriptor->size = 0;
-    descriptor->textures = calloc(1, sizeof(Texture2D *));
+    descriptor->textures = AllocateMemoryP(1, sizeof(Texture2D), blueprints);
+    descriptor->num_textures = 1;
 
     if(!(image->flags & ENGINE_TEXTURE_FLAG_SPECIFIC))
     {
@@ -339,7 +343,7 @@ void BluePrintAddTextureImageArray(Blueprints *blueprints, uint32_t indx_pack, G
 
     if(pack->num_descriptors + 1 > MAX_UNIFORMS)
     {
-        printf("Слишком много декрипторов!\n");
+        printf("Too much descriptors!\n");
         return;
     }
 
@@ -347,7 +351,8 @@ void BluePrintAddTextureImageArray(Blueprints *blueprints, uint32_t indx_pack, G
 
     descriptor->image = images;
     descriptor->size = 0;
-    descriptor->textures = calloc(size, sizeof(Texture2D *));
+    descriptor->textures = AllocateMemoryP(size, sizeof(Texture2D), blueprints);
+    descriptor->num_textures = size;
 
     for(int i=0;i < size;i++)
     {
@@ -377,4 +382,49 @@ void BluePrintAddTextureImageArray(Blueprints *blueprints, uint32_t indx_pack, G
     descriptor->flags = ENGINE_BLUE_PRINT_FLAG_ARRAY_IMAGE | ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE;
 
     pack->num_descriptors ++;
+}
+
+
+void BluePrintClearTextures(BluePrintDescriptor *descriptor){
+
+    ZDevice *device = (ZDevice *)engine.device;
+    
+    for(int i=0;i < descriptor->num_textures;i++){        
+        Texture2D *texture = (Texture2D *)&descriptor->textures[i];
+
+        if(texture->flags & ENGINE_TEXTURE2D_FLAG_GENERATED)
+        {
+            ImageDestroyTexture(&texture);
+        }else if(texture->flags & ENGINE_TEXTURE2D_FLAG_VIEW){
+            vkDestroyImageView(device->e_device, texture->image_view, NULL);
+        }
+    }
+    
+    FreeMemory(descriptor->textures);
+}
+
+void BluePrintClearAll(Blueprints *blueprints){
+
+    ZDevice *device = (ZDevice *)engine.device;
+
+    for(int i=0;i < blueprints->num_blue_print_packs;i++)
+    {
+        for(int j=0;j < blueprints->blue_print_packs[i].num_descriptors;j++)
+        {
+            BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[i].descriptors[j];
+
+            if(descriptor->descrType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || descriptor->descrType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE){
+
+                if(descriptor->flags & ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE)
+                    continue;
+                BluePrintClearTextures(descriptor);
+            }else{
+                if(descriptor->flags & ENGINE_BLUE_PRINT_FLAG_LINKED_UNIFORM)
+                    continue;
+
+                BuffersDestroyContainer(&descriptor->uniform);
+            }
+        }
+    }
+
 }

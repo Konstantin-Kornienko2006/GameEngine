@@ -1,8 +1,11 @@
 #include "Objects/render_texture.h"
 
+#include "Core/e_memory.h"
 #include "Core/engine.h"
+#include "Core/e_device.h"
 #include "Core/e_buffer.h"
 #include "Core/e_texture.h"
+#include "Core/swapchain.h"
 
 #include <vulkan/vulkan.h>
 
@@ -14,20 +17,23 @@
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
 
+extern ZEngine engine;
+
 void RenderTextureCreateDepthResource(RenderTexture *render, RenderFrame *frame)
 {
 
     VkFormat depthFormat = findDepthFormat();
 
-    TextureCreateImage(render->width, render->height, 1,depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, &frame->depth_image, &frame->depth_memory);
-    frame->depth_view = TextureCreateImageView(frame->depth_image, VK_IMAGE_VIEW_TYPE_2D, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+    TextureCreateImage(render->width, render->height, 1,depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, &frame->depth_texture);
+    frame->depth_texture.image_view = TextureCreateImageView(frame->depth_texture.image, VK_IMAGE_VIEW_TYPE_2D, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
-    ToolsTransitionImageLayout(frame->depth_image, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
+    ToolsTransitionImageLayout(frame->depth_texture.image, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 
 }
 
 void RenderTextureCreateRenderPass(RenderTexture *render, void **render_pass)
 {
+    ZDevice *device = (ZDevice *)engine.device;
 
     if(render->m_format == 0)
     {
@@ -45,7 +51,7 @@ void RenderTextureCreateRenderPass(RenderTexture *render, void **render_pass)
         renderPassInfo.subpassCount = 1;
         renderPassInfo.pSubpasses = &subpassDescription;
 
-        if(vkCreateRenderPass(e_device, &renderPassInfo, NULL, render_pass) != VK_SUCCESS)
+        if(vkCreateRenderPass(device->e_device, &renderPassInfo, NULL, (VkRenderPass *)render_pass) != VK_SUCCESS)
         {
             printf("Error create render pass for render texture.");
             exit(1);
@@ -54,7 +60,7 @@ void RenderTextureCreateRenderPass(RenderTexture *render, void **render_pass)
         return;
     }
 
-    VkAttachmentDescription *colorAttachment = calloc(1, sizeof(VkAttachmentDescription));
+    VkAttachmentDescription *colorAttachment = AllocateMemory(1, sizeof(VkAttachmentDescription));
     colorAttachment->format = render->m_format;
     colorAttachment->samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -64,7 +70,7 @@ void RenderTextureCreateRenderPass(RenderTexture *render, void **render_pass)
     colorAttachment->initialLayout = render->type == ENGINE_RENDER_TYPE_IMAGE || render->type == ENGINE_RENDER_TYPE_CUBEMAP ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
     colorAttachment->finalLayout = render->type == ENGINE_RENDER_TYPE_IMAGE || render->type == ENGINE_RENDER_TYPE_CUBEMAP ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-    VkAttachmentDescription *depthAttachment = calloc(1, sizeof(VkAttachmentDescription));
+    VkAttachmentDescription *depthAttachment = AllocateMemory(1, sizeof(VkAttachmentDescription));
     depthAttachment->format = findDepthFormat();
     depthAttachment->samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -81,11 +87,11 @@ void RenderTextureCreateRenderPass(RenderTexture *render, void **render_pass)
         depthAttachment->finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     }
 
-    VkAttachmentReference *colorAttachmentRef = calloc(1, sizeof(VkAttachmentReference));
+    VkAttachmentReference *colorAttachmentRef = AllocateMemory(1, sizeof(VkAttachmentReference));
     colorAttachmentRef->attachment = 0;//Номер атачмента
     colorAttachmentRef->layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    VkAttachmentReference *depthAttachmentRef = calloc(1, sizeof(VkAttachmentReference));
+    VkAttachmentReference *depthAttachmentRef = AllocateMemory(1, sizeof(VkAttachmentReference));
     depthAttachmentRef->attachment = render->type  == ENGINE_RENDER_TYPE_DEPTH || (render->flags & ENGINE_RENDER_FLAG_DEPTH) ? 0 : 1;//Номер атачмента
     depthAttachmentRef->layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
@@ -104,7 +110,7 @@ void RenderTextureCreateRenderPass(RenderTexture *render, void **render_pass)
     VkRenderPassCreateInfo renderPassInfo;
     memset(&renderPassInfo, 0, sizeof(VkRenderPassCreateInfo));
 
-    VkSubpassDependency *depency = calloc( render->type != ENGINE_RENDER_TYPE_DEPTH ? 2 : 1, sizeof(VkSubpassDependency));
+    VkSubpassDependency *depency = AllocateMemory( render->type != ENGINE_RENDER_TYPE_DEPTH ? 2 : 1, sizeof(VkSubpassDependency));
 
     if(render->type == ENGINE_RENDER_TYPE_CUBEMAP)
     {
@@ -169,17 +175,17 @@ void RenderTextureCreateRenderPass(RenderTexture *render, void **render_pass)
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = render->type == ENGINE_RENDER_TYPE_CUBEMAP ? 0 : 1;
 
-    if(vkCreateRenderPass(e_device, &renderPassInfo, NULL, render_pass) != VK_SUCCESS)
+    if(vkCreateRenderPass(device->e_device, &renderPassInfo, NULL, (VkRenderPass *)render_pass) != VK_SUCCESS)
     {
         printf("Error create render pass for render texture.");
         exit(1);
     }
 
-    free(colorAttachment);
-    free(depthAttachment);
-    free(colorAttachmentRef);
-    free(depthAttachmentRef);
-    free(depency);
+    FreeMemory(colorAttachment);
+    FreeMemory(depthAttachment);
+    FreeMemory(colorAttachmentRef);
+    FreeMemory(depthAttachmentRef);
+    FreeMemory(depency);
 }
 
 void RenderTextureTransitionLayer(RenderFrame *frame, uint32_t render_type, uint32_t type_layout, uint32_t aspect_mask)
@@ -194,7 +200,7 @@ void RenderTextureTransitionLayer(RenderFrame *frame, uint32_t render_type, uint
     imgBar.dstAccessMask = 0;
     imgBar.oldLayout = frame->m_currentLayout;
     imgBar.newLayout = type_layout;
-    imgBar.image = frame->image;
+    imgBar.image = frame->render_texture.image;
 
     imgBar.subresourceRange.aspectMask = aspect_mask;//render_type == ENGINE_RENDER_TYPE_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     imgBar.subresourceRange.baseMipLevel = 0;
@@ -212,6 +218,9 @@ void RenderTextureTransitionLayer(RenderFrame *frame, uint32_t render_type, uint
 
 void RenderTextureCreateFrames(RenderTexture *render, uint32_t flags)
 {
+    ZDevice *device = (ZDevice *)engine.device;
+    ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
+
     for (int i=0;i < render->num_frames;i++) {
 
         RenderFrame *frame = &render->frames[i];
@@ -224,18 +233,18 @@ void RenderTextureCreateFrames(RenderTexture *render, uint32_t flags)
             {
                 uint32_t usage = render->type == ENGINE_RENDER_TYPE_DEPTH || (render->flags & ENGINE_RENDER_FLAG_DEPTH) ?  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT :  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-                TextureCreateImage(render->width, render->height, 1,render->m_format, VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, flags, &frame->image, &frame->image_memory);
+                TextureCreateImage(render->width, render->height, 1,render->m_format, VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, flags, &frame->render_texture);
 
-                TextureCreateSampler(&frame->sampler, render->m_format, 1);
+                TextureCreateSampler(&frame->render_texture.sampler, render->m_format, 1);
 
                 if(render->type & ENGINE_RENDER_TYPE_CUBEMAP)
                 {
-                    frame->shadowCubeMapFaceImageViews = calloc(6, sizeof(VkImageView));
-                    frame->view = TextureCreateImageViewCube(frame->image, frame->shadowCubeMapFaceImageViews, render->m_format, render->flags & ENGINE_RENDER_FLAG_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT);
-                    frame->framebufers = calloc(6, sizeof(VkFramebuffer));
+                    frame->shadowCubeMapFaceImageViews = AllocateMemoryP(6, sizeof(VkImageView), render);
+                    frame->render_texture.image_view = TextureCreateImageViewCube(frame->render_texture.image, frame->shadowCubeMapFaceImageViews, render->m_format, render->flags & ENGINE_RENDER_FLAG_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT);
+                    frame->framebufers = AllocateMemoryP(6, sizeof(VkFramebuffer), render);
                 }else{
-                    frame->view = TextureCreateImageView(frame->image, VK_IMAGE_VIEW_TYPE_2D, render->m_format, render->type == ENGINE_RENDER_TYPE_DEPTH || (render->flags & ENGINE_RENDER_FLAG_DEPTH) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, 1);
-                    frame->framebufers = calloc(1, sizeof(VkFramebuffer));
+                    frame->render_texture.image_view = TextureCreateImageView(frame->render_texture.image, VK_IMAGE_VIEW_TYPE_2D, render->m_format, render->type == ENGINE_RENDER_TYPE_DEPTH || (render->flags & ENGINE_RENDER_FLAG_DEPTH) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT, 1);
+                    frame->framebufers = AllocateMemoryP(1, sizeof(VkFramebuffer), render);
                 }
 
                 RenderTextureCreateDepthResource(render, frame);
@@ -243,16 +252,16 @@ void RenderTextureCreateFrames(RenderTexture *render, uint32_t flags)
                 RenderTextureTransitionLayer(frame, render->type, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, render->type == ENGINE_RENDER_TYPE_DEPTH || (render->flags & ENGINE_RENDER_FLAG_DEPTH) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT);
 
             }else{
-                frame->view = swapChainImageViews[i];
-                frame->framebufers = calloc(1, sizeof(VkFramebuffer));
+                frame->render_texture.image_view = swapchain->swapChainImageViews[i];
+                frame->framebufers = AllocateMemoryP(1, sizeof(VkFramebuffer), render);
             }
         }else{
             frame->m_currentLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-            frame->framebufers = calloc(1, sizeof(VkFramebuffer));
+            frame->framebufers = AllocateMemoryP(1, sizeof(VkFramebuffer), render);
         }
 
-        VkFramebufferCreateInfo *framebufferInfo = calloc(1, sizeof(VkFramebufferCreateInfo));
+        VkFramebufferCreateInfo *framebufferInfo = AllocateMemory(1, sizeof(VkFramebufferCreateInfo));
         framebufferInfo->sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo->renderPass = render->render_pass;
         framebufferInfo->width = render->width;
@@ -261,7 +270,7 @@ void RenderTextureCreateFrames(RenderTexture *render, uint32_t flags)
 
         if(render->type == ENGINE_RENDER_TYPE_GEOMETRY)
         {
-            if(vkCreateFramebuffer(e_device, framebufferInfo, NULL, &frame->framebufers[0]) != VK_SUCCESS)
+            if(vkCreateFramebuffer(device->e_device, framebufferInfo, NULL, (VkFramebuffer *)&frame->framebufers[0]) != VK_SUCCESS)
             {
                 printf("Error create framebuffer for render texture.");
                 exit(1);
@@ -269,13 +278,13 @@ void RenderTextureCreateFrames(RenderTexture *render, uint32_t flags)
         }else if(render->type == ENGINE_RENDER_TYPE_WINDOW)
         {
             VkImageView attachments[2];
-            attachments[0] = frame->view;
-            attachments[1] = depthImageView;
+            attachments[0] = frame->render_texture.image_view;
+            attachments[1] = swapchain->depth_texture.image_view;
 
             framebufferInfo->attachmentCount = 2;
             framebufferInfo->pAttachments = attachments;
 
-            if(vkCreateFramebuffer(e_device, framebufferInfo, NULL, &frame->framebufers[0]) != VK_SUCCESS)
+            if(vkCreateFramebuffer(device->e_device, framebufferInfo, NULL, (VkFramebuffer *)&frame->framebufers[0]) != VK_SUCCESS)
             {
                 printf("Error create framebuffer for render texture.");
                 exit(1);
@@ -293,7 +302,7 @@ void RenderTextureCreateFrames(RenderTexture *render, uint32_t flags)
                     framebufferInfo->attachmentCount = 1;
                     framebufferInfo->pAttachments = attachments;
 
-                    if(vkCreateFramebuffer(e_device, framebufferInfo, NULL, &frame->framebufers[j]) != VK_SUCCESS)
+                    if(vkCreateFramebuffer(device->e_device, framebufferInfo, NULL, (VkFramebuffer *)&frame->framebufers[j]) != VK_SUCCESS)
                     {
                         printf("Error create framebuffer for render texture.");
                         exit(1);
@@ -301,7 +310,7 @@ void RenderTextureCreateFrames(RenderTexture *render, uint32_t flags)
                 }
             }else{
                 VkImageView attachments[2];
-                attachments[1] = frame->depth_view;
+                attachments[1] = frame->depth_texture.image_view;
 
                 for(int j=0;j < 6;j++)
                 {
@@ -310,7 +319,7 @@ void RenderTextureCreateFrames(RenderTexture *render, uint32_t flags)
                     framebufferInfo->attachmentCount = 2;
                     framebufferInfo->pAttachments = attachments;
 
-                    if(vkCreateFramebuffer(e_device, framebufferInfo, NULL, &frame->framebufers[j]) != VK_SUCCESS)
+                    if(vkCreateFramebuffer(device->e_device, framebufferInfo, NULL, (VkFramebuffer *)&frame->framebufers[j]) != VK_SUCCESS)
                     {
                         printf("Error create framebuffer for render texture.");
                         exit(1);
@@ -319,12 +328,12 @@ void RenderTextureCreateFrames(RenderTexture *render, uint32_t flags)
             }
 
         }else{
-            VkImageView attachment[] = { frame->view };
+            VkImageView attachment[] = { frame->depth_texture.image_view };
 
             framebufferInfo->attachmentCount = 1;
             framebufferInfo->pAttachments = attachment;
 
-            if(vkCreateFramebuffer(e_device, framebufferInfo, NULL, &frame->framebufers[0]) != VK_SUCCESS)
+            if(vkCreateFramebuffer(device->e_device, framebufferInfo, NULL, (VkFramebuffer *)&frame->framebufers[0]) != VK_SUCCESS)
             {
                 printf("Error create framebuffer for render texture.");
                 exit(1);
@@ -332,12 +341,14 @@ void RenderTextureCreateFrames(RenderTexture *render, uint32_t flags)
         }
 
 
-        free(framebufferInfo);
+        FreeMemory(framebufferInfo);
     }
 }
 
 void RenderTextureInit(RenderTexture *render, uint32_t type, uint32_t width, uint32_t height, uint32_t flags)
 {
+    ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
+
     memset(render, 0, sizeof(RenderTexture));
 
     switch(type)
@@ -349,10 +360,10 @@ void RenderTextureInit(RenderTexture *render, uint32_t type, uint32_t width, uin
             render->m_format = VK_FORMAT_R32_SFLOAT;
             break;
         case ENGINE_RENDER_TYPE_WINDOW:
-            render->m_format = swapChainImageFormat;
+            render->m_format = swapchain->swapChainImageFormat;
             break;
         case ENGINE_RENDER_TYPE_IMAGE:
-            render->m_format = swapChainImageFormat;
+            render->m_format = swapchain->swapChainImageFormat;
             break;
         default:
             render->m_format = 0;
@@ -374,13 +385,13 @@ void RenderTextureInit(RenderTexture *render, uint32_t type, uint32_t width, uin
         render->height = height;
         render->width = width;
     }else{
-        render->height = swapChainExtent.height;
-        render->width = swapChainExtent.width;
+        render->height = swapchain->swapChainExtent.height;
+        render->width = swapchain->swapChainExtent.width;
     }
 
     render->persp_view_distance = 100;
     render->persp_view_near = 0.01;
-    render->persp_view_angle = 45;
+    render->persp_view_angle = 60;
 
     render->ortg_view_distance = 100;
     render->ortg_view_size = 0.01;
@@ -397,11 +408,11 @@ void RenderTextureInit(RenderTexture *render, uint32_t type, uint32_t width, uin
     if(render->type == ENGINE_RENDER_TYPE_IMAGE)
     {
         render->flags |= ENGINE_RENDER_FLAG_ONE_SHOT;
-        render->frames = (RenderFrame*) calloc(1, sizeof(RenderFrame));
+        render->frames = (RenderFrame*) AllocateMemoryP(1, sizeof(RenderFrame), render);
         render->num_frames = 1;
     }else{
-        render->frames = (RenderFrame*) calloc(imagesCount, sizeof(RenderFrame));
-        render->num_frames = imagesCount;
+        render->frames = (RenderFrame*) AllocateMemoryP(engine.imagesCount, sizeof(RenderFrame), render);
+        render->num_frames = engine.imagesCount;
     }
 
     RenderTextureCreateRenderPass(render, &render->render_pass);
@@ -425,7 +436,7 @@ void RenderTextureRecreate(RenderTexture *render)
     RenderTextureDestroy(render);
 
     if(render->type == ENGINE_RENDER_TYPE_WINDOW)
-        RenderTextureInit(render, render->type, WIDTH, HEIGHT, render->flags);
+        RenderTextureInit(render, render->type, engine.width, engine.height, render->flags);
     else
         RenderTextureInit(render, render->type, render->width, render->height, render->flags);
 }
@@ -437,9 +448,9 @@ void RenderTextureBeginRendering(RenderTexture *render, void *cmd_buff)
     if(render->flags & ENGINE_RENDER_FLAG_ONE_SHOT)
         frame = &render->frames[0];
     else
-        frame = &render->frames[imageIndex];
+        frame = &render->frames[engine.imageIndex];
 
-    VkRenderPassBeginInfo *renderBeginInfo = calloc(1, sizeof(VkRenderPassBeginInfo));
+    VkRenderPassBeginInfo *renderBeginInfo = AllocateMemory(1, sizeof(VkRenderPassBeginInfo));
     renderBeginInfo->sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderBeginInfo->renderPass = render->render_pass;
 
@@ -481,7 +492,7 @@ void RenderTextureBeginRendering(RenderTexture *render, void *cmd_buff)
 
     vkCmdBeginRenderPass(cmd_buff, renderBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    free(renderBeginInfo);
+    FreeMemory(renderBeginInfo);
 }
 
 void RenderTextureSetCurrentFrame(RenderTexture *render, uint32_t indx_frame)
@@ -496,31 +507,30 @@ void RenderTextureEndRendering(RenderTexture *render, void *cmd_buff)
 
 void RenderTextureDestroy(RenderTexture *render)
 {
+    ZDevice *device = (ZDevice *)engine.device;
+
     for (int j=0;j< render->num_frames;j++) {
 
         if(render->type != ENGINE_RENDER_TYPE_WINDOW)
         {
-            vkDestroyImage(e_device, render->frames[j].image, NULL);
-            vkFreeMemory(e_device, render->frames[j].image_memory, NULL);
-            vkDestroySampler(e_device, render->frames[j].sampler, NULL);
-            vkDestroyImageView(e_device, render->frames[j].view, NULL);
 
-            vkDestroyImage(e_device, render->frames[j].depth_image, NULL);
-            vkFreeMemory(e_device, render->frames[j].depth_memory, NULL);
-            vkDestroyImageView(e_device, render->frames[j].depth_view, NULL);
+            ImageDestroyTexture(&render->frames[j].render_texture);
+            ImageDestroyTexture(&render->frames[j].depth_texture);
         }
 
         if(render->type & ENGINE_RENDER_TYPE_CUBEMAP)
         {
             for(int i=0;i < 6;i++){
-                vkDestroyFramebuffer(e_device, render->frames[j].framebufers[i], NULL);
-                vkDestroyImageView(e_device, render->frames[j].shadowCubeMapFaceImageViews[i], NULL);
+                vkDestroyFramebuffer(device->e_device, render->frames[j].framebufers[i], NULL);
+                vkDestroyImageView(device->e_device, render->frames[j].shadowCubeMapFaceImageViews[i], NULL);
             }
         }else
-            vkDestroyFramebuffer(e_device, render->frames[j].framebufers[0], NULL);
+            vkDestroyFramebuffer(device->e_device, render->frames[j].framebufers[0], NULL);
+            
+        FreeMemory(render->frames[j].framebufers);
     }
 
-    free(render->frames);
+    FreeMemory(render->frames);
 
-    vkDestroyRenderPass(e_device, render->render_pass, NULL);
+    vkDestroyRenderPass(device->e_device, render->render_pass, NULL);
 }

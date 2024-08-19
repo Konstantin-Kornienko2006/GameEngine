@@ -21,7 +21,6 @@ int RangeWidgetPress(EWidget* widget, void* entry, void* args){
     range->range.color.x = range->selfColor.x - 0.2f;
     range->range.color.y = range->selfColor.y - 0.2f;
     range->range.color.z = range->selfColor.z - 0.2f;
-    range->range.color.w = range->selfColor.w;
 
     return 0;
 }
@@ -91,12 +90,12 @@ void RangeWidgetInit(EWidgetRange *range, float size_x, float size_y, float min,
     WidgetAddDefault(&range->range, dParam->render);
     GameObject2DInitDraw(&range->range);
 
-    range->line.color = vec4_f(0.7, 0.7, 0.7, 1.0);
+    range->line.color = vec3_f(0.7, 0.7, 0.7);
     Transform2DSetScale(&range->line, size_x, 2);
     Transform2DSetPosition(&range->line, 0, size_y - 4);
     range->line.widget_flags &= ~(ENGINE_FLAG_WIDGET_ACTIVE);
 
-    range->widget.color = vec4_f(0.7, 0.7, 0.7, 0.0);
+    range->widget.color = vec3_f(0.7, 0.7, 0.7);
     range->widget.transparent = 0.0f;
     Transform2DSetScale(&range->widget, size_x, size_y);
 
@@ -104,7 +103,7 @@ void RangeWidgetInit(EWidgetRange *range, float size_x, float size_y, float min,
     range->max = max;
     range->dest = NULL;
 
-    range->range.color = range->selfColor = vec4_f(0.3, 0, 0, 1.0);
+    range->range.color = range->selfColor = vec3_f(0.3, 0, 0);
     Transform2DSetScale(&range->range, 10, size_y);
     Transform2DSetPosition(&range->range, 0, 0);
 

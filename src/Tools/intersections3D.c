@@ -201,9 +201,9 @@ float SqDistPointAABB(vec3 pos, void *obj)
     vec3 up = {box->position.x + box->size, box->position.y + box->size, box->position.z + box->size};
     vec3 down = {box->position.x - box->size, box->position.y - box->size, box->position.z - box->size};
 
-    float *p = &pos;
-    float *max = &up;
-    float *min = &down;
+    float *p = (float *)&pos;
+    float *max = (float *)&up;
+    float *min = (float *)&down;
 
     float sqDist = 0.0f;
     for (int i = 0; i < 3; i++) {
@@ -221,10 +221,10 @@ void ClosestPtPointAABB(vec3 pos, void *obj, vec3 *res)
     vec3 up = {box->position.x + box->size, box->position.y + box->size, box->position.z + box->size};
     vec3 down = {box->position.x - box->size, box->position.y - box->size, box->position.z - box->size};
 
-    float *p = &pos;
-    float *max = &up;
-    float *min = &down;
-    float *q = res;
+    float *p = (float *)&pos;
+    float *max = (float *)&up;
+    float *min = (float *)&down;
+    float *q = (float *)res;
 
     for(int i=0; i < 3; i++)
     {
@@ -259,7 +259,7 @@ int IntersectionCapsuleShape(void *obj1, void *shape, float *dist, float *depth,
     indexParam *iParam = &model->graphObj.shapes[0].iParam;
 
     if(vParam->verticesSize <= 0)
-        return;
+        return 0;
 
     vec3 origPos = model->transform.position;
     vec3 scale = model->transform.scale;
@@ -315,7 +315,7 @@ int IntersectionSphereShape(void *obj1, void *shape, float *dist, float *depth, 
     indexParam *iParam = &model->graphObj.shapes[0].iParam;
 
     if(vParam->verticesSize <= 0)
-        return;
+        return 0;
 
     vec3 origPos = model->transform.position;
     vec3 scale = model->transform.scale;
@@ -456,7 +456,7 @@ int IntersectionCapsuleCapsule(void *obj1, void *obj2, float *dist, float *depth
 int IntersectionAABBPlane(void *obj1, void *obj2, float *dist, float *depth, vec3 *dir)
 {
     InterAABBParam* box = (InterAABBParam *)obj1;
-    InterPlaneParam* plane = (InterAABBParam *)obj2;
+    InterPlaneParam* plane = (InterPlaneParam *)obj2;
 
     vec3 max = {box->position.x + box->size, box->position.y + box->size, box->position.z + box->size};
     vec3 min = {box->position.x - box->size, box->position.y - box->size, box->position.z - box->size};

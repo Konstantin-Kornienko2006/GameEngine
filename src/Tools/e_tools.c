@@ -6,12 +6,17 @@
 #include <math.h>
 #include <string.h>
 
-#include "Objects/terrain_object.h"
-
+#include "Core/e_memory.h"
+#include "Core/e_device.h"
+#include "Core/e_window.h"
 #include "Core/e_texture.h"
+
+#include "Objects/terrain_object.h"
 
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
+
+extern ZEngine engine;
 
 int p[512] = {
     151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142,
@@ -46,15 +51,17 @@ int p[512] = {
 const double epsilon = 2.718281828182818281828;
 
 void* beginSingleTimeCommands() {
+    ZDevice *device = (ZDevice *)engine.device;
+
     VkCommandBufferAllocateInfo allocInfo;
     memset(&allocInfo, 0, sizeof(VkCommandBufferAllocateInfo));
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = commandPool;
+    allocInfo.commandPool = device->commandPool;
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(e_device, &allocInfo, &commandBuffer);
+    vkAllocateCommandBuffers(device->e_device, &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo;
     memset(&beginInfo, 0, sizeof(VkCommandBufferBeginInfo));
@@ -67,17 +74,19 @@ void* beginSingleTimeCommands() {
 }
 
 void endSingleTimeCommands(void* commandBuffer) {
+    ZDevice *device = (ZDevice *)engine.device;
+
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
+    submitInfo.pCommandBuffers = (const VkCommandBuffer *)&commandBuffer;
 
-    vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(graphicsQueue);
+    vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(device->graphicsQueue);
 
-    vkFreeCommandBuffers(e_device, commandPool, 1, &commandBuffer);
+    vkFreeCommandBuffers(device->e_device, device->commandPool, 1, (const VkCommandBuffer *)&commandBuffer);
 }
 
 bool isComplete(QueueFamilyIndices self) {
@@ -85,6 +94,7 @@ bool isComplete(QueueFamilyIndices self) {
 }
 
 QueueFamilyIndices findQueueFamilies(void* arg) {
+    ZWindow *window = (ZWindow *)engine.window;
 
     VkPhysicalDevice device = (VkPhysicalDevice)arg;
 
@@ -95,7 +105,7 @@ QueueFamilyIndices findQueueFamilies(void* arg) {
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, NULL);
 
-    VkQueueFamilyProperties* queueFamilies = (VkQueueFamilyProperties*) calloc(queueFamilyCount, sizeof(VkQueueFamilyProperties));
+    VkQueueFamilyProperties* queueFamilies = (VkQueueFamilyProperties*) AllocateMemory(queueFamilyCount, sizeof(VkQueueFamilyProperties));
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies);
 
 
@@ -107,11 +117,15 @@ QueueFamilyIndices findQueueFamilies(void* arg) {
             indices.graphicsFamily = i;
         }
 
-        bool presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+        if(engine.present){
+            bool presentSupport = false;
+            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, window->surface, (VkBool32 *)&presentSupport);
 
-        if (presentSupport) {
-            indices.presentFamily = i;
+            if (presentSupport) {
+                indices.presentFamily = i;
+            }
+        }else{
+            indices.presentFamily = 0;
         }
 
         if (isComplete(indices)) {
@@ -119,7 +133,7 @@ QueueFamilyIndices findQueueFamilies(void* arg) {
         }
     }
 
-    free(queueFamilies);
+    FreeMemory(queueFamilies);
 
     return indices;
 }
@@ -138,7 +152,7 @@ shader readFile(const char* filename) {
     size = ftell(file);
     rewind(file);
 
-    uint32_t* temp = (uint32_t*) calloc(size, sizeof(uint32_t));
+    uint32_t* temp = (uint32_t*) AllocateMemoryP(size, sizeof(uint32_t), &engine);
 
     while(1)
     {
@@ -149,18 +163,22 @@ shader readFile(const char* filename) {
 
     fclose(file);
 
-    shader shdr = {temp, size};
+    shader shdr;
+    shdr.code = temp;
+    shdr.size = size;
 
     return shdr;
 }
 
 void* createShaderModule(shader shdr) {
+    ZDevice *device = (ZDevice *)engine.device;
+
     VkShaderModuleCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = shdr.size;
-    createInfo.pCode = shdr.code;
+    createInfo.pCode = (const uint32_t *)shdr.code;
     VkShaderModule shaderModule;
-    if (vkCreateShaderModule(e_device, &createInfo, NULL, &shaderModule) != VK_SUCCESS) {
+    if (vkCreateShaderModule(device->e_device, &createInfo, NULL, &shaderModule) != VK_SUCCESS) {
         printf("failed to create shader module!");
         exit(1);
     }
@@ -194,9 +212,9 @@ void InitGrass3D(vertexParam *vParam, indexParam *iParam)
     uint32_t planes = 2;
 
     vParam->verticesSize = planes * 4;
-    vParam->vertices = calloc(vParam->verticesSize, sizeof(Vertex3D));
+    vParam->vertices = AllocateMemory(vParam->verticesSize, sizeof(Vertex3D));
     iParam->indexesSize = planes * 6;
-    iParam->indices = calloc(iParam->indexesSize , sizeof(uint32_t));
+    iParam->indices = AllocateMemory(iParam->indexesSize , sizeof(uint32_t));
 
     Vertex3D some_pos[] = {
         {{-1.0f, 1.0f, 0}, {-1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
@@ -227,7 +245,7 @@ void InitPlane3D(vertexParam *vParam, indexParam *iParam, int stackCount, int se
 
     vParam->verticesSize = (stackCount + 1) * (sectorCount + 1);
 
-    vParam->vertices = (Vertex3D *) calloc(vParam->verticesSize, sizeof(Vertex3D));
+    vParam->vertices = (Vertex3D *) AllocateMemory(vParam->verticesSize, sizeof(Vertex3D));
 
     int vIter = 0;
 
@@ -255,7 +273,7 @@ void InitPlane3D(vertexParam *vParam, indexParam *iParam, int stackCount, int se
 
     iParam->indexesSize = (stackCount * sectorCount) * 6 + 6;
 
-    iParam->indices = (uint32_t *) calloc(iParam->indexesSize, sizeof(uint32_t));
+    iParam->indices = (uint32_t *) AllocateMemory(iParam->indexesSize, sizeof(uint32_t));
 
     int k1, k2, it = 0, tt = 0;
 
@@ -283,7 +301,7 @@ void InitTerrain(vertexParam *vParam, indexParam *iParam, void *param){
     TerrainParam *tParam = param;
 
     vParam->verticesSize = tParam->size_patch * tParam->size_patch;
-    vParam->vertices = calloc(vParam->verticesSize, sizeof(TerrainVertex));
+    vParam->vertices = AllocateMemory(vParam->verticesSize, sizeof(TerrainVertex));
 
     TerrainVertex *verts = vParam->vertices;
 
@@ -303,7 +321,7 @@ void InitTerrain(vertexParam *vParam, indexParam *iParam, void *param){
 
     const uint32_t w = (tParam->size_patch - 1);
     iParam->indexesSize = w * w * 4;
-    iParam->indices = (uint32_t *) calloc(iParam->indexesSize, sizeof(uint32_t));
+    iParam->indices = (uint32_t *) AllocateMemory(iParam->indexesSize, sizeof(uint32_t));
 
     // Indices
     for (int x = 0; x < w; x++)
@@ -321,14 +339,14 @@ void InitTerrain(vertexParam *vParam, indexParam *iParam, void *param){
 
 float* computeIcosahedronVertices(float radius)
 {
-    const float H_ANGLE = M_PI / 180 * 72;    // 72 degree = 360 / 5
+    const float H_ANGLE = ((float)M_PI / 180) * 72;    // 72 degree = 360 / 5
     const float V_ANGLE = atanf(1.0f / 2);  // elevation = 26.565 degree
 
-    float *vertices = (float *)calloc(12 * 3, sizeof(float));    // 12 vertices
+    float *vertices = (float *)AllocateMemory(12 * 3, sizeof(float));    // 12 vertices
     int i1, i2;                             // indices
     float z, xy;                            // coords
-    float hAngle1 = -M_PI / 2 - H_ANGLE / 2;  // start from -126 deg at 2nd row
-    float hAngle2 = -M_PI / 2;                // start from -90 deg at 3rd row
+    float hAngle1 = -((float)M_PI / 2) - H_ANGLE / 2;  // start from -126 deg at 2nd row
+    float hAngle2 = -((float)M_PI / 2);                // start from -90 deg at 3rd row
 
     // the first top vertex (0, 0, r)
     vertices[0] = 0;
@@ -434,16 +452,16 @@ void subdivideVerticesFlat(vertexParam *vParam, indexParam *iParam, int subdivis
     // iteration
     for(i = 1; i <= subdivision; ++i)
     {
-        tmpVerts = (Vertex3D *)calloc(vParam->verticesSize, sizeof(Vertex3D));
-        tmpIndxs = (uint32_t *)calloc(iParam->indexesSize, sizeof(uint32_t));
+        tmpVerts = (Vertex3D *)AllocateMemory(vParam->verticesSize, sizeof(Vertex3D));
+        tmpIndxs = (uint32_t *)AllocateMemory(iParam->indexesSize, sizeof(uint32_t));
         memcpy(tmpVerts, vParam->vertices, vParam->verticesSize * sizeof(Vertex3D));
         memcpy(tmpIndxs, iParam->indices, iParam->indexesSize * sizeof(uint32_t));
 
-        free(vParam->vertices);
-        free(iParam->indices);
+        FreeMemory(vParam->vertices);
+        FreeMemory(iParam->indices);
 
-        vParam->vertices = (Vertex3D *)calloc(vParam->verticesSize * 4, sizeof(Vertex3D));
-        iParam->indices = (uint32_t *)calloc(iParam->indexesSize * 4, sizeof(uint32_t));
+        vParam->vertices = (Vertex3D *)AllocateMemory(vParam->verticesSize * 4, sizeof(Vertex3D));
+        iParam->indices = (uint32_t *)AllocateMemory(iParam->indexesSize * 4, sizeof(uint32_t));
 
         index = 0;
         curr = 0;
@@ -452,12 +470,12 @@ void subdivideVerticesFlat(vertexParam *vParam, indexParam *iParam, int subdivis
         for(j = 0; j < indexCount; j += 3)
         {
             // get 3 vertice and texcoords of a triangle
-            v1 = &tmpVerts[tmpIndxs[j]].position;
-            v2 = &tmpVerts[tmpIndxs[j + 1]].position;
-            v3 = &tmpVerts[tmpIndxs[j + 2]].position;
-            t1 = &tmpVerts[tmpIndxs[j]].texCoord;
-            t2 = &tmpVerts[tmpIndxs[j + 1]].texCoord;
-            t3 = &tmpVerts[tmpIndxs[j + 2]].texCoord;
+            v1 = (const float *)&tmpVerts[tmpIndxs[j]].position;
+            v2 = (const float *)&tmpVerts[tmpIndxs[j + 1]].position;
+            v3 = (const float *)&tmpVerts[tmpIndxs[j + 2]].position;
+            t1 = (const float *)&tmpVerts[tmpIndxs[j]].texCoord;
+            t2 = (const float *)&tmpVerts[tmpIndxs[j + 1]].texCoord;
+            t3 = (const float *)&tmpVerts[tmpIndxs[j + 2]].texCoord;
 
             // get 3 new vertices by spliting half on each edge
             computeHalfVertex(v1, v2, radius, newV1);
@@ -505,8 +523,8 @@ void subdivideVerticesFlat(vertexParam *vParam, indexParam *iParam, int subdivis
         }
         iParam->indexesSize = iParam->indexesSize * 4;
         vParam->verticesSize = vParam->verticesSize * 4;
-        free(tmpIndxs);
-        free(tmpVerts);
+        FreeMemory(tmpIndxs);
+        FreeMemory(tmpVerts);
     }
 
     return;
@@ -517,9 +535,9 @@ int IcoSphereGenerator(vertexParam *vParam, indexParam *iParam,float radius)
 {
 
     vParam->verticesSize = 60;
-    vParam->vertices = (Vertex3D *) calloc(60, sizeof(Vertex3D));
+    vParam->vertices = (Vertex3D *) AllocateMemory(60, sizeof(Vertex3D));
     iParam->indexesSize = 60;
-    iParam->indices = (uint32_t *) calloc(60, sizeof(uint32_t));
+    iParam->indices = (uint32_t *) AllocateMemory(60, sizeof(uint32_t));
 
     const float S_STEP = 186 / 2048.0f;     // horizontal texture step
     const float T_STEP = 322 / 1024.0f;     // vertical texture step
@@ -624,9 +642,9 @@ int IcoSphereGenerator(vertexParam *vParam, indexParam *iParam,float radius)
 
 float* getUnitPositiveX(unsigned int pointsPerRow)
 {
-    const float DEG2RAD = M_PI / 180.0f;
+    const float DEG2RAD = ((float)M_PI / 180.0f);
 
-    float* vertices = (float *)calloc(pointsPerRow * pointsPerRow * 3, sizeof(float));
+    float* vertices = (float *)AllocateMemory(pointsPerRow * pointsPerRow * 3, sizeof(float));
     float n1[3];        // normal of longitudinal plane rotating along Y-axis
     float n2[3];        // normal of latitudinal plane rotating along Z-axis
     float v[3];         // direction vector intersecting 2 planes, n1 x n2
@@ -967,19 +985,19 @@ int SphereGenerator3D(vertexParam *vParam, indexParam *iParam,float radius, int 
     float nx, ny, nz, lengthInv = 1.0f / radius;    // vertex normal
     float s, t;                                     // vertex texCoord
 
-    float sectorStep = 2 * M_PI / sectorCount;
-    float stackStep = M_PI / stackCount;
+    float sectorStep = (2 * (float)M_PI) / sectorCount;
+    float stackStep = ((float)M_PI / stackCount);
     float sectorAngle, stackAngle;
 
     vParam->verticesSize = (stackCount + 1) * (sectorCount + 1);
 
-    vParam->vertices = (Vertex3D *) calloc(vParam->verticesSize, sizeof(Vertex3D));
+    vParam->vertices = (Vertex3D *) AllocateMemory(vParam->verticesSize, sizeof(Vertex3D));
 
     int vIter = 0;
 
     for(int i = 0; i <= stackCount; ++i)
     {
-        stackAngle = M_PI / 2 - i * stackStep;        // starting from pi/2 to -pi/2
+        stackAngle = ((float)M_PI / 2) - i * stackStep;        // starting from pi/2 to -pi/2
         xz = radius * -cosf(stackAngle);             // r * cos(u)
         y = radius * -sinf(stackAngle);              // r * sin(u)
 
@@ -1015,7 +1033,7 @@ int SphereGenerator3D(vertexParam *vParam, indexParam *iParam,float radius, int 
 
     iParam->indexesSize = (stackCount * sectorCount) * 6 + 6;
 
-    iParam->indices = (uint32_t *) calloc(iParam->indexesSize, sizeof(uint32_t));
+    iParam->indices = (uint32_t *) AllocateMemory(iParam->indexesSize, sizeof(uint32_t));
 
     int k1, k2;
     int it = 0, tt = 0;
@@ -1054,14 +1072,14 @@ void ConeGenerator(vertexParam *vParam, indexParam *iParam, const float height, 
 
     float x, z;                              // vertex positio
 
-    float angIncSector = 2 * M_PI / sectorCount;
-    float angIncStack = 2 * M_PI / stackCount;
+    float angIncSector = ((float)2 * M_PI) / sectorCount;
+    float angIncStack = ((float)2 * M_PI) / stackCount;
     float heigInc = height / stackCount;
     float sectorAngle, stackAngle;
 
     vParam->verticesSize = ((stackCount + 1) * (sectorCount + 1)) * 2;
 
-    vParam->vertices = (Vertex3D *) calloc(vParam->verticesSize, sizeof(Vertex3D));
+    vParam->vertices = (Vertex3D *) AllocateMemory(vParam->verticesSize, sizeof(Vertex3D));
 
     Vertex3D *verts = vParam->vertices;
 
@@ -1114,7 +1132,7 @@ void ConeGenerator(vertexParam *vParam, indexParam *iParam, const float height, 
 
     iParam->indexesSize = (stackCount * sectorCount) * 2 * 6;
 
-    iParam->indices = (uint32_t *) calloc(iParam->indexesSize, sizeof(uint32_t));
+    iParam->indices = (uint32_t *) AllocateMemory(iParam->indexesSize, sizeof(uint32_t));
 
     int k1, k2;
     int it = 0, tt = 0;
@@ -1173,10 +1191,11 @@ bool hasStencilComponent(uint32_t format) {
 }
 
 uint32_t findSupportedFormat(const uint32_t* candidates, size_t countCandidates, uint32_t tiling, uint32_t features) {
+    ZDevice *device = (ZDevice *)engine.device;
 
     for (int i=0;i < countCandidates;i++) {
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(e_physicalDevice, candidates[i], &props);
+        vkGetPhysicalDeviceFormatProperties(device->e_physicalDevice, candidates[i], &props);
 
         if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
             return candidates[i];
@@ -1195,12 +1214,14 @@ uint32_t findDepthFormat() {
 }
 
 void ToolsCreateDepthResources() {
+    ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
+
     VkFormat depthFormat = findDepthFormat();
 
-    TextureCreateImage(swapChainExtent.width, swapChainExtent.height, 1, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, &depthImage, &depthImageMemory);
-    depthImageView = TextureCreateImageView(depthImage, VK_IMAGE_VIEW_TYPE_2D, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+    TextureCreateImage(swapchain->swapChainExtent.width, swapchain->swapChainExtent.height, 1, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, &swapchain->depth_texture);
+    swapchain->depth_texture.image_view = TextureCreateImageView(swapchain->depth_texture.image, VK_IMAGE_VIEW_TYPE_2D, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
-    ToolsTransitionImageLayout(depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
+    ToolsTransitionImageLayout(swapchain->depth_texture.image, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 
 }
 
@@ -1703,7 +1724,7 @@ char *ToolsMakeString(char *s1, char *s2)
     int len = strlen(s1);
     int len2 = strlen(s2);
 
-    char* out = calloc(len + len2 + 1, sizeof(char));
+    char* out = AllocateMemoryP(len + len2 + 1, sizeof(char), &engine);
 
     memcpy(out, s1, len);
     memcpy(out + len, s2, len2);
@@ -1771,14 +1792,14 @@ void* ToolsLoadImageFromFile(size_t* len, char *filepath)
     fd = fopen(filepath, "r");
     if (fd == NULL) {
         printf("File Not Found!\n");
-        return -1;
+        return;
     }
 
 
     fseek(fd, 0L, SEEK_END);
     size = ftell(fd);
 
-    char *buff = (char *)calloc(size, sizeof(char));
+    char *buff = (char *)AllocateMemoryP(size, sizeof(char), &engine);
 
     fseek(fd, 0L, SEEK_SET);
 
@@ -1795,7 +1816,7 @@ void* ToolsLoadImageFromFile(size_t* len, char *filepath)
 
 int ToolsUInt32ToString(char *dest, const uint32_t *src)
 {
-    uint32_t size = ToolsStr32BitLength(src);
+    uint32_t size = ToolsStr32BitLength((uint32_t *)src);
 
     bool find = false;
     int iter = 0;

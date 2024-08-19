@@ -12,11 +12,13 @@
 #include "Data/e_resource_engine.h"
 #include "Data/e_resource_export.h"
 
+extern ZEngine engine;
+
 void TextWidgetUpdateUniformBufferDefault(EWidgetText* wt, BluePrintDescriptor *descriptor) {
 
     vec2 offset = {0, 0};
     if(wt->widget.parent != NULL){
-        offset = v2_div(wt->widget.parent->offset, vec2_f(WIDTH, HEIGHT));
+        offset = v2_div(wt->widget.parent->offset, vec2_f(engine.width, engine.height));
         wt->widget.position = v2_add(v2_add(wt->widget.go.transform.position, v2_muls(wt->widget.parent->position, 2.0)), offset);
     }
     else{
@@ -49,14 +51,14 @@ void TextWidgetDrawDefault(EWidgetText* wt, void *command)
     {
         BluePrintPack *pack = &wt->widget.go.graphObj.blueprints.blue_print_packs[i];
 
-        if(pack->render_point == current_render)
+        if(pack->render_point == engine.current_render)
         {
             ShaderPack *shader_pack = &wt->widget.go.graphObj.gItems.shader_packs[i];
 
             for(int j=0; j < shader_pack->num_pipelines; j++){
 
                 vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, shader_pack->pipelines[j].pipeline);
-                vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS, shader_pack->pipelines[j].layout, 0, 1, &shader_pack->descriptor.descr_sets[imageIndex], 0, NULL);
+                vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS, shader_pack->pipelines[j].layout, 0, 1, &shader_pack->descriptor.descr_sets[engine.imageIndex], 0, NULL);
 
                 PipelineSetting *settings = &pack->settings[j];
 
@@ -66,7 +68,7 @@ void TextWidgetDrawDefault(EWidgetText* wt, void *command)
                 }
 
                 VkDeviceSize offsets = 0;
-                vkCmdBindVertexBuffers(command, 0, 1, &wt->widget.go.graphObj.shapes[settings->vert_indx].vParam.vertexBuffer, &offsets);
+                vkCmdBindVertexBuffers(command, 0, 1, &wt->widget.go.graphObj.shapes[settings->vert_indx].vParam.buffer.buffer, &offsets);
                 for (uint32_t j = 0; j < wt->tData.font.numLetters; j++)
                 {
                     vkCmdDraw(command, 4, 1, j * 4, 0);
@@ -176,7 +178,7 @@ void TextWidgetInit(EWidgetText *wt, int fontSize, DrawParam *dParam, EWidget* p
     }
 
     wt->widget.type = ENGINE_WIDGET_TYPE_TEXT;
-    wt->widget.color = (vec4){0.4, 0.1, 0.1, 1.0};
+    wt->widget.color = (vec3){0.4, 0.1, 0.1};
 
     wt->widget.offset.x = 0;
     wt->widget.offset.y = 0;

@@ -24,7 +24,7 @@ void _wManagerPlatformInitTimer(void)
 /*#if defined(_POSIX_MONOTONIC_CLOCK)
     struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
-        _glfw.timer.posix.clock = CLOCK_MONOTONIC;
+        _wManager.timer.posix.clock = CLOCK_MONOTONIC;
 #endif*/
 }
 

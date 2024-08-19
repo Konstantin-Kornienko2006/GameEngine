@@ -1,22 +1,26 @@
+#include "Core/e_window.h"
 #include "Core/e_device.h"
+#include "Core/e_memory.h"
 
 #include <vulkan/vulkan.h>
 
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
 
+extern ZEngine engine;
+
 bool checkDeviceExtensionSupport(void* arg) {
 
     VkPhysicalDevice *device = arg;
 
-    vkEnumerateDeviceExtensionProperties(*device, NULL, &extensionCount, NULL);
+    vkEnumerateDeviceExtensionProperties(*device, NULL, &engine.extensionCount, NULL);
 
-    VkExtensionProperties* availableExtensions = (VkExtensionProperties*) calloc( extensionCount, sizeof(VkExtensionProperties));
-    vkEnumerateDeviceExtensionProperties(*device, NULL, &extensionCount, availableExtensions);
+    VkExtensionProperties* availableExtensions = (VkExtensionProperties*) AllocateMemory( engine.extensionCount, sizeof(VkExtensionProperties));
+    vkEnumerateDeviceExtensionProperties(*device, NULL, &engine.extensionCount, availableExtensions);
 
-    const char** requiredExtensions = (const char**) calloc(num_dev_extensions, sizeof(char*));
+    const char** requiredExtensions = (const char**) AllocateMemory(num_dev_extensions, sizeof(char*));
 
-    for(int i=0;i<extensionCount;i++)
+    for(int i=0;i < engine.extensionCount;i++)
     {
         for(int j=0;j<num_dev_extensions;j++)
         {
@@ -24,8 +28,8 @@ bool checkDeviceExtensionSupport(void* arg) {
 
             if(strcmp(deviceExtensions[j], availableExtensions[i].extensionName) == 0)
             {
-                requiredExtensions[j] = (char *) calloc(strlen(availableExtensions[i].extensionName), sizeof(char));
-                memcpy(requiredExtensions[j], deviceExtensions[j], sizeof(char) * strlen(availableExtensions[i].extensionName));
+                requiredExtensions[j] = (char *) AllocateMemory(strlen(availableExtensions[i].extensionName), sizeof(char));
+                memcpy((void *)requiredExtensions[j], (const void *)deviceExtensions[j], sizeof(char) * strlen(availableExtensions[i].extensionName));
             }
         }
     }
@@ -37,12 +41,11 @@ bool checkDeviceExtensionSupport(void* arg) {
         if(requiredExtensions[i] != NULL)
             empty = false;
 
-        free(requiredExtensions[i]);
+        FreeMemory((void *)requiredExtensions[i]);
     }
 
-    free(availableExtensions);
-    free(requiredExtensions);
-
+    FreeMemory(availableExtensions);
+    FreeMemory(requiredExtensions); 
 
     return !empty;
 }
@@ -65,50 +68,62 @@ bool isDeviceSuitable(void* arg) {
 }
 
 void pickPhysicalDevice() {
+    ZWindow *window = (ZWindow *)engine.window;
+    ZDevice *device = (ZDevice *)engine.device;
 
     uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(instance, &deviceCount, NULL);
+    vkEnumeratePhysicalDevices(window->instance, &deviceCount, NULL);
 
     if (deviceCount == 0) {
         printf("failed to find GPUs with Vulkan support!");
         exit(1);
     }
 
-    VkPhysicalDevice* devices = (VkPhysicalDevice *) calloc(deviceCount, sizeof(VkPhysicalDevice));
-    vkEnumeratePhysicalDevices(instance, &deviceCount, devices);
+    VkPhysicalDevice* devices = (VkPhysicalDevice *) AllocateMemory(deviceCount, sizeof(VkPhysicalDevice));
+    vkEnumeratePhysicalDevices(window->instance, &deviceCount, devices);
 
     VkPhysicalDevice tDevice;
     for (int i=0; i < deviceCount; i++){
         tDevice = devices[i];
         bool temp = isDeviceSuitable(&tDevice);
         if (temp) {
-            e_physicalDevice = tDevice;
+            device->e_physicalDevice = tDevice;
             break;
         }
     }
 
-    if(e_physicalDevice == NULL) {
+    if(device->e_physicalDevice == NULL) {
         printf("failed to find a suitable GPU!");
         exit(1);
     }
-
-    free(devices);
+    
+    FreeMemory(devices);
 
 }
 
 void createLogicalDevice() {
-
-    QueueFamilyIndices indices = findQueueFamilies(e_physicalDevice);
+    ZDevice *device = (ZDevice *)engine.device;
 
     VkDeviceQueueCreateInfo* queueCreateInfos;
-    queueCreateInfos = (VkDeviceQueueCreateInfo*) calloc(2, sizeof(VkDeviceQueueCreateInfo));
+    uint32_t* uniqueQueueFamilies;
 
-    uint32_t* uniqueQueueFamilies = (uint32_t*) calloc(2, sizeof(uint32_t));
-    uniqueQueueFamilies[0] = indices.graphicsFamily;
-    uniqueQueueFamilies[1] = indices.presentFamily;
+    QueueFamilyIndices indices = findQueueFamilies(device->e_physicalDevice);
+
+    if(engine.present){
+        queueCreateInfos = (VkDeviceQueueCreateInfo*) AllocateMemory(2, sizeof(VkDeviceQueueCreateInfo));
+        uniqueQueueFamilies = (uint32_t*) AllocateMemory(2, sizeof(uint32_t));
+        uniqueQueueFamilies[0] = indices.graphicsFamily;
+        uniqueQueueFamilies[1] = indices.presentFamily;
+    }else{
+        queueCreateInfos = (VkDeviceQueueCreateInfo*) AllocateMemory(1, sizeof(VkDeviceQueueCreateInfo));
+        uniqueQueueFamilies = (uint32_t*) AllocateMemory(1, sizeof(uint32_t));
+        uniqueQueueFamilies[0] = indices.graphicsFamily;
+    }
 
     float queuePriority = 1.0f;
-    for (int i=0;i<2;i++) {
+
+    uint32_t queueCount = engine.present ? 2 : 1;
+    for (int i=0;i<queueCount;i++) {
         VkDeviceQueueCreateInfo queueCreateInfo;
         memset(&queueCreateInfo, 0, sizeof(VkDeviceQueueCreateInfo));
 
@@ -131,9 +146,8 @@ void createLogicalDevice() {
     memset(&createInfo, 0, sizeof(VkDeviceCreateInfo));
 
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.queueCreateInfoCount = 2;
     createInfo.pQueueCreateInfos = queueCreateInfos;
-    createInfo.queueCreateInfoCount = 1;
+    createInfo.queueCreateInfoCount = indices.graphicsFamily != indices.presentFamily ? 2 : 1;
     createInfo.pEnabledFeatures = &deviceFeatures;
     createInfo.enabledExtensionCount = num_dev_extensions;
     createInfo.ppEnabledExtensionNames = deviceExtensions;
@@ -145,14 +159,16 @@ void createLogicalDevice() {
         createInfo.enabledLayerCount = 0;
     }
 
-    if (vkCreateDevice(e_physicalDevice, &createInfo, NULL, &e_device) != VK_SUCCESS) {
+    if (vkCreateDevice(device->e_physicalDevice, &createInfo, NULL, (VkDevice *) &device->e_device) != VK_SUCCESS) {
         printf("failed to create logical device!");
         exit(1);
     }
 
-    vkGetDeviceQueue(e_device, indices.presentFamily, 0, &presentQueue);
-    vkGetDeviceQueue(e_device, indices.graphicsFamily, 0, &graphicsQueue);
+    if(engine.present)
+        vkGetDeviceQueue(device->e_device, indices.presentFamily,  0, (VkQueue *)&device->presentQueue);
+                
+    vkGetDeviceQueue(device->e_device, indices.graphicsFamily, 0, (VkQueue *)&device->graphicsQueue);
 
-    free(queueCreateInfos);
-    free(uniqueQueueFamilies);
+    FreeMemory(queueCreateInfos);
+    FreeMemory(uniqueQueueFamilies);
 }

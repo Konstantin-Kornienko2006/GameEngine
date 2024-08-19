@@ -36,7 +36,7 @@ void GrassObjectSetDefaultDescriptor(GrassObject *grass, DrawParam *dParam)
     setting.vert_indx = 0;
     setting.cull_mode = VK_CULL_MODE_NONE;
 
-    GameObject3DAddSettingPipeline(grass, nums, &setting);
+    GameObject3DAddSettingPipeline((GameObject3D *)grass, nums, &setting);
 
     grass->go.graphObj.blueprints.num_blue_print_packs ++;
 }
@@ -62,14 +62,14 @@ void GrassObjectSetInstanceDescriptor(GrassObject *grass, DrawParam *dParam)
     setting.vert_indx = 0;
     setting.cull_mode = VK_CULL_MODE_NONE;
 
-    GameObject3DAddSettingPipeline(grass, nums, &setting);
+    GameObject3DAddSettingPipeline((GameObject3D *)grass, nums, &setting);
 
     grass->go.graphObj.blueprints.num_blue_print_packs ++;
 }
 
 void GrassObjectInit(GrassObject *grass, DrawParam *dParam)
 {
-    GameObject3DInit(grass);
+    GameObject3DInit((GameObject3D *)grass);
 
     vertexParam vParam;
     indexParam iParam;
@@ -78,8 +78,8 @@ void GrassObjectInit(GrassObject *grass, DrawParam *dParam)
 
     GraphicsObjectSetVertex(&grass->go.graphObj, vParam.vertices, vParam.verticesSize, sizeof(Vertex3D), iParam.indices, iParam.indexesSize, sizeof(uint32_t));
 
-    free(vParam.vertices);
-    free(iParam.indices);
+    FreeMemory(vParam.vertices);
+    FreeMemory(iParam.indices);
 
-    GameObject3DInitTextures(grass, dParam);
+    GameObject3DInitTextures((GameObject3D *)grass, dParam);
 }

@@ -1,3 +1,4 @@
+#include "Core/e_window.h"
 #include "Core/e_debuger.h"
 
 #include <vulkan/vulkan.h>
@@ -8,16 +9,18 @@
 
 #include "Data/e_resource_engine.h"
 
+extern ZEngine engine;
+
 uint32_t CreateDebugUtilsMessengerEXT(void* arg, const EdDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const EdAllocationCallbacks* pAllocator, void** messenger) {
 
     VkInstance *instance = arg;
-    VkDebugUtilsMessengerEXT* pDebugMessenger = messenger;
+    VkDebugUtilsMessengerEXT* pDebugMessenger = (struct VkDebugUtilsMessengerEXT_t **) messenger;
 
     int (*func1)(VkInstance, const VkDebugUtilsMessengerCreateInfoEXT*, const EdAllocationCallbacks*, VkDebugUtilsMessengerEXT*);
 
     func1 = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func1 != NULL) {
-        return func1(instance, pCreateInfo, pAllocator, pDebugMessenger);
+        return func1((VkInstance)instance, pCreateInfo, pAllocator, pDebugMessenger);
     } else {
         return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
@@ -31,7 +34,7 @@ void DestroyDebugUtilsMessengerEXT(void* arg, void* debugMessenger, const EdAllo
 
     func2 = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func2 != NULL) {
-        func2(instance, debugMessenger, pAllocator);
+        func2((VkInstance)instance, debugMessenger, pAllocator);
     }
 }
 
@@ -48,7 +51,7 @@ uint32_t debugCallback(
         const void** CallbackData,
         void* pUserData){
 
-    VkDebugUtilsMessengerCallbackDataEXT *pCallbackData = CallbackData;
+    VkDebugUtilsMessengerCallbackDataEXT *pCallbackData = (struct VkDebugUtilsMessengerCallbackDataEXT *) CallbackData;
 
     if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
     {
@@ -76,13 +79,15 @@ void populateDebugMessengerCreateInfo(EdDebugUtilsMessengerCreateInfoEXT* create
 
 void setupDebugMessenger(){
 
+    ZWindow *window = (ZWindow *)engine.window;
+
     if(!enableValidationLayers) return;
 
     VkDebugUtilsMessengerCreateInfoEXT debugInfo;
     memset(&debugInfo, 0, sizeof(VkDebugUtilsMessengerCreateInfoEXT));
 
-    populateDebugMessengerCreateInfo(&debugInfo);
-    if(CreateDebugUtilsMessengerEXT(instance, &debugInfo, NULL, &debugMessenger) != VK_SUCCESS)
+    populateDebugMessengerCreateInfo((EdDebugUtilsMessengerCreateInfoEXT *) &debugInfo);
+    if(CreateDebugUtilsMessengerEXT(window->instance, (const EdDebugUtilsMessengerCreateInfoEXT *)&debugInfo, NULL, &engine.debugMessenger) != VK_SUCCESS)
     {
         printf("failed create debug messnger");
         exit(1);

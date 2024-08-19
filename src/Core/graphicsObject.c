@@ -2,6 +2,8 @@
 
 #include <vulkan/vulkan.h>
 
+#include "Core/e_memory.h"
+#include "Core/e_device.h"
 #include "Core/pipeline.h"
 #include "Core/e_buffer.h"
 #include "Core/e_texture.h"
@@ -10,6 +12,8 @@
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_descriptors.h"
 #include "Data/e_resource_engine.h"
+
+extern ZEngine engine;
 
 void GraphicsObjectInit(GraphicsObject* graphObj, uint32_t type)
 {
@@ -37,7 +41,7 @@ void GraphicsObjectInit(GraphicsObject* graphObj, uint32_t type)
             graphObj->shapes[0].type = type;
             break;
         case ENGINE_VERTEX_TYPE_3D_INSTANCE:
-            graphObj->shapes[0].bindingDescription = calloc(2, sizeof(EIVertexInputBindingDescription));
+            graphObj->shapes[0].bindingDescription = AllocateMemory(2, sizeof(EIVertexInputBindingDescription));
             graphObj->shapes[0].bindingDescription[0] = Bind3DDescription;
             graphObj->shapes[0].bindingDescription[1] = Bind3DInstanceDescription;
             graphObj->shapes[0].attr = instanceAttributeDescription;
@@ -46,7 +50,7 @@ void GraphicsObjectInit(GraphicsObject* graphObj, uint32_t type)
             graphObj->shapes[0].type = type;
             break;
         case ENGINE_VERTEX_TYPE_TREE_INSTANCE:
-            graphObj->shapes[0].bindingDescription = calloc(2, sizeof(EIVertexInputBindingDescription));
+            graphObj->shapes[0].bindingDescription = AllocateMemory(2, sizeof(EIVertexInputBindingDescription));
             graphObj->shapes[0].bindingDescription[0] = BindTree3DDescription;
             graphObj->shapes[0].bindingDescription[1] = Bind3DInstanceDescription;
             graphObj->shapes[0].attr = treeInstanceAttributeDescription;
@@ -106,14 +110,14 @@ void GraphicsObjectSetVertex(GraphicsObject* graphObj, void *vert, int vertCount
 
     if(vert != NULL)
     {
-        graphObj->shapes[num].vParam.vertices = calloc(vertCount, graphObj->shapes[num].vParam.typeSize);
+        graphObj->shapes[num].vParam.vertices = AllocateMemoryP(vertCount, graphObj->shapes[num].vParam.typeSize, graphObj);
         memcpy(graphObj->shapes[num].vParam.vertices, vert, graphObj->shapes[num].vParam.typeSize * vertCount);
         graphObj->shapes[num].vParam.verticesSize = vertCount;
     }
 
     if(inx != NULL)
     {
-        graphObj->shapes[num].iParam.indices = calloc(indxCount, graphObj->shapes[num].iParam.typeSize);
+        graphObj->shapes[num].iParam.indices = AllocateMemoryP(indxCount, graphObj->shapes[num].iParam.typeSize, graphObj);
         memcpy(graphObj->shapes[num].iParam.indices, inx, graphObj->shapes[num].iParam.typeSize * indxCount);
         graphObj->shapes[num].iParam.indexesSize = indxCount;
     }
@@ -148,7 +152,7 @@ void GraphicsObjectCreateDrawItems(GraphicsObject* graphObj){
     {
         BluePrintPack *pack = &graphObj->blueprints.blue_print_packs[i];
 
-        DescriptorCreate(&graphObj->gItems.shader_packs[i].descriptor, pack->descriptors, &graphObj->blueprints, pack->num_descriptors, imagesCount);
+        DescriptorCreate(&graphObj->gItems.shader_packs[i].descriptor, pack->descriptors, &graphObj->blueprints, pack->num_descriptors, engine.imagesCount);
     }
 }
 
@@ -161,23 +165,18 @@ void GraphicsObjectClean(GraphicsObject *graphObj)
         DescriptorDestroy(&graphObj->gItems.shader_packs[i].descriptor);
     }
 
+    graphObj->gItems.num_shader_packs = 0;
+
     for(int i=0;i < graphObj->blueprints.num_blue_print_packs;i++)
     {
-        for(int j=0;j < graphObj->blueprints.blue_print_packs[i].num_descriptors;j++)
-        {
-            BluePrintDescriptor *descriptor = &graphObj->blueprints.blue_print_packs[i].descriptors[j];
+        BluePrintPack *pack = &graphObj->blueprints.blue_print_packs[i];
 
-            if(!(descriptor->flags & ENGINE_BLUE_PRINT_FLAG_LINKED_UNIFORM))
-            {
-                if(descriptor->descrType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER){
-                    for (int j = 0; j < imagesCount; j++) {
-                        BuffersDestroyBuffer(descriptor->uniform->uniformBuffers[j]);
-                    }
-                    free(descriptor->uniform->uniformBuffers);
-                    descriptor->uniform->uniformBuffers = NULL;
-                    free(descriptor->uniform->uniformBuffersMemory);
-                    descriptor->uniform->uniformBuffersMemory = NULL;
-                }
+        for(int j=0;j < pack->num_descriptors;j++)
+        {
+            BluePrintDescriptor *descriptor = &pack->descriptors[j];
+
+            if(descriptor->descrType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER){
+                BuffersDestroyContainer(&descriptor->uniform);
             }
         }
     }
@@ -185,6 +184,7 @@ void GraphicsObjectClean(GraphicsObject *graphObj)
 
 void GraphicsObjectDestroy(GraphicsObject* graphObj){
 
+    ZDevice *device = (ZDevice *)engine.device;
 
     for(int i=0;i < graphObj->gItems.num_shader_packs;i++)
     {
@@ -193,93 +193,14 @@ void GraphicsObjectDestroy(GraphicsObject* graphObj){
         DescriptorDestroy(&graphObj->gItems.shader_packs[i].descriptor);
     }
 
-    for(int i=0;i < graphObj->blueprints.num_blue_print_packs;i++)
-    {
-        for(int j=0;j < graphObj->blueprints.blue_print_packs[i].num_descriptors;j++)
-        {
-            BluePrintDescriptor *descriptor = &graphObj->blueprints.blue_print_packs[i].descriptors[j];
-
-            if(descriptor->descrType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || descriptor->descrType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE){
-
-                if(descriptor->flags & ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE)
-                    continue;
-
-                if((descriptor->flags & ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE) && (descriptor->flags & ENGINE_BLUE_PRINT_FLAG_ARRAY_IMAGE))
-                {
-                    Texture2D **textures = descriptor->textures;
-
-                    for(int i=0;i < descriptor->size;i++)
-                    {
-                        if(textures[0][i].flags & ENGINE_TEXTURE2D_FLAG_GENERATED)
-                        {
-                            ImageDestroyTexture(&textures[0][i]);
-                        }else if(textures[0][i].flags & ENGINE_TEXTURE2D_FLAG_VIEW){
-                            vkDestroyImageView(e_device, textures[0][i].textureImageView, NULL);
-                        }
-                    }
-
-                    free(descriptor->textures);
-
-                }else if((descriptor->flags & ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE)){
-                    Texture2D **textures = descriptor->textures;
-
-                    if(textures[0]->flags & ENGINE_TEXTURE2D_FLAG_GENERATED)
-                    {
-                        ImageDestroyTexture(textures[0]);
-                        free(textures[0]);
-                    }else if(textures[0]->flags & ENGINE_TEXTURE2D_FLAG_VIEW){
-                        vkDestroyImageView(e_device, textures[0]->textureImageView, NULL);
-                    }
-
-                    free(descriptor->textures);
-                }else{
-                    Texture2D **textures = descriptor->textures;
-
-                    for(int i=0;i < imagesCount;i++)
-                    {
-                        for(int j=0;j < descriptor->size;j++)
-                        {
-                            if(textures[i][j].flags & ENGINE_TEXTURE2D_FLAG_GENERATED)
-                            {
-                                ImageDestroyTexture(&textures[i][j]);
-                            }else if(textures[i][j].flags & ENGINE_TEXTURE2D_FLAG_VIEW){
-                                vkDestroyImageView(e_device, textures[i][j].textureImageView, NULL);
-                            }
-                        }
-                        free(textures[i]);
-                    }
-
-                    free(descriptor->textures);
-                }
-
-                descriptor->textures = NULL;
-            }else{
-                if(descriptor->flags & ENGINE_BLUE_PRINT_FLAG_LINKED_UNIFORM)
-                    continue;
-
-                for (int k = 0; k < imagesCount; k++) {
-                    BuffersDestroyBuffer(descriptor->uniform->uniformBuffers[k]);
-                }
-
-                free(descriptor->uniform->uniformBuffers);
-                descriptor->uniform->uniformBuffers = NULL;
-                free(descriptor->uniform->uniformBuffersMemory);
-                descriptor->uniform->uniformBuffersMemory = NULL;
-            }
-        }
-    }
+    BluePrintClearAll(&graphObj->blueprints);    
 
     for(int i=0;i < graphObj->num_shapes;i++)
     {
         if(graphObj->shapes[i].iParam.indexesSize > 0)
-            BuffersDestroyBuffer(graphObj->shapes[i].iParam.indexBuffer);
+            BuffersDestroyBuffer(&graphObj->shapes[i].iParam.buffer);
 
-        graphObj->shapes[i].iParam.indexBuffer = NULL;
-        graphObj->shapes[i].iParam.indexBufferMemory = NULL;
-
-        BuffersDestroyBuffer(graphObj->shapes[i].vParam.vertexBuffer);
-        graphObj->shapes[i].vParam.vertexBuffer = NULL;
-        graphObj->shapes[i].vParam.vertexBufferMemory = NULL;
+        BuffersDestroyBuffer(&graphObj->shapes[i].vParam.buffer);
     }
 }
 

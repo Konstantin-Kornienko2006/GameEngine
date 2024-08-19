@@ -50,8 +50,8 @@ void inputMethodInstantiateCallback(Display* display,
         callback.client_data = NULL;
         XSetIMValues(wX11->im, XNDestroyCallback, &callback, NULL);
 
-        for (wManagerWindow* window = _glfw.windowListHead;  window;  window = window->next)
-            _glfwCreateInputContextX11(window);
+        for (wManagerWindow* window = _wManager.windowListHead;  window;  window = window->next)
+            _wManagerCreateInputContextX11(window);
     }*/
 }
 
@@ -369,12 +369,12 @@ void createKeyTables(void *wData)
                 { ENGINE_KEY_MENU, "MENU" }
             };
 
-            // Find the X11 key code -> GLFW key code mapping
+            // Find the X11 key code -> wManager key code mapping
             for (int scancode = scancodeMin;  scancode <= scancodeMax;  scancode++)
             {
                 int key = ENGINE_KEY_UNKNOWN;
 
-                // Map the key name to a GLFW key code. Note: We use the US
+                // Map the key name to a wManager key code. Note: We use the US
                 // keyboard layout. Because function keys aren't mapped correctly
                 // when using traditional KeySym translations, they are mapped
                 // here instead.
@@ -682,7 +682,7 @@ static int32_t initExtensions(void)
                                 &wX11->randr.major,
                                 &wX11->randr.minor))
             {
-                // The GLFW RandR path requires at least version 1.3
+                // The wManager RandR path requires at least version 1.3
                 if (wX11->randr.major > 1 || wX11->randr.minor >= 3)
                     wX11->randr.available = true;
             }
@@ -886,7 +886,7 @@ static int32_t initExtensions(void)
 
     // Custom selection property atom
     wX11->ENGINE_SELECTION =
-        XInternAtom(wX11->display, "GLFW_SELECTION", False);
+        XInternAtom(wX11->display, "wManager_SELECTION", False);
 
     // ICCCM standard clipboard atoms
     wX11->TARGETS = XInternAtom(wX11->display, "TARGETS", False);
@@ -1320,7 +1320,7 @@ void _wManagerTerminateX11(void)
         if (XGetSelectionOwner(wX11->display, wX11->CLIPBOARD) ==
             wX11->helperWindowHandle)
         {
-            _glfwPushSelectionToManagerX11();
+            _wManagerPushSelectionToManagerX11();
         }
 
         XDestroyWindow(wX11->display, wX11->helperWindowHandle);
@@ -1395,11 +1395,11 @@ void _wManagerTerminateX11(void)
         wX11->xi.handle = NULL;
     }
 
-    /*_glfwTerminateOSMesa();
+    /*_wManagerTerminateOSMesa();
     // NOTE: These need to be unloaded after XCloseDisplay, as they register
     //       cleanup callbacks that get called by that function
-    _glfwTerminateEGL();
-    _glfwTerminateGLX();*/
+    _wManagerTerminateEGL();
+    _wManagerTerminateGLX();*/
 
     if (wX11->xlib.handle)
     {
@@ -1500,7 +1500,7 @@ uint32_t _wManagerConnectX11(_wManagerPlatform* platform){
             .getKeyScancode = _wManagerGetKeyScancodeX11,
             .setClipboardString = NULL,//_wManagerSetClipboardStringX11,
             .getClipboardString = NULL,//_wManagerGetClipboardStringX11,
-    /*#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+    /*#if defined(ENGINE_BUILD_LINUX_JOYSTICK)
             .initJoysticks = _wManagerInitJoysticksLinux,
             .terminateJoysticks = _wManagerTerminateJoysticksLinux,
             .pollJoystick = _wManagerPollJoystickLinux,

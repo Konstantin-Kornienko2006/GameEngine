@@ -1,15 +1,25 @@
 #ifndef STDINC_H
 #define STDINC_H
 
+#define _USE_MATH_DEFINES
+
+#include <vulkan/vulkan.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
+#include "Core/e_memory.h"
+
 #include "e_vertex.h"
 #include "e_buffers_variables.h"
 
 #include "e_math_variables.h"
+
+#include "wManager/window_manager.h"
+
+#define ENGINE_DEFINE_NON_DISPATCHABLE_HANDLE(object) typedef struct object##_T *object;
 
 #define MAX_FONTS 32
 #define MAX_IMAGES 32
@@ -32,29 +42,127 @@ extern "C"
     #include <stdbool.h>
 #endif
 
-struct GameObject;
-struct RenderTexture;
+struct GameObject_T;
+struct RenderTexture_T;
 
-typedef struct{
-    struct GameObject *objects[MAX_DRAW_OBJECTS];
-    uint32_t size;
-} EngineDrawItems;
+struct ZWindow_T;
+struct ZDevice_T;
+struct ZSwapChain_T;
 
 typedef struct{
     struct RenderTexture *objects[MAX_DRAW_OBJECTS];
     uint32_t size;
 } EngineRenderItems;
 
+typedef struct{
+    struct GameObject *objects[MAX_DRAW_OBJECTS];
+    uint32_t size;    
+} EngineGameObjects;
+
+typedef struct ChildStack{
+    struct ChildStack* next;
+    struct ChildStack* before;
+    void *node;
+} ChildStack;
+
+typedef struct FontCache{
+    char path[1024];
+    void *cdata;
+    void *info;
+    void *texture;
+} FontCache;
+
+typedef struct{
+    char app_name[256];
+    int width;
+    int height;
+    void* cam2D;
+    void* cam3D;
+    
+    vec2 viewSize;
+    vec2 diffSize;
+
+    struct ZWindow_T *window;
+    struct ZDevice_T *device;
+    struct ZSwapChain_T *swapchain;
+
+    EngineRenderItems renders;
+
+    EngineGameObjects gameObjects;    
+
+    struct{
+        void (*DrawFunc)(void);
+        void (*RecreateFunc)(void);
+
+        e_charCallback *charCallbacks;
+        int charCallbackSize;
+
+        e_keyCallback *keyCallbacks;
+        int keyCallbackSize;
+    } func;
+    
+    struct{
+        ChildStack *alloc_buffers_memory_head;
+        ChildStack *alloc_descriptor_head;
+        ChildStack *alloc_pipeline_head;
+    } cache;
+
+    
+    void *e_var_current_entry;
+    
+    void *current_render;
+
+    size_t currentFrame;
+    uint32_t imageIndex;
+    
+    uint32_t extensionCount;
+    uint32_t imagesCount;
+    uint32_t wManagerExtensionCount;
+
+    bool framebufferResized;
+    bool framebufferwasResized;
+
+    void* debugMessenger;
+
+    bool present;
+
+    uint32_t MAX_FRAMES_IN_FLIGHT;
+
+    struct SynC{  
+        VkSemaphore* imageAvailableSemaphores;
+        VkSemaphore* renderFinishedSemaphores;
+
+        VkFence* inFlightFences;
+    }Sync;
+
+    struct DataR{        
+        void *dir_shadow_array;
+        uint32_t num_dir_shadows;
+
+        void *point_shadow_array;
+        uint32_t num_point_shadows;
+
+        void *spot_shadow_array;
+        uint32_t num_spot_shadows;
+        
+        void *e_var_images;
+        int e_var_num_images;
+
+        void **e_var_lights;
+        int e_var_num_lights;
+
+        FontCache *e_var_fonts;
+        uint32_t e_var_num_fonts;
+
+        int define_font_loaded;
+    } DataR;
+
+} ZEngine;
+
 typedef enum{
     ENGINE_DRAW_PARAM_FLAG_ADD_SHADOW = 0x1,
     ENGINE_DRAW_PARAM_FLAG_DRAW_INDEXED = 0x2
 } EngineDrawParamFlags;
-
-typedef struct ChildStack{
-    struct ChildStack* before;
-    struct ChildStack* next;
-    void *node;
-} ChildStack;
 
 typedef struct EIExtent2D {
     uint32_t    width;
@@ -103,13 +211,6 @@ typedef struct {
     uint32_t count;
     uint32_t maxNodeCount;
 } GeometrySBO;
-
-typedef struct FontCache{
-    char path[2048];
-    void *cdata;
-    void *info;
-    void *texture;
-} FontCache;
 
 typedef struct PipelineCache{
     void *GraphicsPipeline;

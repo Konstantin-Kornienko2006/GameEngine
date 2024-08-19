@@ -80,7 +80,7 @@ typedef struct{
 typedef struct EWidget{
     GameObject2D go;
     vec2 offset;
-    vec4 color;
+    vec3 color;
     vec2 position;
     vec2 scale;
     float transparent;
@@ -119,6 +119,7 @@ int WidgetFindIdChild(EWidget* widget);
 ChildStack * WidgetFindChild(EWidget* widget, int num);
 void WidgetUpdateScissor(EWidget *widget, EIRect2D *scissor, vec2 *parent_pos, vec2 *offset);
 void WidgetSetParent(EWidget* ew, EWidget* parent);
+void WidgetSetColor(EWidget* ew, vec3 color);
 void WidgetInit(EWidget *ew, DrawParam *dParam, EWidget *parent);
 void WidgetAddDefault(EWidget *widget, void *render);
 void WidgetConfirmTrigger(EWidget* widget, int trigger, void *entry);

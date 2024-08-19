@@ -5,6 +5,8 @@
 
 #include "Data/e_resource_data.h"
 
+extern ZEngine engine;
+
 int IntersectRayCircle(InterRay2DParam *ray, InterCircleParam *circle, float *t, vec2 *q)
 {
     vec2 ac = v2_sub(circle->center, ray->position);
@@ -88,7 +90,7 @@ int IntersectRayShape( InterRay2DParam *ray, void *obj)
 
     InterTriangleParam triangle;
 
-    vec2 wind_size = {WIDTH, HEIGHT};
+    vec2 wind_size = {engine.width, engine.height};
 
     for(int i=0; i < iParam->indexesSize;i+=3)
     {

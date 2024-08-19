@@ -2,41 +2,9 @@
 
 #include <vulkan/vulkan.h>
 
-vec2 viewSize = { 0, 0 };
-vec2 diffSize = { 1.0f, 1.0f };
-
-
-int WIDTH = 1024;
-int HEIGHT = 800;
-
-char app_name[256];
-
-void *e_var_current_entry = NULL;
-
-void* cam2D;
-void* cam3D;
-
-void *dir_shadow_array;
-uint32_t num_dir_shadows;
-
-void *point_shadow_array;
-uint32_t num_point_shadows;
-
-void *spot_shadow_array;
-uint32_t num_spot_shadows;
+void *e_var_current_entry;
 
 char *rootDirPath;
-
-void *e_var_images;
-int e_var_num_images = 0;
-
-void **e_var_lights = NULL;
-int e_var_num_lights = 0;
-
-FontCache *e_var_fonts = NULL;
-uint32_t e_var_num_fonts = 0;
-
-int define_font_loaded = 0;
 
 const char* validationLayers[] = {
     "VK_LAYER_KHRONOS_validation"

@@ -122,7 +122,7 @@ mat3 m3_mult(mat3 m1, mat3 m2){
 
 vec3 m3_v3_mult(mat3 m, vec3 v) {
     vec3 ret;
-    float *pvec = &ret;
+    float *pvec = (float *)&ret;
     for (int i = 0; i < 3; i++) {
         pvec[i] = v.x * m.m[0][i] + v.y * m.m[1][i] + v.z * m.m[2][i];
     }
@@ -164,18 +164,18 @@ vec2 v2_norm(vec2 v)
 {
    float len = v2_length(v);
    if (len > 0)
-       return (vec2){ v.x / len, v.y / len};
+       return vec2_f( v.x / len, v.y / len);
    else
-       return (vec2){ 0, 0, 0};
+       return vec2_f(0, 0);
 }
 
 vec3 v3_norm(vec3 v)
 {
    float len = v3_length(v);
    if (len > 0)
-       return (vec3){ v.x / len, v.y / len, v.z / len };
+       return vec3_f( v.x / len, v.y / len, v.z / len );
    else
-       return (vec3){ 0, 0, 0};
+       return vec3_f( 0, 0, 0);
 }
 
 vec3 v3_proj(vec3 v, vec3 onto)
@@ -440,7 +440,7 @@ mat3 mat3_f()
 
 vec3 m4_v3_mult(mat4 m, vec3 v) {
     vec3 ret;
-    float *pvec = &ret;
+    float *pvec = (float *)&ret;
     for (int i = 0; i < 3; i++) {
         pvec[i] = v.x * m.m[0][i] + v.y * m.m[1][i] + v.z * m.m[2][i] + m.m[3][i];
     }

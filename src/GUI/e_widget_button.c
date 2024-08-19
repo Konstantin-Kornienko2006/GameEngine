@@ -1,5 +1,7 @@
 #include "GUI/e_widget_button.h"
 
+#include "Tools/e_math.h"
+
 
 int ButtonWidgetPress(EWidget *widget, void* entry, void *arg){
     EWidgetButton *button = (EWidgetButton *)widget;
@@ -7,7 +9,8 @@ int ButtonWidgetPress(EWidget *widget, void* entry, void *arg){
     button->widget.color.x = button->selfColor.x - 0.2f;
     button->widget.color.y = button->selfColor.y - 0.2f;
     button->widget.color.z = button->selfColor.z - 0.2f;
-    button->widget.color.w = button->selfColor.w;
+    
+    WidgetSetColor(&button->widget, v3_subs(button->selfColor, 0.3f));
 
     return 0;
 }
@@ -15,8 +18,8 @@ int ButtonWidgetPress(EWidget *widget, void* entry, void *arg){
 int ButtonWidgetRelease(EWidget *widget, void* entry, void *arg){
 
     EWidgetButton *button = (EWidgetButton *)widget;
-
-    button->widget.color = button->selfColor;
+    
+    WidgetSetColor(&button->widget, button->selfColor);
 
     WidgetConfirmTrigger(widget, ENGINE_WIDGET_TRIGGER_BUTTON_PRESS, NULL);
 
@@ -32,12 +35,14 @@ void ButtonWidgetInit(EWidgetButton *button, const char *text, DrawParam *dParam
     memcpy(button->widget.go.name, "Button", 6);
     button->widget.type = ENGINE_WIDGET_TYPE_BUTTON;
 
-    button->selfColor = button->widget.color = (vec4){ 1, 1, 1, 1};
+    button->selfColor = (vec3){ 1, 1, 1};
 
-    TextWidgetInit(&button->text, 9, dParam, &button->widget);
+    WidgetSetColor(&button->widget, button->selfColor);
+
+    /*TextWidgetInit(&button->text, 9, dParam, &button->widget);
     TextWidgetAddDefault(&button->text, dParam->render);
     GameObject2DInitDraw(&button->text);
-    TextWidgetSetText(&button->text, text);
+    TextWidgetSetText(&button->text, text);*/
 
     Transform2DSetPosition(&button->text, 0, 9 * 4.0f);
 
