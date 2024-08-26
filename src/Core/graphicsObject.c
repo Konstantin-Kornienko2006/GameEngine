@@ -165,8 +165,6 @@ void GraphicsObjectClean(GraphicsObject *graphObj)
         DescriptorDestroy(&graphObj->gItems.shader_packs[i].descriptor);
     }
 
-    graphObj->gItems.num_shader_packs = 0;
-
     for(int i=0;i < graphObj->blueprints.num_blue_print_packs;i++)
     {
         BluePrintPack *pack = &graphObj->blueprints.blue_print_packs[i];

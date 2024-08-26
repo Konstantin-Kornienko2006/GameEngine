@@ -55,11 +55,8 @@ int RollerMouseMove(EWidget *widget, void *entry, void *args)
 
 void RollerWidgetInit(EWidgetRoller *roller, DrawParam *dParam, EWidget *parent)
 {
-    WidgetInit(roller, dParam, parent);
-    WidgetAddDefault(roller, dParam->render);
-    GameObject2DInitDraw(roller);
+    WidgetInit(roller, parent);
 
-    memcpy(roller->widget.go.name, "Widget_Roller", 11);
     roller->widget.type = ENGINE_WIDGET_TYPE_ROLLER;
 
     roller->widget.color = roller->selfColor = vec3_f(0.6, 0, 0);

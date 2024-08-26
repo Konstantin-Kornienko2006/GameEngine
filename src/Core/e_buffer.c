@@ -374,11 +374,7 @@ void BuffersClearAll()
 
     ChildStack *next = NULL;
     
-    uint32_t counter = 0;
-       
-    counter = 0;
-
-    child = engine.cache.alloc_buffers_memory_head;
+    uint32_t counter = 0;       
 
     while(child != NULL){    
         

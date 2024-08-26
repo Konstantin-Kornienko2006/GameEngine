@@ -13,8 +13,7 @@
 #include <wctype.h> //"Классификация" широких символов
 
 #define STB_TRUETYPE_IMPLEMENTATION
-#define TEXTOVERLAY_MAX_CHAR_COUNT 2048
-#define BUFFER_SIZE 2048
+#define BUFFER_SIZE 64
 
 #ifdef __cplusplus
 extern "C"
@@ -29,7 +28,7 @@ typedef struct{
         void *info;
         float fontSize;
         int numLetters;
-        const char fontpath[256];
+        const char fontpath[128];
         vec3 color;
     } font;
     float textWidth;
@@ -71,6 +70,7 @@ void TextObjectSetTextU8(TextObject* to, const char* text);
 #define TextObjectSetText(arg1, arg2)\
     _Generic((arg2),\
     char *: TextObjectSetTextU8,\
+    const char *: TextObjectSetTextU8,\
     unsigned int *: TextObjectSetTextU32\
     )(arg1, arg2)
 

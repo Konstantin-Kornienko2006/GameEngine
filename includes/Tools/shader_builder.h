@@ -163,12 +163,19 @@ void ShaderBuilderInit(ShaderBuilder *builder, ShaderType type);
 void ShaderBuilderMake(ShaderBuilder *builder);
 void ShaderBuilderWriteToFile(ShaderBuilder *builder,  const char *path);
 
+uint32_t ShaderBuilderAddVector(ShaderBuilder *builder, uint32_t size, char *name);
+VectorExtract ShaderBuilderGetElemenets(ShaderBuilder *builder, ShaderLabel *label, uint32_t src_index, uint32_t start_indx, uint32_t size);
+uint32_t ShaderBuilderAddOperand(ShaderBuilder *builder, ShaderLabel *label, uint32_t *indexes, uint32_t count, ShaderOperandType operand);
+uint32_t ShaderBuilderAcceptLoadL(ShaderBuilder *builder, ShaderLabel *label, uint32_t type, uint32_t val_indx);
+
 uint32_t ShaderBuilderAddFuncSetTexure(ShaderBuilder *builder, ShaderLabel *label, uint32_t texture_indx, uint32_t uv_indx, uint32_t dest_indx, uint32_t dest_size);
 int ShaderBuilderAddFuncAdd(ShaderBuilder *builder, ShaderLabel *label, uint32_t val_1, uint32_t val_2, uint32_t size, uint32_t res_store);
 uint32_t ShaderBuilderAddFuncMove(ShaderBuilder *builder, ShaderLabel *label, uint32_t src_indx, uint32_t src_size, uint32_t dest_indx, uint32_t dest_size);
 uint32_t ShaderBuilderAddFuncMultS(ShaderBuilder *builder, ShaderLabel *label, uint32_t val_indx, uint32_t single_indx, uint32_t size);
 uint32_t ShaderBuilderAddFuncSetColor4(ShaderBuilder *builder, ShaderLabel *label, uint32_t val_indx, uint32_t single_indx, uint32_t size);
 uint32_t ShaderBuilderGetTexture(ShaderBuilder *builder, ShaderLabel *label, uint32_t texture_indx, uint32_t uv_indx);
+
+int ShaderBuilderAddFuncMoveToGL(ShaderBuilder *builder, ShaderLabel *label, uint32_t v2_val, uint32_t res_store);
 
 void ShaderBuilderStoreValue(ShaderBuilder *builder, ShaderLabel *label, uint32_t *arr, uint32_t size);
 

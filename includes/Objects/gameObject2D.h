@@ -31,7 +31,7 @@ void GameObject2DTransformBufferUpdate(GameObject2D *go, BluePrintDescriptor *de
 void GameObject2DImageBuffer(GameObject2D *go, BluePrintDescriptor *descriptor);
 
 void GameObject2DDefaultUpdate(GameObject2D* go);
-void GameObject2DDefaultDraw(GameObject2D* go, void *command);
+void GameObject2DDefaultDraw(GameObject2D* go);
 
 void GameObject2DInitDraw(GameObject2D *go);
 void GameObject2DInit(GameObject2D* go);

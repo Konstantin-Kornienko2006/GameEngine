@@ -36,6 +36,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 				src/Data/e_resource_descriptors.c
 				src/Data/e_resource_engine.c
 				src/Data/e_resource_shapes.c
+				src/GUI/GUIManager.c
 				src/GUI/e_widget.c
 				src/GUI/e_widget_button.c
 				src/GUI/e_widget_combobox.c
@@ -46,7 +47,6 @@ target_sources(${PROJECT_NAME} PRIVATE
 				src/GUI/e_widget_range.c
 				src/GUI/e_widget_roller.c
 				src/GUI/e_widget_scroll.c
-				src/GUI/e_widget_text.c
 				src/GUI/e_widget_top_menu.c
 				src/GUI/e_widget_window.c
 				src/Objects/e_audioObject.c
@@ -115,3 +115,13 @@ add_executable(TestShaderBuilder tests/shader_builder_test.c)
 target_link_libraries(TestShaderBuilder ${CMAKE_CURRENT_SOURCE_DIR}/Debug/libZamEngine.a ${CMAKE_CURRENT_SOURCE_DIR}/data/data1.bin Vulkan::Vulkan)
 add_test(NAME Test3
 		COMMAND TestShaderBuilder)
+		
+add_executable(TestRender tests/render_objets_test.c)
+target_link_libraries(TestRender ${CMAKE_CURRENT_SOURCE_DIR}/Debug/libZamEngine.a ${CMAKE_CURRENT_SOURCE_DIR}/data/data1.bin Vulkan::Vulkan)
+add_test(NAME Test4
+		COMMAND TestRender)
+		
+add_executable(TestGUI tests/test_gui.c)
+target_link_libraries(TestGUI ${CMAKE_CURRENT_SOURCE_DIR}/Debug/libZamEngine.a ${CMAKE_CURRENT_SOURCE_DIR}/data/data1.bin Vulkan::Vulkan)
+add_test(NAME Test5
+		COMMAND TestGUI)

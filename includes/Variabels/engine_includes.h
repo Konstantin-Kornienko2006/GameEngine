@@ -21,17 +21,17 @@
 
 #define ENGINE_DEFINE_NON_DISPATCHABLE_HANDLE(object) typedef struct object##_T *object;
 
-#define MAX_FONTS 32
-#define MAX_IMAGES 32
-#define MAX_PIPELINES 50
-#define MAX_UNIFORMS 25
-#define MAX_BLUE_PRINTS 25
+#define MAX_FONTS 16
+#define MAX_IMAGES 16
+#define MAX_PIPELINES 16
+#define MAX_UNIFORMS 16
+#define MAX_BLUE_PRINTS 16
 
-#define MAX_DRAW_OBJECTS UINT16_MAX
+#define MAX_DRAW_OBJECTS 256
 
-#define MAX_GUI_CALLBACKS 25
+#define MAX_GUI_CALLBACKS 16
 
-#define NODE_COUNT 20
+#define NODE_COUNT 16
 
 #ifdef __cplusplus
 extern "C"
@@ -66,7 +66,7 @@ typedef struct ChildStack{
 } ChildStack;
 
 typedef struct FontCache{
-    char path[1024];
+    char path[256];
     void *cdata;
     void *info;
     void *texture;
@@ -109,7 +109,8 @@ typedef struct{
 
     
     void *e_var_current_entry;
-    
+
+    void *main_render;    
     void *current_render;
 
     size_t currentFrame;

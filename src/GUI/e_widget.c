@@ -6,6 +6,8 @@
 #include "wManager/window_manager.h"
 #include "wManager/manager_includes.h"
 
+#include <GUI/GUIManager.h>
+
 #include "Tools/e_math.h"
 #include "Tools/e_shaders.h"
 
@@ -20,88 +22,43 @@
 #include "Data/e_resource_export.h"
 
 extern ZEngine engine;
+extern GUIManager gui;
 
 bool e_var_wasReleased = true, e_var_leftMouse = false;
 
 EWidget* e_var_sellected = NULL;
 EWidget* e_var_last_sellected = NULL;
 
-void WidgetUpdateScissor(EWidget *widget, EIRect2D *scissor, vec2 *parent_pos, vec2 *offset)
-{
+void WidgetAcceptStack(EWidget* ew){
+    
+    if(gui.first_widget->node == NULL){
+        gui.first_widget->next = AllocateMemory(1, sizeof(ChildStack));
+        gui.first_widget->next->before = gui.first_widget;
+        gui.first_widget->node = ew; 
+        gui.last_widget = gui.first_widget;
+    }
+    else{
 
-    vec2 parentSize = {engine.width, engine.height};
+        ChildStack *child = gui.first_widget;
 
-    EWidget* parent = widget->parent;
-
-    if(parent != NULL)
-    {
-        *parent_pos = parent->position;
-        parentSize = parent->scale;
-
-        while(parent->parent != NULL){
-
-            parent = parent->parent;
-
-            *offset = v2_div(parent->offset, vec2_f( engine.width, engine.height));
-
-            vec2 temp = v2_add(parent->position, *offset);
-
-            if(parent_pos->x < temp.x)
-            {
-                parentSize.x = parentSize.x - (temp.x - parent_pos->x) / 2;
-                parent_pos->x = temp.x;
-            }
-
-            if(parent_pos->y < temp.y)
-            {
-                parentSize.y = parentSize.y - (temp.y - parent_pos->y) / 2;
-                parent_pos->y = temp.y;
-            }
-
-            if(parent_pos->x + (parentSize.x * 2) > parent->position.x + (parent->scale.x * 2))
-            {
-                parent_pos->x = parent->position.x;
-                parentSize.x = parent->scale.x;
-            }
-
-            if(parent_pos->y + (parentSize.y * 2) > parent->position.y + (parent->scale.y * 2))
-            {
-                parent_pos->y = parent->position.y;
-                parentSize.y = parent->scale.y;
-            }
-
+        while(child->next != NULL)
+        {
+            child = child->next;
         }
 
+        child->next = AllocateMemory(1, sizeof(ChildStack));
+        child->next->before = child;
+        child->node = ew; 
+
+        gui.last_widget = child;
     }
-
-    scissor->offset.x = parent_pos->x * engine.width;
-
-    if(scissor->offset.x < 0)
-        scissor->offset.x = 0;
-
-    scissor->offset.y = parent_pos->y * engine.height;
-
-    if(scissor->offset.y < 0)
-        scissor->offset.y = 0;
-
-    scissor->extent.height = parentSize.y * 2 * engine.height;
-
-    if(scissor->extent.height > engine.height)
-        scissor->extent.height = 0;
-
-    scissor->extent.width = parentSize.x * 2 * engine.width;
-
-    if(scissor->extent.width > engine.width)
-        scissor->extent.width = 0;
-
 }
 
 void WidgetSetParent(EWidget* ew, EWidget* parent){
 
     ew->parent = parent;
     ew->child = NULL;
-    ew->last = NULL;
-
+    
     if(parent != NULL)
     {
         if(parent->child != NULL)
@@ -171,42 +128,41 @@ ChildStack * WidgetFindChild(EWidget* widget, int num)
 void WidgetSetColor(EWidget* ew, vec3 color){
     
     ew->color = color;
-
-    Vertex2D *verts = ew->go.graphObj.shapes[0].vParam.vertices;
-
-    for(int i = 0;i < ew->go.graphObj.shapes[0].vParam.verticesSize;i++)
-        verts[i].color = color;
-
-    BuffersUpdateVertex(&ew->go.graphObj.shapes[0].vParam);
 }
 
-void WidgetInit(EWidget* ew, DrawParam *dParam, EWidget* parent){
+void WidgetSetScale(EWidget* ew, float xscale, float yscale){
+    
+    ew->scale.x = xscale;
+    ew->scale.y = yscale;
+}
 
-    memcpy(ew->go.name, "Widget", 6);
+void WidgetSetPosition(EWidget* ew, float xpos, float ypos){
+    
+    ew->position.x = xpos;
+    ew->position.y = ypos;
+}
+
+void WidgetUpdate(EWidget* ew){
+    
+}
+
+void WidgetDraw(EWidget* ew){
+
+    if(ew->widget_flags & ENGINE_FLAG_WIDGET_VISIBLE){
+        GUIAddRectFilled(ew->position, v2_add(ew->position, ew->scale), ew->color, 5, GUIDrawFlags_RoundCornersAll);
+    }    
+}
+
+void WidgetInit(EWidget* ew, EWidget* parent){
+
+    memset(ew, 0, sizeof(EWidget));
 
     ew->type = ENGINE_WIDGET_TYPE_WIDGET;
 
-    GameObject2DInit(&ew->go);
+    GameObjectSetUpdateFunc((GameObject *)ew, (void *)WidgetUpdate);
+    GameObjectSetDrawFunc((GameObject *)ew, (void *)WidgetDraw);
+    GameObjectSetDestroyFunc((GameObject *)ew, (void *)WidgetDestroy);
 
-    GraphicsObjectSetVertex(&ew->go.graphObj, (void *)projPlaneVert, 4, sizeof(Vertex2D), (void *)projPlaneIndx, 6, sizeof(uint32_t));
-
-
-    if(dParam != NULL)
-        GraphicsObjectSetShadersPath(&ew->go.graphObj, dParam->vertShader, dParam->fragShader);
-
-    ew->go.image = AllocateMemory(1, sizeof(GameObjectImage));
-
-    if(dParam != NULL)
-        if(strlen(dParam->diffuse) != 0)
-        {
-            int len = strlen(dParam->diffuse);
-            ew->go.image->path = AllocateMemory(len + 1, sizeof(char));
-            memcpy(ew->go.image->path, dParam->diffuse, len);
-            ew->go.image->path[len] = '\0';
-            //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
-            ew->go.num_images ++;
-        }
-    
     WidgetSetColor(ew, vec3_f(0.2, 0.2, 0.2));
 
     ew->offset.x = 0;
@@ -215,45 +171,13 @@ void WidgetInit(EWidget* ew, DrawParam *dParam, EWidget* parent){
 
     WidgetSetParent(ew, parent);
 
+    WidgetAcceptStack(ew);
+
     ew->widget_flags = ENGINE_FLAG_WIDGET_ACTIVE | ENGINE_FLAG_WIDGET_VISIBLE | ENGINE_FLAG_WIDGET_SELF_VISIBLE;
 
     ew->callbacks.stack = (CallbackStruct *) AllocateMemory(MAX_GUI_CALLBACKS, sizeof(CallbackStruct));
     ew->callbacks.size = 0;
 
-}
-
-void WidgetAddDefault(EWidget *widget, void *render)
-{ 
-    uint32_t nums = widget->go.graphObj.blueprints.num_blue_print_packs;
-    widget->go.graphObj.blueprints.blue_print_packs[nums].render_point = render;
-
-    BluePrintAddUniformObject(&widget->go.graphObj.blueprints, nums, sizeof(TransformBuffer2D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject2DTransformBufferUpdate, 0);
-
-
-    //BluePrintAddUniformObject(&widget->go.graphObj.blueprints, nums, sizeof(ImageBufferObjects), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject2DImageBuffer, 0);
-
-
-    if(widget->go.num_images > 0)
-        BluePrintAddTextureImage(&widget->go.graphObj.blueprints, nums, widget->go.image, VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    PipelineSetting setting;
-
-    PipelineSettingSetDefault(&widget->go.graphObj, &setting);
-
-    ShaderBuilder *vert = widget->go.self.vert;
-    ShaderBuilder *frag = widget->go.self.frag;
-
-    ShadersMakeDefault2DShader(vert, frag, widget->go.num_images > 0);
-
-    PipelineSettingSetShader(&setting, (char *)vert->code, vert->size * sizeof(uint32_t), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(&setting, (char *)frag->code, frag->size * sizeof(uint32_t), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    setting.fromFile = 0;
-
-    GameObject2DAddSettingPipeline(&widget->go, nums, &setting);
-
-
-    widget->go.graphObj.blueprints.num_blue_print_packs ++;
 }
 
 void WidgetConnect(EWidget* widget, int trigger, widget_callback callback, void* args){
@@ -287,53 +211,82 @@ void WidgetConfirmTrigger(EWidget* widget, int trigger, void *entry){
     }
 }
 
-EWidget* WidgetCheckMouseInner(EWidget* widget){
+int WidgetCheck(ChildStack* child){
+    
     ZWindow *window = (ZWindow *)engine.window;
 
+    EWidget *widget = child->node;
+
+    if(widget == NULL)
+        return NULL;
+        
     if(!(widget->widget_flags & ENGINE_FLAG_WIDGET_ACTIVE) || !(widget->widget_flags & ENGINE_FLAG_WIDGET_VISIBLE))
         return NULL;
 
     double xpos, ypos;
     wManagerGetCursorPos(window->e_window, &xpos, &ypos);
 
-    xpos /= engine.width;
-    ypos /= engine.height;
+    xpos *= 2;
+    ypos *= 2;
 
-    if(xpos > widget->go.transform.position.x / 2 && xpos < (widget->go.transform.position.x / 2 + widget->go.transform.scale.x) &&
-            ypos > widget->go.transform.position.y / 2 && ypos < (widget->go.transform.position.y / 2 + widget->go.transform.scale.y)){
-
-        ChildStack *next = widget->last;
-
-        while(next != NULL)
-        {
-            if(next->node != NULL)
-            {
-                EWidget* res = WidgetCheckMouseInner(next->node);
-
-                if(res != NULL)
-                {
-                    widget->widget_flags |= ENGINE_FLAG_WIDGET_OUT;
-                    return res;
-                }
+    if(xpos > (widget->position.x) && xpos < (widget->position.x + widget->scale.x) &&
+            ypos > (widget->position.y) && ypos < (widget->position.y + widget->scale.y)){
+                return true;
             }
 
-            next = next->before;
+    widget->widget_flags |= ENGINE_FLAG_WIDGET_OUT;
+
+    return false;
+}
+
+EWidget* WidgetCheckMouseInner(ChildStack* child){
+
+    ChildStack* next = child->before;    
+
+    EWidget *widget = child->node;
+
+    if(widget == NULL)
+        return NULL;
+        
+    if(!(widget->widget_flags & ENGINE_FLAG_WIDGET_ACTIVE) || !(widget->widget_flags & ENGINE_FLAG_WIDGET_VISIBLE))
+        return NULL;
+
+    if(WidgetCheck(child))
+    {        
+        widget->widget_flags |= ENGINE_FLAG_WIDGET_IN;
+        return widget;
+    }else
+        widget->widget_flags |= ENGINE_FLAG_WIDGET_OUT;
+
+    while(next != NULL)
+    {
+        widget = next->node;
+
+        if(widget != NULL)
+        {
+            if(WidgetCheck(next))
+            {
+                widget->widget_flags |= ENGINE_FLAG_WIDGET_IN;
+                return widget;
+            }else
+                widget->widget_flags |= ENGINE_FLAG_WIDGET_OUT;
         }
 
-        return widget;
+        next = next->before;
     }
 
-    widget->widget_flags |= ENGINE_FLAG_WIDGET_OUT;
     return NULL;
 }
 
 
-void WidgetEventsPipe(EWidget* widget)
+void WidgetEventsPipe(ChildStack *child)
 {
     ZWindow *window = (ZWindow *)engine.window;
 
+    EWidget *widget = child->node;
+
     if(e_var_wasReleased && e_var_sellected == NULL){
-        e_var_sellected = WidgetCheckMouseInner(widget);
+        e_var_sellected = WidgetCheckMouseInner(child);
     }
 
     if(e_var_sellected != NULL)
@@ -392,31 +345,8 @@ void WidgetEventsPipe(EWidget* widget)
 
 }
 
-void WidgetDraw(EWidget * widget)
-{
-    if(!(widget->widget_flags & ENGINE_FLAG_WIDGET_VISIBLE))
-        return;
-
-    ChildStack *child = widget->child;
-    ZEngineDraw(widget);
-    while(child != NULL)
-    {
-        WidgetDraw(child->node);
-
-        child = child->next;
-    }
-}
-
 void WidgetRecreate(EWidget * widget){
-    EngineDeviceWaitIdle();
-    ChildStack *child = widget->child;
-    GameObjectClean((GameObject *)widget);
-    GameObjectRecreate((GameObject *)widget);
-    while(child != NULL)
-    {
-        WidgetRecreate(child->node);
-        child = child->next;
-    }
+    
 }
 
 void WidgetDestroy(EWidget *widget){
@@ -426,13 +356,11 @@ void WidgetDestroy(EWidget *widget){
 
     while(child != NULL)
     {
-        WidgetDestroy(child->node);
+        GameObjectDestroy(child->node);
         lastChild = child;
         child = child->next;
         FreeMemory(lastChild);
     }
-
-    GameObjectDestroy((GameObject *)widget);
 
     FreeMemory(widget->callbacks.stack);
 

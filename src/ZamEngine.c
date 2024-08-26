@@ -11,6 +11,7 @@
 #include "Objects/lightObject.h"
 #include "Objects/render_texture.h"
 
+#include "GUI/GUIManager.h"
 #include "GUI/e_widget_entry.h"
 
 #include "wManager/window_manager.h"
@@ -80,7 +81,7 @@ void ZEngineInitSystem(int width, int height, const char* name){
     
     InitWindow(engine.window);
     EngineInitVulkan();
-
+    
     ZWindow *window = (ZWindow *)engine.window;
     wManagerSetCharCallback(window->e_window, EngineCharacterCallback);
     wManagerSetKeyCallback(window->e_window, EngineKeyCallback);
@@ -95,6 +96,14 @@ void ZEngineInitSystem(int width, int height, const char* name){
     engine.DataR.e_var_num_images ++;
     
     memset(&engine.renders, 0, sizeof(EngineRenderItems));
+    
+    engine.main_render = AllocateMemory(1, sizeof(RenderTexture));
+    
+    RenderTextureInit(engine.main_render, ENGINE_RENDER_TYPE_WINDOW, 0, 0, 0);
+
+    ZEngineSetRender(engine.main_render, 1);
+
+    GUIManagerInit();
 }
 
 void ZEngineSetRender(void *obj, uint32_t count)
@@ -181,6 +190,8 @@ void ZEngineRender(){
             for( int i=0;i < engine.gameObjects.size;i++)
                 GameObjectDraw(engine.gameObjects.objects[i]);
 
+            GUIManagerDraw();
+
             RenderTextureEndRendering(engine.current_render, device->commandBuffers[engine.imageIndex]);
         }
     }
@@ -265,6 +276,8 @@ void ZEngineRender(){
 
     engine.gameObjects.size = 0;
 
+    GUIManagerClear();
+
     /*free(engine.DataR.e_var_lights);
     engine.DataR.e_var_lights = calloc(0, sizeof(LightObject *));
     engine.DataR.e_var_num_lights = 0;*/
@@ -318,6 +331,12 @@ void ZEngineSetCursorPoscallback(void * callback){
     ZWindow *window = (ZWindow *)engine.window;
 
     wManagerSetCursorPosCallback(window->e_window, callback);
+}
+
+void ZEngineGetWindowSize(int *width, int *height){
+
+    *width = engine.width;
+    *height = engine.height;
 }
 
 void ZEngineCleanUp(){
@@ -379,6 +398,10 @@ void ZEngineCleanUp(){
         engine.DataR.e_var_num_lights = 0;
     }
 
+    RenderTextureDestroy(engine.main_render);
+    FreeMemory(engine.main_render);
+
+    GUIManagerDestroy();
 
     BuffersClearAll();
     DescriptorClearAll();

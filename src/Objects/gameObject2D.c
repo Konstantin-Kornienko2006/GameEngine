@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <math.h>
 
+#include "Core/e_device.h"
 #include "Core/e_buffer.h"
 #include "Core/pipeline.h"
 #include "Core/e_camera.h"
@@ -24,7 +25,7 @@ void GameObject2DTransformBufferUpdate(GameObject2D *go, BluePrintDescriptor *de
 {
     TransformBuffer2D tbo;
 
-    tbo.position = v2_subs(go->transform.position, 1.0f);
+    tbo.position = v2_subs(v2_add(go->transform.position, go->transform.scale), 1.0f);
     tbo.rotation = go->transform.rotation;
     tbo.scale = go->transform.scale;
 
@@ -65,7 +66,11 @@ void GameObject2DDefaultUpdate(GameObject2D* go) {
     }
 }
 
-void GameObject2DDefaultDraw(GameObject2D* go, void *command){
+void GameObject2DDefaultDraw(GameObject2D* go){
+    
+    ZDevice *device = (ZDevice *)engine.device;
+    
+    VkCommandBuffer command = device->commandBuffers[engine.imageIndex];
 
     for(int i=0; i < go->graphObj.gItems.num_shader_packs;i++)
     {
@@ -82,6 +87,9 @@ void GameObject2DDefaultDraw(GameObject2D* go, void *command){
 
                 vertexParam *vParam = &go->graphObj.shapes[settings->vert_indx].vParam;
                 indexParam *iParam = &go->graphObj.shapes[settings->vert_indx].iParam;
+
+                if(vParam->verticesSize == 0)
+                    continue;
 
                 if(settings->flags & ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW){
                     vkCmdSetViewport(command, 0, 1, (const VkViewport *)&settings->viewport);
@@ -143,16 +151,16 @@ void GameObject2DRecreate(GameObject2D* go){
 
         PipelineSetting *settings = pack->settings;
 
-        for(int i=0; i < pack->num_settings;i++)
+        for(int j=0; j < pack->num_settings;j++)
         {
-            settings[i].scissor.offset.x = 0;
-            settings[i].scissor.offset.y = 0;
-            settings[i].scissor.extent.height = engine.height;
-            settings[i].scissor.extent.width = engine.width;
-            settings[i].viewport.x = 0;
-            settings[i].viewport.y = 0;
-            settings[i].viewport.height = engine.height;
-            settings[i].viewport.width = engine.width;
+            settings[j].scissor.offset.x = 0;
+            settings[j].scissor.offset.y = 0;
+            settings[j].scissor.extent.height = engine.height;
+            settings[j].scissor.extent.width = engine.width;
+            settings[j].viewport.x = 0;
+            settings[j].viewport.y = 0;
+            settings[j].viewport.height = engine.height;
+            settings[j].viewport.width = engine.width;
         }
     }
 

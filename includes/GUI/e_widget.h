@@ -78,7 +78,7 @@ typedef struct{
 } CallbackStack;
 
 typedef struct EWidget{
-    GameObject2D go;
+    GameObject go;
     vec2 offset;
     vec3 color;
     vec2 position;
@@ -117,15 +117,18 @@ void WidgetGUIBufferUpdate(EWidget *ew, BluePrintDescriptor *descriptor);
 
 int WidgetFindIdChild(EWidget* widget);
 ChildStack * WidgetFindChild(EWidget* widget, int num);
-void WidgetUpdateScissor(EWidget *widget, EIRect2D *scissor, vec2 *parent_pos, vec2 *offset);
+void WidgetUpdateScissor(EWidget *widget);
+void WidgetUpdateScissorFromParent(EWidget *parent, GameObject2D *child);
 void WidgetSetParent(EWidget* ew, EWidget* parent);
 void WidgetSetColor(EWidget* ew, vec3 color);
-void WidgetInit(EWidget *ew, DrawParam *dParam, EWidget *parent);
+void WidgetSetScale(EWidget* ew, float xscale, float yscale);
+void WidgetSetPosition(EWidget* ew, float xpos, float ypos);
+void WidgetInit(EWidget *ew, EWidget *parent);
 void WidgetAddDefault(EWidget *widget, void *render);
 void WidgetConfirmTrigger(EWidget* widget, int trigger, void *entry);
 void WidgetConnect(EWidget *widget, int trigger, widget_callback callback, void *args);
 void WidgetRecreate(EWidget *widget);
-void WidgetEventsPipe(EWidget *widget);
+void WidgetEventsPipe(ChildStack* child);
 void WidgetDraw(EWidget *widget);
 void WidgetDestroy(EWidget * widget);
 

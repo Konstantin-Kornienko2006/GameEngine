@@ -43,6 +43,7 @@ void ZEngineSetMouseKeyCallback(void *callback);
 /// @brief Установка обратного вызова при изменении позиции мыши на экране
 /// @param callback - Функция вызываемая при изменении положения мыши
 void ZEngineSetCursorPoscallback(void * callback);
+void ZEngineGetWindowSize(int *width, int *height);
 /// @brief Очистка движка перед закрытием 
 void ZEngineCleanUp();
 

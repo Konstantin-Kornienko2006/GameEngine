@@ -25,13 +25,30 @@ int ListWidgetPressItem(EWidget *widget, void *entry, int id){
     return -1;
 }
 
+void ListWidgetDestroy(EWidgetList *list){
+    
+    ChildStack *child = list->widget.child;
+    ChildStack *lastChild;
+
+    while(child != NULL)
+    {
+        GameObjectDestroy(child->node);
+        FreeMemory(child->node);
+        lastChild = child;
+        child = child->next;
+        FreeMemory(lastChild);
+    }
+    
+    GameObject2DDestroy((GameObject *)list);
+
+    FreeMemory(list->widget.callbacks.stack);
+}
+
 void ListWidgetInit(EWidgetList *list, int size_x, int size_y, DrawParam *dParam, EWidget *parent){
 
-    WidgetInit(list, NULL, parent);
-    WidgetAddDefault(list, dParam->render);
-    GameObject2DInitDraw(list);
+    WidgetInit(list, parent);
+    GameObjectSetDestroyFunc((GameObject *)list, (void *)ListWidgetDestroy);
 
-    memcpy(list->widget.go.name, "Widget_List", 11);
     list->widget.type = ENGINE_WIDGET_TYPE_LIST;
 
     list->widget.color = vec3_f(0.4, 0.4, 0.4);
@@ -66,7 +83,7 @@ EWidgetButton *ListWidgetAddItem(EWidgetList *list, const char *text, DrawParam 
     ButtonWidgetInit(item, text, dParam, &list->widget);
     item->widget.widget_flags |= ENGINE_FLAG_WIDGET_ALLOCATED;
     ButtonWidgetSetColor(item, list->widget.color.x, list->widget.color.y, list->widget.color.z);
-    TextWidgetSetText(&item->text, text);
+    ButtonWidgetSetText(item, text);
 
     item->widget.transparent = 0.5f;
 

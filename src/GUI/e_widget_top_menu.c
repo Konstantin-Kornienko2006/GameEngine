@@ -118,7 +118,7 @@ void TopMenuWidgetResize(EWidgetTopMenu *top_menu)
 {
     if(top_menu->window != NULL)
     {
-        vec2 size = Transform2DGetScale(&top_menu->window->widget);
+        vec2 size = Transform2DGetScale(&top_menu->window->surface);
 
         Transform2DSetScale(&top_menu->widget, size.x, size.y);
         Transform2DSetScale(&top_menu->top, size.x, 20);
@@ -134,14 +134,13 @@ void TopMenuWidgetResize(EWidgetTopMenu *top_menu)
 
 void TopMenuWidgetInit(EWidgetTopMenu *top_menu, DrawParam *dParam,EWidgetWindow *window)
 {
-    WidgetInit(&top_menu->widget, NULL, window);
+    WidgetInit(&top_menu->widget, window);
     WidgetAddDefault(&top_menu->widget, dParam->render);
     GameObject2DInitDraw(&top_menu->widget);
 
-    memcpy(top_menu->widget.go.name, "Widget_Menu", 10);
     top_menu->widget.type = ENGINE_WIDGET_TYPE_MENU;
 
-    WidgetInit(&top_menu->top, NULL, &top_menu->widget);
+    WidgetInit(&top_menu->top, &top_menu->widget);
     WidgetAddDefault(&top_menu->top, dParam->render);
     GameObject2DInitDraw(&top_menu->top);
     top_menu->widget.transparent = 0.0f;

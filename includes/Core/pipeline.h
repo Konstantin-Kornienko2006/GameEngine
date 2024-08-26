@@ -29,8 +29,6 @@ void PipelineSettingSetShader(PipelineSetting *setting, char *shader, size_t siz
 
 void PipelineCreateGraphics(GraphicsObject* graphObj);
 
-void PipelineCreateRenderPass();
-
 void PipelineDestroy(ShaderPack *pipeline);
 
 #ifdef __cplusplus

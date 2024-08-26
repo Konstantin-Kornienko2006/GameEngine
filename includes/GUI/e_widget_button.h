@@ -5,7 +5,7 @@
 
 #include "e_widget.h"
 #include "e_widget_image.h"
-#include "e_widget_text.h"
+#include "Objects/text_object.h"
 
 #include <wchar.h>
 
@@ -15,8 +15,8 @@ extern "C"
 #endif
 
 typedef struct{
-    EWidget widget;
-    EWidgetText text;
+    EWidget widget;    
+    TextObject to;
     EWidgetImage image;
     vec3 selfColor;
 } EWidgetButton;

@@ -56,7 +56,7 @@ void TextImageMakeTexture(GameObject2D *go, TextData *tData, BluePrintDescriptor
 
     VkDeviceSize bufferSize, vertBufferSize;
 
-    bufferSize = tData->font.fontWidth * tData->font.fontHeight; //TEXTOVERLAY_MAX_CHAR_COUNT *  sizeof(Vertex2D) * sizeof(float);
+    bufferSize = tData->font.fontWidth * tData->font.fontHeight;
 
     vertBufferSize = BUFFER_SIZE * 4 * sizeof(Vertex2D);
 
@@ -83,7 +83,7 @@ void TextImageMakeTexture(GameObject2D *go, TextData *tData, BluePrintDescriptor
         }
 
         int len = strlen(tData->font.fontpath);
-        memset(fonts[engine.DataR.e_var_num_fonts].path, 0, 2048);
+        memset(fonts[engine.DataR.e_var_num_fonts].path, 0, 256);
         memcpy(fonts[engine.DataR.e_var_num_fonts].path, tData->font.fontpath, len);
 
     }
@@ -107,7 +107,7 @@ void TextImageMakeTexture(GameObject2D *go, TextData *tData, BluePrintDescriptor
     }else{
 
         int len = strlen(name_font);
-        memset(fonts[engine.DataR.e_var_num_fonts].path, 0, 2048);
+        memset(fonts[engine.DataR.e_var_num_fonts].path, 0, 256);
         memcpy(fonts[engine.DataR.e_var_num_fonts].path, name_font, len);
 
         engine.DataR.define_font_loaded = 1;
@@ -213,15 +213,19 @@ void TextObjectTransformBufferUpdate(GameObject2D *go, BluePrintDescriptor *desc
 
     TransformBuffer2D tbo;
 
-    tbo.position = go->transform.position;
+    tbo.position =  v2_subs(go->transform.position, 1.0f);
     tbo.rotation = go->transform.rotation;
     tbo.scale = go->transform.scale;
 
     DescriptorUpdate(descriptor, (char *)&tbo, sizeof(tbo));
 }
 
-void TextObjectDrawDefault(TextObject* to, void *command)
+void TextObjectDrawDefault(TextObject* to)
 {
+    ZDevice *device = (ZDevice *)engine.device;
+    
+    VkCommandBuffer command = device->commandBuffers[engine.imageIndex];
+
     for(int i=0; i < to->go.graphObj.gItems.num_shader_packs;i++)
     {
         BluePrintPack *pack = &to->go.graphObj.blueprints.blue_print_packs[i];
@@ -329,14 +333,6 @@ void TextImageSetText(const uint32_t* text, GameObject2D* go, TextData *tData){
     // Generate a uv mapped quad per char in the new text
     for (int i=0;i < len;i++)
     {
-        /*if(*tempI == '\n')
-        {
-            x = 0;
-            y += (mulY * HEIGHT * 20);
-            ++tempI;
-            continue;
-        }*/
-
         stbtt_GetBakedQuad(tData->font.cdata, 512,512, *tempI, &x,&y,&q,1);//1=opengl & d3d10+,0=d3d9
 
         mapped->position.x = (float)q.x0 * mulX;
@@ -382,6 +378,8 @@ void TextImageSetText(const uint32_t* text, GameObject2D* go, TextData *tData){
 void TextObjectSetTextU32(TextObject* to, const uint32_t* text)
 {
     TextImageSetText(text, &to->go, &to->textData);
+
+    Transform2DRescale(to);
 }
 
 void TextObjectSetTextU8(TextObject* to, const char* text)
@@ -392,29 +390,12 @@ void TextObjectSetTextU8(TextObject* to, const char* text)
     ToolsStringToUInt32(buff, text);
 
     TextImageSetText(buff, &to->go, &to->textData);
+    
+    Transform2DRescale(to);
 }
 
 //Не корректно
 void TextObjectRecreate(TextObject* to){
-
-    for(int i=0; i < to->go.graphObj.gItems.num_shader_packs;i++)
-    {
-        BluePrintPack *pack = &to->go.graphObj.blueprints.blue_print_packs[i];
-
-        PipelineSetting *settings = pack->settings;
-
-        for(int i=0; i < pack->num_settings;i++)
-        {
-            settings[i].scissor.offset.x = 0;
-            settings[i].scissor.offset.y = 0;
-            settings[i].scissor.extent.height = engine.height;
-            settings[i].scissor.extent.width = engine.width;
-            settings[i].viewport.x = 0;
-            settings[i].viewport.y = 0;
-            settings[i].viewport.height = engine.height;
-            settings[i].viewport.width = engine.width;
-        }
-    }
 
     GameObject2DRecreate(to);
     

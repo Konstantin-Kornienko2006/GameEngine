@@ -2,7 +2,7 @@
 #define E_WIDGET_RANGE_H
 
 #include "e_widget.h"
-#include "e_widget_text.h"
+#include "Objects/text_object.h"
 
 #ifdef __cplusplus
 extern "C"

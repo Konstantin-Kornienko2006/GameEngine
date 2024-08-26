@@ -165,6 +165,9 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t
     PipelineStruct *pipeline = &graphObj->gItems.shader_packs[indx_pack].pipelines[graphObj->gItems.shader_packs[indx_pack].num_pipelines];
     RenderTexture *render = graphObj->blueprints.blue_print_packs[indx_pack].render_point;
 
+    if(render == NULL)
+        render = graphObj->blueprints.blue_print_packs[indx_pack].render_point = engine.main_render;
+
     //Шейдеры
     VkPipelineShaderStageCreateInfo shaderStages[6];
     memset(shaderStages, 0, sizeof(VkPipelineShaderStageCreateInfo) * 6);
@@ -405,80 +408,6 @@ void PipelineCreateGraphics(GraphicsObject* graphObj){
 
         }
     }
-}
-
-void PipelineCreateRenderPass() {
-    ZDevice *device = (ZDevice *)engine.device;
-    ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
-
-    VkAttachmentDescription colorAttachment = {};
-    colorAttachment.format = swapchain->swapChainImageFormat;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentReference colorAttachmentRef = {};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentDescription depthAttachment = {};
-    depthAttachment.format = findDepthFormat();
-    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-
-    VkAttachmentReference depthAttachmentRef = {};
-    depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-
-    VkSubpassDependency* dependency = AllocateMemory(2, sizeof(VkSubpassDependency));
-    dependency[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency[0].dstSubpass = 0;
-    dependency[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT; //VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT; //0;
-    dependency[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-    dependency[1].srcSubpass = 0;
-    dependency[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-    dependency[1].srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-    dependency[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependency[1].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    dependency[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    VkAttachmentDescription attachments[] = {colorAttachment, depthAttachment};
-
-    VkRenderPassCreateInfo renderPassInfo = {};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 2;
-    renderPassInfo.pAttachments = attachments;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = dependency;
-
-    if (vkCreateRenderPass(device->e_device, &renderPassInfo, NULL, (VkRenderPass *)&renderPass) != VK_SUCCESS) {
-        printf("failed to create render pass!");
-        exit(1);
-    }
-
-    FreeMemory(dependency);
-    dependency = NULL;    
 }
 
 void PipelineDestroy(ShaderPack *pack)

@@ -29,7 +29,7 @@ int ComboboxWidgetPressSub(EWidget* widget, int id, EWidgetCombobox *cmb){
 
     char temp[1024];
 
-    TextWidgetGetText(&butt->text, temp);
+    ButtonWidgetSetText(butt, temp);
 
     ButtonWidgetSetText(&cmb->button, temp);
 
@@ -51,11 +51,8 @@ int ComboboxWidgetPressSub(EWidget* widget, int id, EWidgetCombobox *cmb){
 
 void ComboboxWidgetInit(EWidgetCombobox *combobox, vec2 scale, DrawParam *dParam, EWidget *parent){
 
-    WidgetInit(&combobox->widget, dParam, parent);
-    WidgetAddDefault(&combobox->widget, dParam->render);
-    GameObject2DInitDraw(&combobox->widget);
+    WidgetInit(&combobox->widget, parent);
 
-    memcpy(combobox->widget.go.name, "Combobox", 8);
     combobox->widget.type = ENGINE_WIDGET_TYPE_COMBOBOX;
 
     ButtonWidgetInit(&combobox->button, " ", dParam, &combobox->widget);

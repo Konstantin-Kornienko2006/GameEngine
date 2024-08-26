@@ -4,7 +4,8 @@
 #include "Variabels/engine_includes.h"
 
 #include "e_widget.h"
-#include "e_widget_text.h"
+#include "e_widget_button.h"
+#include "Objects/text_object.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -12,12 +13,12 @@ extern "C"
 #endif
 
 typedef struct{
-    EWidget widget;
-    EWidget top;
-    EWidget hide;
-    EWidget resize;
-    EWidget close;
-    EWidgetText name;
+    EWidget window;
+    EWidget surface;
+    EWidgetButton hide;
+    EWidgetButton resize;
+    EWidgetButton close;
+    TextObject name;
     bool show;
     bool wasResize;
     bool wasHide;
@@ -32,6 +33,8 @@ void WindowWidgetHide(EWidgetWindow *ww);
 void WindowWidgetUpdate(EWidgetWindow *ww);
 void WindowWidgetDraw(EWidgetWindow *ww);
 void WindowWidgetDestroy(EWidgetWindow *ww);
+
+EWidget *WindowWidgetGetSurface(EWidgetWindow *ww);
 
 #ifdef __cplusplus
 }

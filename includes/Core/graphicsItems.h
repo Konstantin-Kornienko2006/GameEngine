@@ -5,7 +5,7 @@
 
 #include "Variabels/engine_includes.h"
 
-#define MAX_SHAPES 10
+#define MAX_SHAPES 8
 
 #ifdef __cplusplus
 extern "C"

@@ -2,7 +2,7 @@
 #define E_WIDGET_ENTRY_H
 
 #include "e_widget.h"
-#include "e_widget_text.h"
+#include "Objects/text_object.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -11,7 +11,7 @@ extern "C"
 
 typedef struct{
     EWidget widget;
-    EWidgetText text;
+    TextObject text;
     uint32_t num_texts;
     uint32_t curr_texts;
     char **buffers;

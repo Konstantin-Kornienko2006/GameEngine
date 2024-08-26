@@ -298,7 +298,11 @@ void GameObject3DDefaultUpdate(GameObject3D* go) {
     }
 }
 
-void GameObject3DDefaultDraw(GameObject3D* go, void *command){
+void GameObject3DDefaultDraw(GameObject3D* go){
+    
+    ZDevice *device = (ZDevice *)engine.device;
+
+    VkCommandBuffer command = device->commandBuffers[engine.imageIndex];
 
     for(int i=0; i < go->graphObj.gItems.num_shader_packs;i++)
     {
@@ -448,16 +452,16 @@ void GameObject3DRecreate(GameObject3D* go){
 
         PipelineSetting *settings = pack->settings;
 
-        for(int i=0; i < pack->num_settings;i++)
+        for(int j=0; j < pack->num_settings;j++)
         {
-            settings[i].scissor.offset.x = 0;
-            settings[i].scissor.offset.y = 0;
-            settings[i].scissor.extent.height = engine.height;
-            settings[i].scissor.extent.width = engine.width;
-            settings[i].viewport.x = 0;
-            settings[i].viewport.y = 0;
-            settings[i].viewport.height = engine.height;
-            settings[i].viewport.width = engine.width;
+            settings[j].scissor.offset.x = 0;
+            settings[j].scissor.offset.y = 0;
+            settings[j].scissor.extent.height = engine.height;
+            settings[j].scissor.extent.width = engine.width;
+            settings[j].viewport.x = 0;
+            settings[j].viewport.y = 0;
+            settings[j].viewport.height = engine.height;
+            settings[j].viewport.width = engine.width;
         }
     }
 

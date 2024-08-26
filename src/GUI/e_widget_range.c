@@ -75,18 +75,17 @@ int RangeWidgetMove(EWidget* widget, void* entry, void* args){
 
 void RangeWidgetInit(EWidgetRange *range, float size_x, float size_y, float min, float max, DrawParam *dParam, EWidget *parent){
 
-    WidgetInit(&range->widget, dParam, parent);
+    WidgetInit(&range->widget, parent);
     WidgetAddDefault(&range->widget, dParam->render);
     GameObject2DInitDraw(&range->widget);
 
-    memcpy(range->widget.go.name, "Widget_Range", 10);
     range->widget.type = ENGINE_WIDGET_TYPE_RANGE;
 
-    WidgetInit(&range->line, dParam, &range->widget);
+    WidgetInit(&range->line, &range->widget);
     WidgetAddDefault(&range->line, dParam->render);
     GameObject2DInitDraw(&range->line);
 
-    WidgetInit(&range->range, dParam, &range->widget);
+    WidgetInit(&range->range, &range->widget);
     WidgetAddDefault(&range->range, dParam->render);
     GameObject2DInitDraw(&range->range);
 
