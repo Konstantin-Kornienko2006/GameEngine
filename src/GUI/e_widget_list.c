@@ -6,97 +6,92 @@ int max_size = 2;
 
 int ListWidgetPressItem(EWidget *widget, void *entry, int id){
 
-    EWidgetList *list = widget->parent;
+    EWidgetList *list = (EWidgetList *)widget->parent;
 
     EWidgetButton *button;
 
-    for(int i=0;i < list->size;i++)
+    EWidget *parent = widget->parent;
+
+    ChildStack *child = parent->child;
+
+    while(child != NULL)
     {
-        button = WidgetFindChild(list, i)->node;
-        button->widget.color = button->selfColor;
+        button = child->node;
+
+        ButtonWidgetSetColor(button, parent->color.x, parent->color.y, parent->color.z);
+
+        child = child->next;
     }
 
-    button = widget;
+    button = (EWidgetButton *)widget;
 
-    button->widget.color.x += 0.6;
+    ButtonWidgetSetColor(button, parent->color.x + 0.6, parent->color.y, parent->color.z);
 
-    WidgetConfirmTrigger(list, ENGINE_WIDGET_TRIGGER_LIST_PRESS_ITEM, id);
+    WidgetConfirmTrigger((EWidget *)list, ENGINE_WIDGET_TRIGGER_LIST_PRESS_ITEM, id);
 
     return -1;
 }
 
-void ListWidgetDestroy(EWidgetList *list){
-    
-    ChildStack *child = list->widget.child;
-    ChildStack *lastChild;
+void ListWidgetDraw(EWidgetList *list){
 
-    while(child != NULL)
-    {
-        GameObjectDestroy(child->node);
-        FreeMemory(child->node);
-        lastChild = child;
-        child = child->next;
-        FreeMemory(lastChild);
+    if(list->widget.widget_flags & ENGINE_FLAG_WIDGET_VISIBLE){
+
+        ChildStack *child = list->widget.child;
+
+        float ypos = 0;
+        vec2 pos = v2_add(list->widget.position, list->widget.base);
+        while(child != NULL){
+
+            WidgetSetBase(child->node, pos.x , pos.y + ypos);
+
+            ypos += list->widget.scale.y;
+
+            child = child->next;
+        }
     }
-    
-    GameObject2DDestroy((GameObject *)list);
-
-    FreeMemory(list->widget.callbacks.stack);
 }
 
-void ListWidgetInit(EWidgetList *list, int size_x, int size_y, DrawParam *dParam, EWidget *parent){
+void ListWidgetInit(EWidgetList *list, vec2 scale, EWidget *parent){
 
-    WidgetInit(list, parent);
-    GameObjectSetDestroyFunc((GameObject *)list, (void *)ListWidgetDestroy);
+    WidgetInit((EWidget *)list, parent);
+    WidgetSetScale((EWidget *)list, scale.x, scale.y);
 
-    list->widget.type = ENGINE_WIDGET_TYPE_LIST;
+    GameObjectSetDrawFunc((GameObject *)list, ListWidgetDraw);
 
-    list->widget.color = vec3_f(0.4, 0.4, 0.4);
-    list->widget.transparent = 0.0f;
-
-    list->size_x = size_x;
-    list->size_y = size_y;
-
-    Transform2DSetScale(&list->widget, list->size_x, list->size_y);
+    WidgetSetColor((EWidget *)list, vec3_f(0.4, 0.4, 0.4));
 }
 
 void ListWidgetSetColor(EWidgetList *list, vec3 color){
 
-    list->widget.color = color;
+    WidgetSetColor((EWidget *)list, color);
 
-    for(int i=0;i < list->size;i++)
+    ChildStack *child = list->widget.child;
+    EWidgetButton *button;
+
+    while(child != NULL)
     {
-         ChildStack *child = WidgetFindChild(&list->widget, i);
-         EWidgetButton *widget = (EWidgetButton *)child->node;
+        button = child->node;
+        ButtonWidgetSetColor(button, list->widget.color.x, list->widget.color.y, list->widget.color.z);
 
-        widget->selfColor = widget->widget.color = color;
+        child = child->next;
     }
 }
 
-//Max 256 for some times...
-EWidgetButton *ListWidgetAddItem(EWidgetList *list, const char *text, DrawParam *dParam){
-    list->size ++;
+
+EWidgetButton *ListWidgetAddItem(EWidgetList *list, const char *text){
 
     EWidgetButton *item = (EWidgetButton *) AllocateMemory(1, sizeof(EWidgetButton));
 
-    Transform2DSetScale(&list->widget, list->size_x, list->size_y * list->size);
-    ButtonWidgetInit(item, text, dParam, &list->widget);
+    ButtonWidgetInit(item, list->widget.scale, text, list);
+
     item->widget.widget_flags |= ENGINE_FLAG_WIDGET_ALLOCATED;
+    item->widget.rounding = 0.f;
+
     ButtonWidgetSetColor(item, list->widget.color.x, list->widget.color.y, list->widget.color.z);
-    ButtonWidgetSetText(item, text);
 
-    item->widget.transparent = 0.5f;
+    WidgetConnect((EWidget *)item, ENGINE_WIDGET_TRIGGER_BUTTON_PRESS, (widget_callback)ListWidgetPressItem, list->size);
 
-    WidgetConnect(item, ENGINE_WIDGET_TRIGGER_BUTTON_PRESS, ListWidgetPressItem, list->size -1);
-
-    for(int i=0;i < list->size;i++)
-    {
-         ChildStack *child = WidgetFindChild(&list->widget, i);
-
-         Transform2DSetPosition(child->node, 0, i * (list->size_y * 2));
-         Transform2DSetScale(child->node, list->size_x, list->size_y);
-    }
-
+    list->size ++;
     return item;
 }
 
@@ -105,7 +100,7 @@ void ListWidgetRemoveItem(EWidgetList *list, int num){
     if(num + 1 > list->size)
         return;
 
-    ChildStack *child = WidgetFindChild(&list->widget, num);
+    ChildStack *child = list->widget.child;
 
     if(child == NULL)
         return;
@@ -154,7 +149,7 @@ void ListWidgetRemoveItem(EWidgetList *list, int num){
         }
     }
 */
-    list->size--;
+    /*list->size--;
 
     Transform2DSetScale(&list->widget, list->size_x, list->size_y * list->size);
 
@@ -166,5 +161,5 @@ void ListWidgetRemoveItem(EWidgetList *list, int num){
         widget->callbacks.stack[2].args = i;
         Transform2DSetPosition(child->node, 0, i * (list->size_y * 2));
         Transform2DSetScale(child->node, list->size_x, list->size_y);
-    }
+    }*/
 }

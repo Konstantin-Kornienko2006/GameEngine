@@ -38,10 +38,7 @@ void ShadersMakeDefault2DShader(ShaderBuilder *vert, ShaderBuilder *frag, bool h
 
     uint32_t texture = ShaderBuilderAddIOData(frag, SHADER_VARIABLE_TYPE_IMAGE, SHADER_DATA_FLAG_UNIFORM_CONSTANT, NULL, 0, "Texture2D", 0, 2);
 
-    if(hasTexture)
-        ShaderBuilderAddFuncSetTexure(frag, &frag->main_point_index->labels[0], texture, fragTexCoord, outColor, 4);
-    else
-        ShaderBuilderAddFuncMove(frag, &frag->main_point_index->labels[0], fragColor, 3, outColor, 4);
+    ShaderBuilderAddFuncSetTexure(frag, &frag->main_point_index->labels[0], texture, fragTexCoord, outColor, 4);
 
     ShaderBuilderMake(vert);
     ShaderBuilderMake(frag);

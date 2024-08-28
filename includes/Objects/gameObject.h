@@ -28,6 +28,7 @@ typedef struct GameObject{
     void (*DestroyPoint)(struct GameObject* go);
     uint32_t obj_type;
     uint32_t flags;
+    bool init;
     void *vert;
     void *frag;
 } GameObject;

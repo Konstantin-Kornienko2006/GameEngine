@@ -10,7 +10,7 @@ int main(){
     memset(&vert, 0, sizeof(ShaderBuilder));
     memset(&frag, 0, sizeof(ShaderBuilder));
 
-    ShadersMakeClear2DShader(&vert, &frag);
+    ShadersMakeDefault2DShader(&vert, &frag, true);
     
     remove("D:\\Projects\\Temp\\frag.spv");
     remove("D:\\Projects\\Temp\\vert.spv");

@@ -18,6 +18,7 @@ add_library(${PROJECT_NAME} STATIC)
 include_directories(libs includes)
 target_sources(${PROJECT_NAME} PRIVATE
 				src/ZamEngine.c
+				src/ZamGUI.c
 				src/Core/e_blue_print.c
 				src/Core/e_memory.c
 				src/Core/e_buffer.c
@@ -69,7 +70,6 @@ target_sources(${PROJECT_NAME} PRIVATE
 				src/Objects/sky_object.c
 				src/Objects/sprite_object.c
 				src/Objects/terrain_object.c
-				src/Objects/text_object.c
 				src/Objects/tree_object.c
 				src/Objects/water_object.c
 				src/Tools/e_direct.c

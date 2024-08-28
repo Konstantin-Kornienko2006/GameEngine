@@ -189,7 +189,7 @@ void Particle3DAddDefault(ParticleObject3D* particle, void *render)
 
 void Particle3DAdd(ParticleObject3D* particle, vec3 position, vec3 direction, float speed, float gravity, float life){
 
-    double time = EngineGetTime();
+    double time = ZEngineGetTime();
 
     srand((uint32_t)(time * 1000));
 

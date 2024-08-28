@@ -55,12 +55,29 @@ typedef struct{
     int stackCount;
 } ConeParam;
 
-
+/// @brief Инциализация объекта-примитива
+/// @param po - объект-примитив
+/// @param dParam - параметры для рендера
+/// @param type - тип примитива
+/// @param params - параметры примитива
 void PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void *params);
+/// @brief Инициализация стандартного объекта-примитива
+/// @param po - объект-примитив
+/// @param dParam - параметры для рендера
+/// @param type - тип примитива
+/// @param params - параметры примитива
 void PrimitiveObjectInitDefault(PrimitiveObject *po, DrawParam *dParam, char type, void *params);
-
+/// @brief Установка стандартного чертежа для объекта
+/// @param po - объект-примитив
+/// @param dParam - параметры для рендера
 void PrimitiveObjectSetDefaultDescriptor(PrimitiveObject *po, DrawParam *dParam);
+/// @brief Установка стандартного чертежа для инстанс-объекта-примитива
+/// @param po - объект-примитив
+/// @param dParam - параметры для рендера
 void PrimitiveObjectSetInstanceDescriptor(PrimitiveObject *po, DrawParam *dParam);
+/// @brief Установка стандартного чертежа с шейдерами
+/// @param po - объект-примитив
+/// @param dParam -параметры для рендера
 void PrimitiveObjectSetShadowDefaultDescriptor(PrimitiveObject *po, DrawParam *dParam);
 
 void *PrimitiveObjectGetVertex(PrimitiveObject *po);

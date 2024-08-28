@@ -1,53 +1,24 @@
+#ifndef GUIMANAGER_H
+#define GUIMANAGER_H
 #include "Variabels/engine_includes.h"
 
 #include "Core/e_buffer.h"
 
 #include "Objects/gameObject2D.h"
 
-#ifndef IM_DRAWLIST_TEX_LINES_WIDTH_MAX
-#define IM_DRAWLIST_TEX_LINES_WIDTH_MAX     (63)
+#ifndef GUI_DRAWLIST_TEX_LINES_WIDTH_MAX
+#define GUI_DRAWLIST_TEX_LINES_WIDTH_MAX     (63)
 #endif
 
-typedef enum DrawListFlags
-{
-    GUIDrawListFlags_None                    = 0,
-    GUIDrawListFlags_AntiAliasedLines        = 1 << 0,  // Enable anti-aliased lines/borders (*2 the number of triangles for 1.0f wide line or lines thin enough to be drawn using textures, otherwise *3 the number of triangles)
-    GUIDrawListFlags_AntiAliasedLinesUseTex  = 1 << 1,  // Enable anti-aliased lines/borders using textures when possible. Require backend to render with bilinear filtering (NOT point/nearest filtering).
-    GUIDrawListFlags_AntiAliasedFill         = 1 << 2,  // Enable anti-aliased edge around filled shapes (rounded rectangles, circles).
-    GUIDrawListFlags_AllowVtxOffset          = 1 << 3,  // Can emit 'VtxOffset > 0' to allow large meshes. Set when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled.
-} DrawListFlags;
-
-typedef enum DrawFlags
-{
-    GUIDrawFlags_None                        = 0,
-    GUIDrawFlags_Closed                      = 1 << 0, // PathStroke(), AddPolyline(): specify that shape should be closed (Important: this is always == 1 for legacy reason)
-    GUIDrawFlags_RoundCornersTopLeft         = 1 << 4, // AddRect(), AddRectFilled(), PathRect(): enable rounding top-left corner only (when rounding > 0.0f, we default to all corners). Was 0x01.
-    GUIDrawFlags_RoundCornersTopRight        = 1 << 5, // AddRect(), AddRectFilled(), PathRect(): enable rounding top-right corner only (when rounding > 0.0f, we default to all corners). Was 0x02.
-    GUIDrawFlags_RoundCornersBottomLeft      = 1 << 6, // AddRect(), AddRectFilled(), PathRect(): enable rounding bottom-left corner only (when rounding > 0.0f, we default to all corners). Was 0x04.
-    GUIDrawFlags_RoundCornersBottomRight     = 1 << 7, // AddRect(), AddRectFilled(), PathRect(): enable rounding bottom-right corner only (when rounding > 0.0f, we default to all corners). Wax 0x08.
-    GUIDrawFlags_RoundCornersNone            = 1 << 8, // AddRect(), AddRectFilled(), PathRect(): disable rounding on all corners (when rounding > 0.0f). This is NOT zero, NOT an implicit flag!
-    GUIDrawFlags_RoundCornersTop             = GUIDrawFlags_RoundCornersTopLeft | GUIDrawFlags_RoundCornersTopRight,
-    GUIDrawFlags_RoundCornersBottom          = GUIDrawFlags_RoundCornersBottomLeft | GUIDrawFlags_RoundCornersBottomRight,
-    GUIDrawFlags_RoundCornersLeft            = GUIDrawFlags_RoundCornersBottomLeft | GUIDrawFlags_RoundCornersTopLeft,
-    GUIDrawFlags_RoundCornersRight           = GUIDrawFlags_RoundCornersBottomRight | GUIDrawFlags_RoundCornersTopRight,
-    GUIDrawFlags_RoundCornersAll             = GUIDrawFlags_RoundCornersTopLeft | GUIDrawFlags_RoundCornersTopRight | GUIDrawFlags_RoundCornersBottomLeft | GUIDrawFlags_RoundCornersBottomRight,
-    GUIDrawFlags_RoundCornersDefault_        = GUIDrawFlags_RoundCornersAll, // Default to ALL corners if none of the _RoundCornersXX flags are specified.
-    GUIDrawFlags_RoundCornersMask_           = GUIDrawFlags_RoundCornersAll | GUIDrawFlags_RoundCornersNone,
-}DrawFlags;
-
-// Flags for ImFontAtlas build
-typedef enum FontAtlasFlags
-{
-    GUIFontAtlasFlags_None               = 0,
-    GUIFontAtlasFlags_NoPowerOfTwoHeight = 1 << 0,   // Don't round the height to next power of two
-    GUIFontAtlasFlags_NoMouseCursors     = 1 << 1,   // Don't build software mouse cursors into the atlas (save a little texture memory)
-    GUIFontAtlasFlags_NoBakedLines       = 1 << 2,   // Don't build thick line textures into the atlas (save a little texture memory, allow support for point/nearest filtering). The AntiAliasedLinesUseTex features uses them, otherwise they will be rendered using polygons (more expensive for CPU/GPU).
-} FontAtlasFlags;
-
+/// @brief Объект интерфейса
 typedef struct{
+    /// @brief вершины объекта
     Vertex2D *points;
+    /// @brief количество вершин
     uint32_t vert_count;
+    /// @brief индексы объекта
     uint32_t *indeces;
+    /// @brief количество индексов
     uint32_t indx_count;
 } GUIObj;
 
@@ -76,45 +47,63 @@ typedef struct{
     } font;
 } GUIManager;
 
-extern GUIManager gui;
-extern ZEngine engine;
-
+/// @brief Отрисовка примитива квадрата
+/// @param a - левый верхний угол
+/// @param c - правый нижний
+/// @param color - цвет
 void GUIManagerDrawRect(vec2 a, vec2 c, vec3 color);
-
-void GUIAddLine(const vec2 p1, const vec2 p2, vec3 col, float thickness);
-void GUIAddRect(const vec2 p_min, const vec2 p_max, vec3 col, float rounding, uint32_t flags, float thickness);
-void GUIAddRectFilled(const vec2 p_min, const vec2 p_max, vec3 col, float rounding, uint32_t flags);
-void GUIAddQuad(const vec2 p1, const vec2 p2, const vec2 p3, const vec2 p4, vec3 col, float thickness);
-void GUIAddQuadFilled(const vec2 p1, const vec2 p2, const vec2 p3, const vec2 p4, vec3 col);
-void GUIAddTriangle(const vec2 p1, const vec2 p2, const vec2 p3, vec3 col, float thickness);
-void GUIAddTriangleFilled(const vec2 p1, const vec2 p2, const vec2 p3, vec3 col);
-void GUIAddCircle(vec2 center, float radius, vec3 col, int num_segments, float thickness);
-void GUIAddCircleFilled(vec2 center, float radius, vec3 col, int num_segments);
-void GUIAddNgon(vec2 center, float radius, vec3 col, int num_segments, float thickness);
-void GUIAddNgonFilled(vec2 center, float radius, vec3 col, int num_segments);
-void GUIAddEllipse(vec2 center, const vec2 radius, vec3 col, float rot, int num_segments, float thickness);
-void GUIAddEllipseFilled(vec2 center, const vec2 radius, vec3 col, float rot, int num_segments);
-
+/// @brief Отрисавка текста в формате char
+/// @param xpos - Координата по х
+/// @param ypos - Координата по у
+/// @param color - Цвет текста
+/// @param font_size - Размер текста
+/// @param text - Текст
 void GUIAddTextU8(float xpos, float ypos, vec3 color, float font_size, char *text);
+/// @brief Отрисовка текста в формате uint32_t
+/// @param xpos - Координата по х
+/// @param ypos - Координата по у
+/// @param color - Цвет текста
+/// @param font_size - Размер текста
+/// @param text - Текст
 void GUIAddTextU32(float xpos, float ypos, vec3 color, float font_size, uint32_t *text);
-
+/// @brief Формирование объекта фигуры с заполнением
+/// @param points - точки фигуры
+/// @param points_count - количество точек
+/// @param col - цвет заполнения
 void GUIManagerAddConvexPolyFilled(const vec2 *points, const int points_count, vec3 col);
+/// @brief Формерование объекта фигуры без заполнения
+/// @param points - точки фигуры
+/// @param num_points - количество точек
+/// @param color - цвет заполнения
+/// @param flags - флаги фигуры 
+/// @param thickness - толщина линий
 void GUIManagerAddPolyline(const vec2* points, int num_points, vec3 color, uint32_t flags, float thickness);
-
+/// @brief Добавить точку в стек
+/// @param pos - коррдинаты точки
 void PathLineTo(vec2 pos);
+/// @brief Функция для вызова формирования фигуры из стека
+/// @param col - цвет фигуры
 void PathFillConvex(vec3 col);
+/// @brief Функция формирования квадрата
+/// @param a - левый верхний угол
+/// @param b - правый нижний
+/// @param rounding - степень закруглённости
+/// @param flags - флаги фигуры
 void PathRect(vec2 a, vec2 b, float rounding, uint32_t flags);
+/// @brief Функция для вызова формирования фигуры из стека
+/// @param col - цвет фигуры 
+/// @param flags - флаги фигуры
+/// @param thickness - толщина линий
 void PathStroke(vec3 color, uint32_t flags, float thickness);
-
+/// @brief Функция инициализация обхекта интрефейса
 void GUIManagerInit();
+/// @brief Функция отрисовки объекта интерфейса
 void GUIManagerDraw();
+/// @brief Функция очистки объекта интерфейса
 void GUIManagerClear();
+/// @brief Функция пересоздания объекта интерфейса
 void GUIManagerRecreate();
+/// @brief Функция уничтожения объекта интерфейса
 void GUIManagerDestroy();
 
-#define GUIAddText(xpos, ypos, color, font_size, text)\
-    _Generic((text),\
-    char *: GUIAddTextU8,\
-    const char *: GUIAddTextU8,\
-    unsigned int *: GUIAddTextU32\
-    )(xpos, ypos, color, font_size, text)
+#endif //GUIMANAGER_H

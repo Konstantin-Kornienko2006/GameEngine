@@ -1,10 +1,11 @@
 #include "GUI/e_widget_window.h"
 
+#include "ZamGUI.h"
+#include "ZamEngine.h"
+
 #include <vulkan/vulkan.h>
 
 #include "Tools/e_math.h"
-
-#include "Core/engine.h"
 
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
@@ -15,25 +16,18 @@ extern ZEngine engine;
 
 vec2 e_var_mouse, e_var_temp, e_var_tscale ;
 
-uint32_t button_wind_offset = 15;
+uint32_t button_wind_offset = 8;
 
 int WindowWidgetSetSize(EWidgetWindow* window, float x, float y)
 {
 
-    /*Transform2DSetScale(&window->window, x, y);
+    WidgetSetScale(window, x, y);    
 
-    vec2 position = {};
-    Transform2DSetPosition(&window->close, (x - 20) * 2 , button_wind_offset);
-    Transform2DSetPosition(&window->resize, (x - 40) * 2 , button_wind_offset);
-    Transform2DSetPosition(&window->hide, (x - 60) * 2 , button_wind_offset);
-
-    vec2 botSize = window->window.go.transform.scaleOrig;
-    vec2 size = window->window.go.transform.scaleOrig;
+    vec2 botSize = window->window.scale;
     botSize.y -= 40;
     botSize.x -= 10;
 
-    Transform2DSetScale(&window->surface, botSize.x, botSize.y);
-    Transform2DSetPosition(&window->surface, 10, 60);*/
+    WidgetSetScale(&window->surface, botSize.x, botSize.y);
 
     return 0;
 }
@@ -43,12 +37,12 @@ int WindowWidgetPress(EWidget* widget, void* entry, void* args)
 
     double xpos, ypos;
 
-    EngineGetCursorPos(&xpos, &ypos);
-    e_var_mouse.x = xpos;
-    e_var_mouse.y = ypos;
+    ZEngineGetCursorPos(&xpos, &ypos);
+    e_var_mouse.x = xpos * 2;
+    e_var_mouse.y = ypos * 2;
 
-    e_var_temp = Transform2DGetPosition(widget);
-    e_var_tscale = Transform2DGetScale(widget);
+    e_var_temp = widget->position;
+    e_var_tscale = widget->scale;
 
     return 0;
 }
@@ -58,15 +52,18 @@ int WindowWidgetMove(EWidget* widget, void* entry, void* args)
 
     EWidgetWindow *window = (EWidgetWindow *)args;
 
+    if(window->wasResize)
+        return;
+
     vec2 te;
     double xpos, ypos;
 
-    EngineGetCursorPos(&xpos, &ypos);
-    te.x = xpos;
-    te.y = ypos;
+    ZEngineGetCursorPos(&xpos, &ypos);
+    te.x = xpos * 2;
+    te.y = ypos * 2;
 
 
-    if(e_var_mouse.y > e_var_temp.y + 10 && e_var_mouse.y < e_var_temp.y && window->resizeble)
+    if(e_var_mouse.y > e_var_temp.y + 50 && window->resizeble)
     {
         te = v2_sub(te, e_var_mouse);
         vec2 scale = v2_add(e_var_tscale, te);
@@ -80,9 +77,11 @@ int WindowWidgetMove(EWidget* widget, void* entry, void* args)
     }
     else
     {
-        te = v2_muls(v2_sub(te, e_var_mouse), 2.0);
+        te = v2_sub(te, e_var_mouse);
         te = v2_add(e_var_temp, te);
-        Transform2DSetPosition(widget, te.x, te.y);
+        WidgetSetPosition(widget, te.x, te.y);
+        
+        window->origScale = te;
     }
 
     return 0;
@@ -92,7 +91,7 @@ int WindowWidgetCloseButton(EWidget* widget, void* entry, void *arg){
 
     EWidgetWindow *window = (EWidgetWindow *)arg;
 
-    window->show = false;
+    window->window.widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
 
     WidgetConfirmTrigger(window, ENGINE_WIDGET_TRIGGER_WINDOW_CLOSE, NULL);
 
@@ -108,10 +107,10 @@ int WindowWidgetResizeButton(EWidget* widget, void* entry, void *arg){
 
     if(!window->wasResize && !window->wasHide)
     {
-        window->lastPos = Transform2DGetPosition(&window->window);
-        window->lastSize = Transform2DGetScale(&window->window);
+        window->lastPos = window->window.position;
+        window->lastSize = window->window.scale;
     }else if(window->wasResize){
-        Transform2DSetPosition(&window->window, window->lastPos.x, window->lastPos.y);
+        WidgetSetPosition(&window->window, window->lastPos.x, window->lastPos.y);
         WindowWidgetSetSize(window, window->lastSize.x, window->lastSize.y);
         window->wasHide = false;
         window->wasResize = false;
@@ -123,7 +122,7 @@ int WindowWidgetResizeButton(EWidget* widget, void* entry, void *arg){
     vec2 size = {engine.width * 2, engine.height * 2};
 
     WindowWidgetSetSize(window, size.x, size.y);
-    Transform2DSetPosition(&window->window, 0, 0);
+    WidgetSetPosition(&window->window, 0, 0);
 
 
     return 0;
@@ -135,48 +134,93 @@ int WindowWidgetHideButton(EWidget* widget, void* entry, void *arg){
 
     if(!window->wasHide && !window->wasResize)
     {
-        window->lastPos = Transform2DGetPosition(&window->window);
-        window->lastSize = Transform2DGetScale(&window->window);
+        window->lastPos = window->window.position;
+        window->lastSize = window->window.scale;
+        
+        
+        EWidget *widget = NULL;
+        ChildStack *child = window->surface.child;
+
+        while(child != NULL)
+        {
+            widget = child->node;
+
+            if(widget != NULL)
+                widget->widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
+            
+            child = child->next;
+        }
+
     }else if(window->wasHide){
-        Transform2DSetPosition(&window->window, window->lastPos.x, window->lastPos.y);
+        WidgetSetPosition(&window->window, window->lastPos.x, window->lastPos.y);
         WindowWidgetSetSize(window, window->lastSize.x, window->lastSize.y);
         window->wasHide = false;
         window->wasResize = false;
+
+        EWidget *widget = NULL;
+        ChildStack *child = window->surface.child;
+
+        while(child != NULL)
+        {
+            widget = child->node;
+
+            if(widget != NULL)
+                widget->widget_flags |= ENGINE_FLAG_WIDGET_VISIBLE;
+            
+            child = child->next;
+        }
+
         return;
     }
 
     window->wasHide = true;
 
     WindowWidgetSetSize(window, 200, 40);
-    Transform2DSetPosition(&widget->parent->go, 60, (engine.height * 2) - 60);
+    WidgetSetPosition(&widget->parent->go, 60, (engine.height * 2) - 60);
 
     return 0;
 }
 
+extern void WidgetDraw(EWidget* ew);
+
 void WindowWidgetDraw(EWidgetWindow *window){
 
-    if(!window->show)
-        return; 
+    if(window->window.widget_flags & ENGINE_FLAG_WIDGET_VISIBLE){
 
-    WidgetUpdateScissor(&window->surface);
-    WidgetUpdateScissorFromParent(&window->window, &window->name);
-    
-    GameObject2DDefaultUpdate(&window->window);
-    GameObject2DDefaultDraw(&window->window);
-    GameObjectDraw(&window->surface);
-    GameObjectDraw(&window->name);
-    
-    GameObjectDraw(&window->close);
-    GameObjectDraw(&window->resize);
-    GameObjectDraw(&window->hide);
+        vec2 pos = v2_add(window->window.position, window->window.base);
+
+        WidgetDraw(&window->window);
+
+        GUIAddText(pos.x + 5, pos.y + 15, vec3_f(0, 0, 0), 9, window->name);
+
+        WidgetSetPosition(&window->surface, pos.x + 5, pos.y + 30);
+
+
+        vec2 b_pos = v2_add(pos, vec2_f(window->window.scale.x , button_wind_offset));
+
+        WidgetSetPosition(&window->close, b_pos.x - 30, b_pos.y);
+        WidgetSetPosition(&window->resize, b_pos.x - 60, b_pos.y);
+        WidgetSetPosition(&window->hide, b_pos.x - 90, b_pos.y);
+
+        ChildStack *child = window->surface.child;
+
+        while(child != NULL)
+        {
+            WidgetSetBase(child->node, window->surface.position.x, window->surface.position.y);
+            
+            child = child->next;
+        }
+    }
+
 }
 
 void WindowWidgetDestroy(EWidgetWindow *window){
-    GameObjectDestroy(&window->name);
-
     ChildStack *child = window->window.child;
     ChildStack *lastChild;
 
+    if(!window->window.go.init)
+        return;
+    
     while(child != NULL)
     {
         GameObjectDestroy(child->node);
@@ -184,125 +228,118 @@ void WindowWidgetDestroy(EWidgetWindow *window){
         child = child->next;
         FreeMemory(lastChild);
     }
-
+    
     FreeMemory(window->window.callbacks.stack);
+    
+    window->window.go.init = false;
 }
 
 
-void WindowWidgetInitWindow(EWidget* widget, DrawParam *dParam, vec2 size, vec2 position){
+void WindowWidgetInitWindow(EWidget* widget, vec2 scale, vec2 position){
 
     WidgetInit(widget, NULL);
     GameObjectSetDrawFunc((GameObject *)widget, (void *)WindowWidgetDraw);
     GameObjectSetDestroyFunc((GameObject *)widget, (void *)WindowWidgetDestroy);
-    WidgetAddDefault(widget, dParam->render);
-    GameObject2DInitDraw(widget);
 
-    Transform2DSetScale(widget, size.x, size.y);
-    Transform2DSetPosition(widget, position.x, position.y);
-    
     widget->type = ENGINE_WIDGET_TYPE_WINDOW;
 
     WidgetSetColor(widget, vec3_f(1, 1, 1));
-    widget->color = (vec3){1, 1, 1};
-    widget->transparent = 1.0f;
+    WidgetSetScale(widget, scale.x, scale.y);
+    WidgetSetPosition(widget, position.x, position.y);
 }
 
-void InitName(TextObject *to, char* name, DrawParam *dParam, EWidget *parent)
+void InitName(EWidgetWindow *window, char* name, EWidget *parent)
 {
-    TextObjectInitDefault(to, 9, NULL, dParam);
-    TextObjectSetText(to, name);
-    Transform2DSetPosition(to, 20, 40);
+    int len = strlen(name);
+
+    memset(window->name, 0, 256);
+    memcpy(window->name, name, len);
 }
 
-void InitSurface(EWidget* widget, DrawParam *dParam, vec2 size, EWidget *parent){
+void InitSurface(EWidget* widget, vec2 scale, EWidget *parent){
 
     WidgetInit(widget, parent);
-    WidgetAddDefault(widget, dParam->render);
-    GameObject2DInitDraw(widget);
 
-    vec2 botSize = size;
+    WidgetSetColor(widget, vec3_f(0.5f, 0.5f, 0.5f));
+
+    vec2 botSize = scale;
     botSize.y -= 40;
     botSize.x -= 10;
 
-    WidgetSetColor(widget, vec3_f(0.5f, 0.5f, 0.5f));
-    Transform2DSetScale(widget, botSize.x, botSize.y);
-    Transform2DSetPosition(widget, 10, 60);
+    WidgetSetScale(widget, botSize.x, botSize.y);
 }
 
-void InitClose(EWidget* widget, DrawParam *dParam, vec2 size, EWidget *parent){
+void InitClose(EWidget* widget, vec2 size, EWidget *parent){
 
-    ButtonWidgetInit(widget, NULL, dParam, parent);
+    ButtonWidgetInit(widget, vec2_f(20, 20), NULL, parent);
+    
+    widget->rounding = 5.0f;
 
     ButtonWidgetSetColor(widget, 1.0f, 0.0f, 0.0);
-
-    Transform2DSetScale(widget, 10, 10);
-    Transform2DSetPosition(widget, (size.x - 20) * 2 , button_wind_offset);
 }
 
-void InitResize(EWidget* widget, DrawParam *dParam, vec2 size, EWidget *parent){
+void InitResize(EWidget* widget, vec2 size, EWidget *parent){
     
-    ButtonWidgetInit(widget, NULL, dParam, parent);
+    ButtonWidgetInit(widget, vec2_f(20, 20), NULL, parent);
+    
+    widget->rounding = 5.0f;
     
     ButtonWidgetSetColor(widget, 0.0f, 1.0f, 0.0f);
-
-    Transform2DSetScale(widget, 10, 10);
-    Transform2DSetPosition(widget, (size.x - 40) * 2, button_wind_offset);
 }
 
-void InitHide(EWidget* widget, DrawParam *dParam, vec2 size, EWidget *parent){
+void InitHide(EWidget* widget, vec2 size, EWidget *parent){
 
-    ButtonWidgetInit(widget, NULL, dParam, parent);
+    ButtonWidgetInit(widget, vec2_f(20, 20), NULL, parent);
+
+    widget->rounding = 5.0f;
 
     ButtonWidgetSetColor(widget, 0.0f, 0.0f, 1.0f);
-
-    Transform2DSetScale(widget, 10, 10);
-    Transform2DSetPosition(widget, (size.x - 60) * 2, button_wind_offset);
 }
 
-void WindowWidgetInit(EWidgetWindow *ww, char* name, vec2 size, DrawParam *dParam, vec2 position)
+void WindowWidgetInit(EWidgetWindow *window, char* name, vec2 size, vec2 position)
 {
-    WindowWidgetInitWindow(&ww->window, dParam, size, position);
-    InitSurface(&ww->surface, dParam, size, &ww->window);
-    InitName(&ww->name, name, dParam, &ww->window);
+    WindowWidgetInitWindow(&window->window, size, position);
+    InitSurface(&window->surface, size, &window->window);
+    InitName(window, name, &window->window);
 
-    InitClose(&ww->close, dParam, size, &ww->window);
-    InitResize(&ww->resize, dParam, size, &ww->window);
-    InitHide(&ww->hide, dParam, size, &ww->window);
+    InitClose(&window->close, size, &window->window);
+    InitResize(&window->resize, size, &window->window);
+    InitHide(&window->hide, size, &window->window);
 
-    WidgetConnect(&ww->window, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetPress, NULL);
-    WidgetConnect(&ww->window, ENGINE_WIDGET_TRIGGER_MOUSE_MOVE, WindowWidgetMove, ww);
+    window->origScale = size;
 
-    WidgetConnect(&ww->close, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetCloseButton, ww);
-    WidgetConnect(&ww->resize, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetResizeButton, ww);
-    WidgetConnect(&ww->hide, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetHideButton, ww);
+    WidgetConnect(&window->window, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetPress, NULL);
+    WidgetConnect(&window->window, ENGINE_WIDGET_TRIGGER_MOUSE_MOVE, WindowWidgetMove, window);
 
-    ww->window.type = ENGINE_WIDGET_TYPE_WINDOW;
-    ww->show = true;
-    ww->wasHide = false;
-    ww->wasResize = false;
-    ww->resizeble = true;
+    WidgetConnect(&window->close, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetCloseButton, window);
+    WidgetConnect(&window->resize, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetResizeButton, window);
+    WidgetConnect(&window->hide, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetHideButton, window);
+
+    window->window.type = ENGINE_WIDGET_TYPE_WINDOW;
+    window->wasHide = false;
+    window->wasResize = false;
+    window->resizeble = true;
+
+    window->window.go.init = true;
 }
 
-void WindowWidgetShow(EWidgetWindow *ww){
-    ww->show = true;
+void WindowWidgetAddWidget(EWidgetWindow *window, EWidget *widget){
 
-    WidgetConfirmTrigger(ww, ENGINE_WIDGET_TRIGGER_WINDOW_OPEN, NULL);
+    WidgetSetParent(widget, &window->surface);
 }
 
-void WindowWidgetHide(EWidgetWindow *ww){
-    ww->show = false;
+void WindowWidgetShow(EWidgetWindow *window){
+    window->window.widget_flags |= ENGINE_FLAG_WIDGET_VISIBLE;
 
-    WidgetConfirmTrigger(ww, ENGINE_WIDGET_TRIGGER_WINDOW_CLOSE, NULL);
+    WidgetConfirmTrigger(window, ENGINE_WIDGET_TRIGGER_WINDOW_OPEN, NULL);
 }
 
-void WindowWidgetUpdate(EWidgetWindow *ww){
+void WindowWidgetHide(EWidgetWindow *window){
+    window->window.widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
 
-    if(!ww->show)
-        return;
-
-    WidgetEventsPipe(&ww->window);
+    WidgetConfirmTrigger(window, ENGINE_WIDGET_TRIGGER_WINDOW_CLOSE, NULL);
 }
 
-EWidget *WindowWidgetGetSurface(EWidgetWindow *ww){
-    return &ww->surface;
+EWidget *WindowWidgetGetSurface(EWidgetWindow *window){
+    return &window->surface;
 }

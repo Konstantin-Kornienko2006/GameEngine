@@ -5,7 +5,6 @@
 
 #include "e_widget.h"
 #include "e_widget_button.h"
-#include "Objects/text_object.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -18,23 +17,24 @@ typedef struct{
     EWidgetButton hide;
     EWidgetButton resize;
     EWidgetButton close;
-    TextObject name;
-    bool show;
+    char name[256];
     bool wasResize;
     bool wasHide;
     bool resizeble;
     vec2 lastSize;
     vec2 lastPos;
+    vec2 origScale;
 }EWidgetWindow;
 
-void WindowWidgetInit(EWidgetWindow *ww, char* name, vec2 size, DrawParam *dParam, vec2 position);
-void WindowWidgetShow(EWidgetWindow *ww);
-void WindowWidgetHide(EWidgetWindow *ww);
-void WindowWidgetUpdate(EWidgetWindow *ww);
-void WindowWidgetDraw(EWidgetWindow *ww);
-void WindowWidgetDestroy(EWidgetWindow *ww);
+void WindowWidgetInit(EWidgetWindow *window, char* name, vec2 siz, vec2 position);
+void WindowWidgetShow(EWidgetWindow *window);
+void WindowWidgetHide(EWidgetWindow *window);
+void WindowWidgetUpdate(EWidgetWindow *window);
+void WindowWidgetDraw(EWidgetWindow *window);
+void WindowWidgetDestroy(EWidgetWindow *window);
+void WindowWidgetAddWidget(EWidgetWindow *window, EWidget *widget);
 
-EWidget *WindowWidgetGetSurface(EWidgetWindow *ww);
+EWidget *WindowWidgetGetSurface(EWidgetWindow *window);
 
 #ifdef __cplusplus
 }

@@ -1,6 +1,8 @@
 #include "GUI/e_widget_range.h"
 
-#include "Core/engine.h"
+#include "ZamGUI.h"
+#include "ZamEngine.h"
+
 
 #include "Tools/e_math.h"
 
@@ -12,15 +14,13 @@ int RangeWidgetPress(EWidget* widget, void* entry, void* args){
 
     double xpos, ypos;
 
-    EngineGetCursorPos(&xpos, &ypos);
-    range_mouse.x = xpos;
-    range_mouse.y = ypos;
+    ZEngineGetCursorPos(&xpos, &ypos);
+    range_mouse.x = xpos * 2;
+    range_mouse.y = ypos * 2;
 
-    range_temp = Transform2DGetPosition(widget);
+    range_temp = range->rangePos;
 
-    range->range.color.x = range->selfColor.x - 0.2f;
-    range->range.color.y = range->selfColor.y - 0.2f;
-    range->range.color.z = range->selfColor.z - 0.2f;
+    WidgetSetColor(&range->range, v3_subs(range->selfColor, 0.2f));
 
     return 0;
 }
@@ -29,7 +29,7 @@ int RangeWidgetRelease(EWidget* widget, void* entry, void* args){
 
     EWidgetRange *range = args;
 
-    range->range.color = range->selfColor;
+    WidgetSetColor(&range->range, range->selfColor);
 }
 
 int RangeWidgetMove(EWidget* widget, void* entry, void* args){
@@ -39,72 +39,73 @@ int RangeWidgetMove(EWidget* widget, void* entry, void* args){
 
     EWidgetRange *range = (EWidgetRange *)args;
 
-    EngineGetCursorPos(&xpos, &ypos);
-    te.x = xpos;
-    te.y = ypos;
+    ZEngineGetCursorPos(&xpos, &ypos);
+    te.x = xpos * 2;
+    te.y = ypos * 2;
 
-    te2 = Transform2DGetPosition(widget);
-    te = v2_muls(v2_sub(te, range_mouse), 2);
-    te.x += range_temp.x;
-    te.y = te2.y;
+    te = v2_sub(te, range_mouse);
 
     int len = range->max - range->min;
 
-    vec2 size = v2_muls(Transform2DGetScale(&range->widget), 2);
-    size.x -= 20;
+    vec2 size = range->widget.scale;
 
-    if(te.x  < 0)
-        te.x = 0;
+    if(te.x < -range->range.scale.x / 2)
+        te.x = -range->range.scale.x / 2;
 
-    if(te.x > size.x)
-        te.x = size.x;
+    if(te.x > size.x - range->range.scale.x / 2)
+        te.x = size.x - range->range.scale.x / 2;
 
     float diff =  len / size.x;
 
-    float val = te.x * diff + range->min;
+    float val = (te.x + range->range.scale.x / 2) * diff + range->min;
 
     if(range->dest != NULL)
         *range->dest = val;
 
-    Transform2DSetPosition(widget, te.x, te.y);
+    range->rangePos.x = te.x;
 
     WidgetConfirmTrigger(range, ENGINE_WIDGET_TRIGGER_RANGE_CHANGE, &val);
 
     return 0;
 }
 
-void RangeWidgetInit(EWidgetRange *range, float size_x, float size_y, float min, float max, DrawParam *dParam, EWidget *parent){
+void RangeWidgetDraw(EWidgetRange *range){
+
+    if(range->widget.widget_flags & ENGINE_FLAG_WIDGET_VISIBLE){
+        
+        vec2 pos = v2_add(range->widget.position, range->widget.base);
+
+        GUIAddLine(vec2_f(pos.x, pos.y + range->widget.scale.y / 2),vec2_f(pos.x + range->widget.scale.x, pos.y + range->widget.scale.y / 2), vec3_f(1, 1, 1), 1.0f);
+
+        WidgetSetPosition(&range->range, pos.x + range->rangePos.x, pos.y + range->rangePos.y);
+
+        GUIAddRectFilled(range->range.position, v2_add(range->range.position, range->range.scale), range->range.color, range->range.rounding, GUIDrawFlags_RoundCornersAll);
+    }
+}
+
+void RangeWidgetInit(EWidgetRange *range, vec2 scale, float min, float max, EWidget *parent){
 
     WidgetInit(&range->widget, parent);
-    WidgetAddDefault(&range->widget, dParam->render);
-    GameObject2DInitDraw(&range->widget);
+    WidgetSetScale(range, scale.x, scale.y);
+
+    GameObjectSetDrawFunc(range, RangeWidgetDraw);
 
     range->widget.type = ENGINE_WIDGET_TYPE_RANGE;
 
-    WidgetInit(&range->line, &range->widget);
-    WidgetAddDefault(&range->line, dParam->render);
-    GameObject2DInitDraw(&range->line);
-
     WidgetInit(&range->range, &range->widget);
-    WidgetAddDefault(&range->range, dParam->render);
-    GameObject2DInitDraw(&range->range);
+    WidgetSetScale(&range->range, 30, scale.y);
+    range->range.rounding = 10.0f;
 
-    range->line.color = vec3_f(0.7, 0.7, 0.7);
-    Transform2DSetScale(&range->line, size_x, 2);
-    Transform2DSetPosition(&range->line, 0, size_y - 4);
-    range->line.widget_flags &= ~(ENGINE_FLAG_WIDGET_ACTIVE);
-
-    range->widget.color = vec3_f(0.7, 0.7, 0.7);
-    range->widget.transparent = 0.0f;
-    Transform2DSetScale(&range->widget, size_x, size_y);
+    WidgetSetColor(range, vec3_f(0.7, 0.7, 0.7));
 
     range->min = min;
     range->max = max;
     range->dest = NULL;
 
-    range->range.color = range->selfColor = vec3_f(0.3, 0, 0);
-    Transform2DSetScale(&range->range, 10, size_y);
-    Transform2DSetPosition(&range->range, 0, 0);
+    range->selfColor = vec3_f(0.6, 0.3, 0.1);
+    range->rangePos = vec2_f(0, 0);
+
+    WidgetSetColor(&range->range, range->selfColor);
 
     WidgetConnect(&range->range, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, RangeWidgetPress, range);
     WidgetConnect(&range->range, ENGINE_WIDGET_TRIGGER_MOUSE_MOVE, RangeWidgetMove, range);

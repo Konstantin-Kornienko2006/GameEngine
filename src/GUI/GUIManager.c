@@ -1,12 +1,14 @@
 #include "GUI/GUIManager.h"
 #include "GUI/e_widget.h"
 
+#define STB_TRUETYPE_IMPLEMENTATION
+
 #include "stb_truetype.h"
 
+#include "ZamGUI.h"
 #include "ZamEngine.h"
 
 #include "Core/e_device.h"
-#include "Core/engine.h"
 
 #include "Data/e_resource_shapes.h"
 #include "Data/e_resource_export.h"
@@ -14,38 +16,40 @@
 #include "Tools/e_math.h"
 #include "Tools/e_shaders.h"
 
-double ImRsqrt(double x)          { return 1.0 / sqrt(x); }
+double GUIRsqrt(double x)          { return 1.0 / sqrt(x); }
 
 // Helper Macros
-#ifndef IM_ASSERT
+#ifndef GUI_ASSERT
 #include <assert.h>
-#define IM_ASSERT(_EXPR)            assert(_EXPR)                               // You can override the default assert handler by editing imconfig.h
+#define GUI_ASSERT(_EXPR)            assert(_EXPR)                               // You can override the default assert handler by editing imconfig.h
 #endif
 
-#define IM_NORMALIZE2F_OVER_ZERO(VX,VY)     { float d2 = VX*VX + VY*VY; if (d2 > 0.0f) { float inv_len = ImRsqrt(d2); VX *= inv_len; VY *= inv_len; } } (void)0
+#define GUI_NORMALIZE2F_OVER_ZERO(VX,VY)     { float d2 = VX*VX + VY*VY; if (d2 > 0.0f) { float inv_len = GUIRsqrt(d2); VX *= inv_len; VY *= inv_len; } } (void)0
 
 // ImDrawList: Lookup table size for adaptive arc drawing, cover full circle.
-#ifndef IM_DRAWLIST_ARCFAST_TABLE_SIZE
-#define IM_DRAWLIST_ARCFAST_TABLE_SIZE                          48 // Number of samples in lookup table.
+#ifndef GUI_DRAWLIST_ARCFAST_TABLE_SIZE
+#define GUI_DRAWLIST_ARCFAST_TABLE_SIZE                          48 // Number of samples in lookup table.
 #endif
-#define IM_DRAWLIST_ARCFAST_SAMPLE_MAX                          IM_DRAWLIST_ARCFAST_TABLE_SIZE // Sample index _PathArcToFastEx() for 360 angle.
+#define GUI_DRAWLIST_ARCFAST_SAMPLE_MAX                          GUI_DRAWLIST_ARCFAST_TABLE_SIZE // Sample index _PathArcToFastEx() for 360 angle.
 
-#define IM_ARRAYSIZE(_ARR)          ((int)(sizeof(_ARR) / sizeof(*(_ARR))))     // Size of a static C-style array. Don't use on pointers!
+#define GUI_ARRAYSIZE(_ARR)          ((int)(sizeof(_ARR) / sizeof(*(_ARR))))     // Size of a static C-style array. Don't use on pointers!
 
-#define IM_ROUNDUP_TO_EVEN(_V)                                  ((((_V) + 1) / 2) * 2)
-#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN                     4
-#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX                     512
-#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(_RAD,_MAXERROR)    clamp(IM_ROUNDUP_TO_EVEN((int)ceil(M_PI / acos(1 - min((_MAXERROR), (_RAD)) / (_RAD)))), IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX)
-#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(_N,_MAXERROR)    ((_MAXERROR) / (1 - cos(M_PI / max((float)(_N), M_PI))))
+#define GUI_ROUNDUP_TO_EVEN(_V)                                  ((((_V) + 1) / 2) * 2)
+#define GUI_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN                     4
+#define GUI_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX                     512
+#define GUI_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(_RAD,_MAXERROR)    clamp(GUI_ROUNDUP_TO_EVEN((int)ceil(M_PI / acos(1 - min((_MAXERROR), (_RAD)) / (_RAD)))), GUI_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN, GUI_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX)
+#define GUI_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(_N,_MAXERROR)    ((_MAXERROR) / (1 - cos(M_PI / max((float)(_N), M_PI))))
 
 #define MAX_VERTEX_SIZE 1024
 #define MAX_INDEX_SIZE 2048
 
 GUIManager gui;
 
-int GUIFontResizer = 5;
+extern ZEngine engine;
 
-vec2 ArcFastVtx[IM_DRAWLIST_ARCFAST_TABLE_SIZE];
+int GUIFontResizer = 7;
+
+vec2 ArcFastVtx[GUI_DRAWLIST_ARCFAST_TABLE_SIZE];
 uint8_t CircleSegmentCounts[64];
 float CircleSegmentMaxError = 0.3f;
 float ArcFastRadiusCutoff;
@@ -55,10 +59,10 @@ int _CalcCircleAutoSegmentCount(float radius)
 {
     // Automatic segment count
     const int radius_idx = (int)(radius + 0.999999f); // ceil to never reduce accuracy
-    if (radius_idx >= 0 && radius_idx < IM_ARRAYSIZE(CircleSegmentCounts))
+    if (radius_idx >= 0 && radius_idx < GUI_ARRAYSIZE(CircleSegmentCounts))
         return CircleSegmentCounts[radius_idx]; // Use cached value
     else
-        return IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError);
+        return GUI_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError);
 }
 
 void _PathArcToFastEx(const vec2 center, float radius, int a_min_sample, int a_max_sample, int a_step)
@@ -72,10 +76,10 @@ void _PathArcToFastEx(const vec2 center, float radius, int a_min_sample, int a_m
 
     // Calculate arc auto segment step size
     if (a_step <= 0)
-        a_step = IM_DRAWLIST_ARCFAST_SAMPLE_MAX / _CalcCircleAutoSegmentCount(radius);
+        a_step = GUI_DRAWLIST_ARCFAST_SAMPLE_MAX / _CalcCircleAutoSegmentCount(radius);
 
     // Make sure we never do steps larger than one quarter of the circle
-    a_step = clamp(a_step, 1, IM_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
+    a_step = clamp(a_step, 1, GUI_DRAWLIST_ARCFAST_TABLE_SIZE / 4);
 
     const int sample_range = abs(a_max_sample - a_min_sample);
     const int a_next_step = a_step;
@@ -100,11 +104,11 @@ void _PathArcToFastEx(const vec2 center, float radius, int a_min_sample, int a_m
     }
 
     int sample_index = a_min_sample;
-    if (sample_index < 0 || sample_index >= IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
+    if (sample_index < 0 || sample_index >= GUI_DRAWLIST_ARCFAST_SAMPLE_MAX)
     {
-        sample_index = sample_index % IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        sample_index = sample_index % GUI_DRAWLIST_ARCFAST_SAMPLE_MAX;
         if (sample_index < 0)
-            sample_index += IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+            sample_index += GUI_DRAWLIST_ARCFAST_SAMPLE_MAX;
     }
 
     if (a_max_sample >= a_min_sample)
@@ -112,8 +116,8 @@ void _PathArcToFastEx(const vec2 center, float radius, int a_min_sample, int a_m
         for (int a = a_min_sample; a <= a_max_sample; a += a_step, sample_index += a_step, a_step = a_next_step)
         {
             // a_step is clamped to IM_DRAWLIST_ARCFAST_SAMPLE_MAX, so we have guaranteed that it will not wrap over range twice or more
-            if (sample_index >= IM_DRAWLIST_ARCFAST_SAMPLE_MAX)
-                sample_index -= IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+            if (sample_index >= GUI_DRAWLIST_ARCFAST_SAMPLE_MAX)
+                sample_index -= GUI_DRAWLIST_ARCFAST_SAMPLE_MAX;
 
             const vec2 s = v2_div(ArcFastVtx[sample_index], vec2_f(engine.width, engine.height));
             gui._Path[gui._Path_Size].x = center.x + s.x * radius;
@@ -127,7 +131,7 @@ void _PathArcToFastEx(const vec2 center, float radius, int a_min_sample, int a_m
         {
             // a_step is clamped to IM_DRAWLIST_ARCFAST_SAMPLE_MAX, so we have guaranteed that it will not wrap over range twice or more
             if (sample_index < 0)
-                sample_index += IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+                sample_index += GUI_DRAWLIST_ARCFAST_SAMPLE_MAX;
 
             const vec2 s = v2_div(ArcFastVtx[sample_index], vec2_f(engine.width, engine.height));
             gui._Path[gui._Path_Size].x = center.x + s.x * radius;
@@ -138,9 +142,9 @@ void _PathArcToFastEx(const vec2 center, float radius, int a_min_sample, int a_m
 
     if (extra_max_sample)
     {
-        int normalized_max_sample = a_max_sample % IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        int normalized_max_sample = a_max_sample % GUI_DRAWLIST_ARCFAST_SAMPLE_MAX;
         if (normalized_max_sample < 0)
-            normalized_max_sample += IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+            normalized_max_sample += GUI_DRAWLIST_ARCFAST_SAMPLE_MAX;
 
         const vec2 s = v2_div(ArcFastVtx[normalized_max_sample], vec2_f(engine.width, engine.height));
         gui._Path[gui._Path_Size].x = center.x + s.x * radius;
@@ -193,15 +197,15 @@ void PathArcTo(const vec2 center, float radius, float a_min, float a_max, int nu
 
         // We are going to use precomputed values for mid samples.
         // Determine first and last sample in lookup table that belong to the arc.
-        const float a_min_sample_f = IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_min / (M_PI * 2.0f);
-        const float a_max_sample_f = IM_DRAWLIST_ARCFAST_SAMPLE_MAX * a_max / (M_PI * 2.0f);
+        const float a_min_sample_f = GUI_DRAWLIST_ARCFAST_SAMPLE_MAX * a_min / (M_PI * 2.0f);
+        const float a_max_sample_f = GUI_DRAWLIST_ARCFAST_SAMPLE_MAX * a_max / (M_PI * 2.0f);
 
         const int a_min_sample = a_is_reverse ? (int)floor(a_min_sample_f) : (int)ceil(a_min_sample_f);
         const int a_max_sample = a_is_reverse ? (int)ceil(a_max_sample_f) : (int)floor(a_max_sample_f);
         const int a_mid_samples = a_is_reverse ? max(a_min_sample - a_max_sample, 0) : max(a_max_sample - a_min_sample, 0);
 
-        const float a_min_segment_angle = a_min_sample * M_PI * 2.0f / IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
-        const float a_max_segment_angle = a_max_sample * M_PI * 2.0f / IM_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        const float a_min_segment_angle = a_min_sample * M_PI * 2.0f / GUI_DRAWLIST_ARCFAST_SAMPLE_MAX;
+        const float a_max_segment_angle = a_max_sample * M_PI * 2.0f / GUI_DRAWLIST_ARCFAST_SAMPLE_MAX;
         const bool a_emit_start = abs(a_min_segment_angle - a_min) >= 1e-5f;
         const bool a_emit_end = abs(a_max - a_max_segment_angle) >= 1e-5f;
 
@@ -240,7 +244,7 @@ void PathArcToFast(vec2 center, float radius, int a_min_of_12, int a_max_of_12)
         gui._Path_Size++;
         return;
     }
-    _PathArcToFastEx(center, radius, a_min_of_12 * IM_DRAWLIST_ARCFAST_SAMPLE_MAX / 12, a_max_of_12 * IM_DRAWLIST_ARCFAST_SAMPLE_MAX / 12, 0);
+    _PathArcToFastEx(center, radius, a_min_of_12 * GUI_DRAWLIST_ARCFAST_SAMPLE_MAX / 12, a_max_of_12 * GUI_DRAWLIST_ARCFAST_SAMPLE_MAX / 12, 0);
 }
 
 void PathEllipticalArcTo(const vec2 center, const vec2 radius, float rot, float a_min, float a_max, int num_segments)
@@ -334,8 +338,8 @@ void GUIManagerCopyVertex(uint32_t vCount, uint32_t iCount){
     uint32_t counter = 0;        
     
     char *dataV, *dataI;
-    vkMapMemory(device->e_device, gui.vertBuffer.memory, 0, sizeof(Vertex2D) * vCount, 0, &dataV);
-    vkMapMemory(device->e_device, gui.indxBuffer.memory, 0, sizeof(uint32_t) * iCount, 0, &dataI);
+    vkMapMemory(device->e_device, gui.vertBuffer.memory, 0, sizeof(Vertex2D) * vCount, 0, (void **)&dataV);
+    vkMapMemory(device->e_device, gui.indxBuffer.memory, 0, sizeof(uint32_t) * iCount, 0, (void **)&dataI);
 
     memset(dataV, 0, sizeof(Vertex2D) * MAX_VERTEX_SIZE);
     memset(dataI, 0, sizeof(uint32_t) * MAX_INDEX_SIZE);
@@ -409,7 +413,7 @@ void GUIManagerInitFont(){
     stbtt_InitFont(gui.font.info , &_binary_fonts_RobotoBlack_ttf_start, stbtt_GetFontOffsetForIndex(&_binary_fonts_RobotoBlack_ttf_start,0));
     stbtt_BakeFontBitmap(&_binary_fonts_RobotoBlack_ttf_start, 0, 32.0, temp_bitmap, gui.font.fontWidth, gui.font.fontHeight, 0, 1106, gui.font.cdata); // no guarantee this fits!
 
-    uint32_t *point = temp_bitmap;
+    uint32_t *point = (uint32_t *)temp_bitmap;
 
     vec2 TexUvScale = vec2_f(1.0f / gui.font.fontWidth, 1.0f / gui.font.fontHeight);
 
@@ -472,23 +476,23 @@ void GUIManagerAddTexture(){
 
 void GUIManagerInit(){
     
-    for (int i = 0; i < IM_ARRAYSIZE(ArcFastVtx); i++)
+    for (int i = 0; i < GUI_ARRAYSIZE(ArcFastVtx); i++)
     {
-        const float a = ((float)i * 2 * M_PI) / (float)IM_ARRAYSIZE(ArcFastVtx);
+        const float a = ((float)i * 2 * M_PI) / (float)GUI_ARRAYSIZE(ArcFastVtx);
         ArcFastVtx[i] = vec2_f(cos(a), sin(a));
     }
     
-    for (int i = 0; i < IM_ARRAYSIZE(CircleSegmentCounts); i++)
+    for (int i = 0; i < GUI_ARRAYSIZE(CircleSegmentCounts); i++)
     {
         const float radius = (float)i;
-        CircleSegmentCounts[i] = (uint8_t)((i > 0) ? IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : IM_DRAWLIST_ARCFAST_SAMPLE_MAX);
+        CircleSegmentCounts[i] = (uint8_t)((i > 0) ? GUI_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(radius, CircleSegmentMaxError) : GUI_DRAWLIST_ARCFAST_SAMPLE_MAX);
     }
 
-    ArcFastRadiusCutoff = IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(IM_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
+    ArcFastRadiusCutoff = GUI_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC_R(GUI_DRAWLIST_ARCFAST_SAMPLE_MAX, CircleSegmentMaxError);
 
     memset(&gui, 0, sizeof(GUIManager));
     
-    GameObject2DInit(&gui); 
+    GameObject2DInit((GameObject2D *)&gui); 
 
     memcpy(gui.go.name, "GUI", 3);
 
@@ -518,7 +522,7 @@ void GUIManagerInit(){
     setting.fromFile = 0;
     setting.flags |= ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE;
 
-    GameObject2DAddSettingPipeline(&gui, 0, &setting);
+    GameObject2DAddSettingPipeline((GameObject2D *)&gui, 0, &setting);
     
     gui.go.graphObj.blueprints.num_blue_print_packs ++;
 
@@ -531,7 +535,7 @@ void GUIManagerInit(){
     BuffersCreate(sizeof(Vertex2D) * MAX_VERTEX_SIZE, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &gui.vertBuffer, ENGINE_BUFFER_ALLOCATE_UNIFORM);
     BuffersCreate(sizeof(uint32_t) * MAX_INDEX_SIZE, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &gui.indxBuffer, ENGINE_BUFFER_ALLOCATE_UNIFORM);
 
-    GameObject2DInitDraw(&gui);
+    GameObject2DInitDraw((GameObject2D *)&gui);
 }
 
 void GUIManagerDrawPrimRect(vec2 a, vec2 c, vec3 color){
@@ -584,12 +588,12 @@ void GUIManagerDrawRect(vec2 a, vec2 c, vec3 color){
 
     double xpos, ypos;
 
-    EngineGetCursorPos(&xpos, &ypos);
+    ZEngineGetCursorPos(&xpos, &ypos);
 
     xpos *= 2;
     ypos *= 2;
 
-    if(a.x < xpos && c.x > xpos && a.y < ypos && c.y > ypos && EngineGetMousePress(ENGINE_MOUSE_BUTTON_1) && !gui.sellected){
+    if(a.x < xpos && c.x > xpos && a.y < ypos && c.y > ypos && ZEngineGetMousePress(ENGINE_MOUSE_BUTTON_1) && !gui.sellected){
         color = v3_subs(color, 0.1);
         gui.sellected =true;
     }
@@ -609,160 +613,6 @@ void GUIAddRectFilled(const vec2 p_min, const vec2 p_max, vec3 col, float roundi
         PathRect(p_min, p_max, rounding, flags);
         PathFillConvex(col);
     }
-}
-
-void GUIAddLine(const vec2 p1, const vec2 p2, vec3 col, float thickness)
-{
-    PathLineTo(v2_add(p1, vec2_f(0.5f, 0.5f)));
-    PathLineTo(v2_add(p2, vec2_f(0.5f, 0.5f)));
-    PathStroke(col, 0, thickness);
-}
-
-void GUIAddRect(const vec2 p_min, const vec2 p_max, vec3 col, float rounding, uint32_t flags, float thickness)
-{
-    PathRect(v2_add(p_min, vec2_f(0.50f, 0.50f)), v2_sub(p_max, vec2_f(0.49f, 0.49f)), rounding, flags); // Better looking lower-right corner and rounded non-AA shapes.
-
-    PathStroke(col, GUIDrawFlags_Closed, thickness);
-}
-
-void GUIAddQuad(const vec2 p1, const vec2 p2, const vec2 p3, const vec2 p4, vec3 col, float thickness){
-    PathLineTo(p1);
-    PathLineTo(p2);
-    PathLineTo(p3);
-    PathLineTo(p4);
-    PathStroke(col, GUIDrawFlags_Closed, thickness);
-}
-
-void GUIAddQuadFilled(const vec2 p1, const vec2 p2, const vec2 p3, const vec2 p4, vec3 col){
-    PathLineTo(p1);
-    PathLineTo(p2);
-    PathLineTo(p3);
-    PathLineTo(p4);
-    PathFillConvex(col);
-}
-
-void GUIAddTriangle(const vec2 p1, const vec2 p2, const vec2 p3, vec3 col, float thickness){
-    PathLineTo(p1);
-    PathLineTo(p2);
-    PathLineTo(p3);
-    PathStroke(col, GUIDrawFlags_Closed, thickness);
-}
-
-void GUIAddTriangleFilled(const vec2 p1, const vec2 p2, const vec2 p3, vec3 col){
-    PathLineTo(p1);
-    PathLineTo(p2);
-    PathLineTo(p3);
-    PathFillConvex(col);
-}
-
-void GUIAddCircle(vec2 center, float radius, vec3 col, int num_segments, float thickness){
-
-    if(center.x != 0) 
-        center.x /= engine.width; 
-        
-    if(center.y != 0) 
-        center.y /= engine.height; 
-
-    if (num_segments <= 0)
-    {
-        // Use arc with automatic segment count
-        _PathArcToFastEx(center, radius - 0.5f, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, 0);
-        gui._Path_Size--;
-    }
-    else
-    {
-        // Explicit segment count (still clamp to avoid drawing insanely tessellated shapes)
-        num_segments = clamp(num_segments, 3, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX);
-
-        // Because we are filling a closed shape we remove 1 from the count of segments/points
-        const float a_max = (M_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
-        PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
-    }
-
-    PathStroke(col, GUIDrawFlags_Closed, thickness);
-}
-
-void GUIAddCircleFilled(vec2 center, float radius, vec3 col, int num_segments){
-
-    if(center.x != 0) 
-        center.x /= engine.width; 
-        
-    if(center.y != 0) 
-        center.y /= engine.height; 
-
-    if (num_segments <= 0)
-    {
-        // Use arc with automatic segment count
-        _PathArcToFastEx(center, radius, 0, IM_DRAWLIST_ARCFAST_SAMPLE_MAX, 0);
-        gui._Path_Size--;
-    }
-    else
-    {
-        // Explicit segment count (still clamp to avoid drawing insanely tessellated shapes)
-        num_segments = clamp(num_segments, 3, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX);
-
-        // Because we are filling a closed shape we remove 1 from the count of segments/points
-        const float a_max = (M_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
-        PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
-    }
-
-    PathFillConvex(col);
-}
-
-void GUIAddNgon(vec2 center, float radius, vec3 col, int num_segments, float thickness){
-
-    if(center.x != 0) 
-        center.x /= engine.width; 
-        
-    if(center.y != 0) 
-        center.y /= engine.height; 
-
-    // Because we are filling a closed shape we remove 1 from the count of segments/points
-    const float a_max = (M_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
-    PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
-    PathStroke(col, GUIDrawFlags_Closed, thickness);
-}
-
-void GUIAddNgonFilled(vec2 center, float radius, vec3 col, int num_segments){
-
-    if(center.x != 0) 
-        center.x /= engine.width; 
-        
-    if(center.y != 0) 
-        center.y /= engine.height; 
-
-    // Because we are filling a closed shape we remove 1 from the count of segments/points
-    const float a_max = (M_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
-    PathArcTo(center, radius, 0.0f, a_max, num_segments - 1);
-    PathFillConvex(col);
-}
-
-void GUIAddEllipse(vec2 center, const vec2 radius, vec3 col, float rot, int num_segments, float thickness){
-
-    if(center.x != 0) 
-        center.x /= engine.width; 
-        
-    if(center.y != 0) 
-        center.y /= engine.height; 
-
-    if (num_segments <= 0)
-        num_segments = _CalcCircleAutoSegmentCount(max(radius.x, radius.y)); // A bit pessimistic, maybe there's a better computation to do here.
-
-    // Because we are filling a closed shape we remove 1 from the count of segments/points
-    const float a_max = M_PI * 2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
-    PathEllipticalArcTo(center, radius, rot, 0.0f, a_max, num_segments - 1);
-    PathStroke(col, true, thickness);
-}
-
-void GUIAddEllipseFilled(vec2 center, const vec2 radius, vec3 col, float rot, int num_segments){
-    
-    if (num_segments <= 0)
-        num_segments = _CalcCircleAutoSegmentCount(max(radius.x, radius.y)); // A bit pessimistic, maybe there's a better computation to do here.
-
-    // Because we are filling a closed shape we remove 1 from the count of segments/points
-    const float a_max = M_PI * 2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
-    PathEllipticalArcTo(center, radius, rot, 0.0f, a_max, num_segments - 1);
-    PathFillConvex(col);
 }
 
 void GUISetText(float xpos, float ypos, vec3 color, float font_size, uint32_t *text){
@@ -792,6 +642,8 @@ void GUISetText(float xpos, float ypos, vec3 color, float font_size, uint32_t *t
     
     float mulX = font_size / engine.width / GUIFontResizer;
     float mulY = font_size / engine.height / GUIFontResizer;
+    
+    float temp = font_size / engine.height;
 
     uint32_t v_iter = 0;
     uint32_t i_iter = 0;
@@ -803,8 +655,8 @@ void GUISetText(float xpos, float ypos, vec3 color, float font_size, uint32_t *t
         
         float x1 = xpos + q.x0 * mulX - 1.0f;
         float x2 = xpos + q.x1 * mulX - 1.0f;
-        float y1 = ypos + q.y0 * mulY - 1.0f;
-        float y2 = ypos + q.y1 * mulY - 1.0f;
+        float y1 = ypos + q.y0 * mulY - 1.0f + temp;
+        float y2 = ypos + q.y1 * mulY - 1.0f + temp;
         float u1 = q.s0;
         float v1 = q.t0;
         float u2 = q.s1;
@@ -1185,7 +1037,7 @@ void GUIManagerAddPolyline(const vec2* points, int points_count, vec3 color, Dra
 
             float dx = p2.x - p1.x;
             float dy = p2.y - p1.y;
-            IM_NORMALIZE2F_OVER_ZERO(dx, dy);
+            GUI_NORMALIZE2F_OVER_ZERO(dx, dy);
             dx *= (thickness * 0.5f);
             dy *= (thickness * 0.5f);
 
@@ -1224,7 +1076,7 @@ DrawFlags FixRectCornerFlags(DrawFlags flags)
     // If this assert triggers, please update your code replacing hardcoded values with new ImDrawFlags_RoundCorners* values.
     // Note that ImDrawFlags_Closed (== 0x01) is an invalid flag for AddRect(), AddRectFilled(), PathRect() etc. anyway.
     // See details in 1.82 Changelog as well as 2021/03/12 and 2023/09/08 entries in "API BREAKING CHANGES" section.
-    IM_ASSERT((flags & 0x0F) == 0 && "Misuse of legacy hardcoded ImDrawCornerFlags values!");
+    GUI_ASSERT((flags & 0x0F) == 0 && "Misuse of legacy hardcoded ImDrawCornerFlags values!");
 
     if ((flags & GUIDrawFlags_RoundCornersMask_) == 0)
         flags |= GUIDrawFlags_RoundCornersAll;
@@ -1296,7 +1148,23 @@ void GUIManagerDraw(){
 
     WidgetEventsPipe(gui.last_widget);
 
-    GameObject2DDefaultUpdate(&gui);
+    GameObject2DDefaultUpdate((GameObject2D *)&gui);
+    
+    ChildStack *child = gui.first_widget;  
+
+    EWidget *widget = NULL;
+    while(child != NULL)
+    {
+        widget = child->node;
+
+        if(widget != NULL){
+            if(widget->widget_flags & ENGINE_FLAG_WIDGET_VISIBLE && widget->type != ENGINE_WIDGET_TYPE_IMAGE){
+                GameObjectDraw((GameObject *)widget);
+            }
+        }
+
+        child = child->next;
+    }
     
     ZDevice *device = (ZDevice *)engine.device;
     
@@ -1340,25 +1208,57 @@ void GUIManagerDraw(){
             }
         }
     }
+
+    child = gui.first_widget;  
+
+    while(child != NULL)
+    {
+        widget = child->node;
+
+        if(widget != NULL){
+            if(widget->widget_flags & ENGINE_FLAG_WIDGET_VISIBLE && widget->type == ENGINE_WIDGET_TYPE_IMAGE){
+                GameObjectDraw((GameObject *)widget);
+            }
+        }
+
+        child = child->next;
+    }
 }
 
 void GUIManagerRecreate(){
 
-    GameObjectClean(&gui.go);
+    GameObjectClean((GameObject *)&gui.go);
 
-    GameObjectRecreate(&gui.go);
+    GameObjectRecreate((GameObject *)&gui.go);
 }
 
 
 void GUIManagerDestroy(){
     GUIManagerClear();   
+
+    ChildStack *child = gui.first_widget;
+    ChildStack *last = NULL;
+
+    while(child != NULL){
+
+        GameObjectDestroy(child->node);
+        
+        last = child;
+        child = child->next;
+
+        FreeMemory(last);
+
+    }
+
+    BuffersDestroyBuffer(&gui.vertBuffer);
+    BuffersDestroyBuffer(&gui.indxBuffer);
     
     FreeMemory(gui.font.cdata);
     FreeMemory(gui.font.info);
     ImageDestroyTexture(gui.font.texture);
     FreeMemory(gui.font.texture);
 
-    GameObject2DDestroy(&gui); 
+    GameObject2DDestroy((GameObject2D *)&gui); 
     
     if(gui.draw_list != NULL){
         free(gui.draw_list);

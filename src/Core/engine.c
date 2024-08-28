@@ -20,7 +20,6 @@
 #include "string.h"
 
 #include "Objects/gameObject.h"
-#include "Objects/text_object.h"
 #include "Objects/lightObject.h"
 #include "Objects/render_texture.h"
 
@@ -66,68 +65,6 @@ void EngineInitVulkan(){
     ToolsCreateDepthResources();
     BuffersCreateCommand();
     EngineCreateSyncobjects();
-}
-
-void EngineFixedCursorCenter(){
-    ZWindow *window = (ZWindow *)engine.window;
-
-    wManagerSetCursorPos(window->e_window, engine.width / 2, engine.height / 2);
-}
-
-void EngineGetCursorPos(double *xpos, double *ypos){
-    ZWindow *window = (ZWindow *)engine.window;
-
-    wManagerGetCursorPos(window->e_window, xpos, ypos);
-}
-
-void EngineSetCursorPos(float xpos, float ypos){
-    ZWindow *window = (ZWindow *)engine.window;
-
-    wManagerSetCursorPos(window->e_window, xpos, ypos);
-}
-
-void EngineHideCursor(char state){
-    ZWindow *window = (ZWindow *)engine.window;
-
-    switch(state){
-        case 0 :
-            wManagerSetInputMode(window->e_window, ENGINE_CURSOR, ENGINE_CURSOR_DISABLED);
-            break;
-        case 1 :
-            wManagerSetInputMode(window->e_window, ENGINE_CURSOR, ENGINE_CURSOR_HIDDEN);
-            break;
-        case 2 :
-            wManagerSetInputMode(window->e_window, ENGINE_CURSOR, ENGINE_CURSOR_NORMAL);
-            break;
-    }
-}
-
-int EngineGetMousePress(int Key){
-    ZWindow *window = (ZWindow *)engine.window;
-
-    int state = wManagerGetMouseButton(window->e_window, Key);
-
-    return state;
-}
-
-int EngineWindowIsClosed(){
-    return wManagerWindowIsClosed();
-}
-
-double EngineGetTime(){
-    return wManagerGetTime();
-}
-
-const char *EngineGetClipBoardString(){
-    ZWindow *window = (ZWindow *)engine.window;
-
-    return wManagerGetClipboardString(window->e_window);
-}
-
-void EngineSetClipBoardString(const char *string){
-    ZWindow *window = (ZWindow *)engine.window;
-
-    wManagerSetClipboardString(window->e_window, string);
 }
 
 void EngineDeviceWaitIdle(){

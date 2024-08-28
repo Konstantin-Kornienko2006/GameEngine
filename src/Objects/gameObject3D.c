@@ -472,6 +472,9 @@ void GameObject3DRecreate(GameObject3D* go){
 }
 
 void GameObject3DDestroy(GameObject3D* go){
+    
+    if(!go->self.init)
+        return;
 
     GraphicsObjectDestroy(&go->graphObj);
 
@@ -496,6 +499,8 @@ void GameObject3DDestroy(GameObject3D* go){
 
     if(go->num_instances > 0)
         BuffersDestroyBuffer(go->buffer.buffer);
+
+    go->self.init = false;
 }
 
 void GameObject3DInitTextures(GameObject3D *go, DrawParam *dParam)
@@ -559,6 +564,7 @@ void GameObject3DInit(GameObject3D *go){
     go->graphObj.gItems.perspective = true;
 
     go->self.flags = 0;
+    go->self.init = true;
 }
 
 void GameObject3DAddInstance(GameObject3D *go, VertexInstance3D vertex){

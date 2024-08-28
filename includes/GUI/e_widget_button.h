@@ -5,7 +5,6 @@
 
 #include "e_widget.h"
 #include "e_widget_image.h"
-#include "Objects/text_object.h"
 
 #include <wchar.h>
 
@@ -15,16 +14,14 @@ extern "C"
 #endif
 
 typedef struct{
-    EWidget widget;    
-    TextObject to;
-    EWidgetImage image;
+    EWidget widget;   
+    char text[256]; 
     vec3 selfColor;
 } EWidgetButton;
 
-void ButtonWidgetInit(EWidgetButton *button, const char *text, DrawParam *dParam, EWidget *parent);
+void ButtonWidgetInit(EWidgetButton *button, vec2 scale, const char *text, EWidget *parent);
 void ButtonWidgetSetText(EWidgetButton *button, const char *text);
 void ButtonWidgetSetColor(EWidgetButton *button, float r, float g, float b);
-void ButtonWidgetSetImage(EWidgetButton *button, char *path, DrawParam *dParam);
 
 #ifdef __cplusplus
 }

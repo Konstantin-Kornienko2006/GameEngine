@@ -43,11 +43,21 @@ typedef struct{
     GameObject2D go;
     uint32_t type;
 } ShapeObject;
-
+/// @brief Инициализация многоугольного двумерного объекта
+/// @param so - объект многоугольника
+/// @param dParam - параметры для рендера
+/// @param type - тип многоугольника
+/// @param param - параметры многоугольника
 void ShapeObjectInit(ShapeObject *so, DrawParam *dParam, ShapeType type, void *param);
-
+/// @brief Инициализация стандартного многоугольного двумерного объекта
+/// @param so - объект многоугольника
+/// @param dParam - параметры для рендера
+/// @param type - тип многоугольника
+/// @param param - параметры многоугольника
 void ShapeObjectInitDefault(ShapeObject *so, DrawParam *dParam, ShapeType type, void *param);
-
+/// @brief Установка стандартного чертежа для многоугольника
+/// @param so - объект многоугольника
+/// @param render - рендер за которым закрепляется объект. Может быть NULL.
 void ShapeObjectAddDefault(ShapeObject *so, void *render);
 
 #ifdef __cplusplus

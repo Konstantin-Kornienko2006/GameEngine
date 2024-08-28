@@ -82,10 +82,14 @@ void GameObjectRecreate(GameObject* go){
 
 void GameObjectDestroy(GameObject* go){
 
-    EngineDeviceWaitIdle();
-
     if(go == NULL)
         return;
+        
+    if(!go->init)
+        return;
+
+    EngineDeviceWaitIdle();
+
 
     void (*destroy)(GameObject* go) = go->DestroyPoint;
 

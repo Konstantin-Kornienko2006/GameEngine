@@ -1131,6 +1131,11 @@ void ShaderBuilderMake(ShaderBuilder *builder){
 
         if(builder->num_decorations > 0){
             uint32_t iter = 0;
+            
+            ShaderBuilderAddOp(builder, SpvOpDecorate, 3);
+            ShaderBuilderAddValue(builder, builder->decors[0].indx );
+            ShaderBuilderAddValue(builder, SpvDecorationBlock );
+
             for(int i=0;i < 4;i++){
                 ShaderBuilderAddOp(builder, SpvOpMemberDecorate, 5);
                 ShaderBuilderAddValue(builder, builder->decors[0].indx );
@@ -1144,13 +1149,15 @@ void ShaderBuilderMake(ShaderBuilder *builder){
                     iter ++;
             }
 
-            ShaderBuilderAddOp(builder, SpvOpDecorate, 3);
-            ShaderBuilderAddValue(builder, builder->decors[0].indx );
-            ShaderBuilderAddValue(builder, SpvDecorationBlock );
 
             for(int i=0;i < builder->num_io_data;i++){
 
                 if(builder->ioData[i].type == SHADER_VARIABLE_TYPE_UNIFORM){
+                    
+                    ShaderBuilderAddOp(builder, SpvOpDecorate, 3);
+                    ShaderBuilderAddValue(builder, builder->decors[1].indx );
+                    ShaderBuilderAddValue(builder, SpvDecorationBlock );
+
                     for(int j =0;j < 3;j++){
                         ShaderBuilderAddOp(builder, SpvOpMemberDecorate, 5);
                         ShaderBuilderAddValue(builder, builder->decors[1].indx );
@@ -1158,9 +1165,6 @@ void ShaderBuilderMake(ShaderBuilder *builder){
                         ShaderBuilderAddValue(builder, SpvDecorationOffset );
                         ShaderBuilderAddValue(builder, j * 8 );
                         
-                        ShaderBuilderAddOp(builder, SpvOpDecorate, 3);
-                        ShaderBuilderAddValue(builder, builder->decors[1].indx );
-                        ShaderBuilderAddValue(builder, SpvDecorationBlock );
                     }
                 }               
 

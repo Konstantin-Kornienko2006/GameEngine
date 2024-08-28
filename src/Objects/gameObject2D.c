@@ -176,6 +176,9 @@ void GameObject2DRecreate(GameObject2D* go){
 
 void GameObject2DDestroy(GameObject2D* go){
 
+    if(!go->self.init)
+        return;
+
     GraphicsObjectDestroy(&go->graphObj);
 
     if(go->image != NULL)
@@ -199,6 +202,8 @@ void GameObject2DDestroy(GameObject2D* go){
 
     FreeMemory(go->self.vert);
     FreeMemory(go->self.frag);
+    
+    go->self.init = false;
 }
 
 void GameObject2DInit(GameObject2D* go)
@@ -217,6 +222,7 @@ void GameObject2DInit(GameObject2D* go)
     go->self.vert = AllocateMemory(1, sizeof(ShaderBuilder));
     go->self.frag = AllocateMemory(1, sizeof(ShaderBuilder));
 
+    go->self.init = true;
 }
 
 vec2 GameObject2DGetSize(GameObject2D* go)

@@ -10,6 +10,8 @@
 
 #include "Objects/render_texture.h"
 
+#include "Tools/e_math.h"
+
 #include "Variabels/e_device_variables.h"
 
 #include "Data/e_resource_data.h"

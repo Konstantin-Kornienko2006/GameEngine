@@ -11,14 +11,12 @@ extern "C"
 typedef struct{
     EWidget widget;
     bool vertical;
-    float *source;
     float move_val;
     float stable_val;
     vec3 selfColor;
 } EWidgetRoller;
 
-void RollerWidgetInit(EWidgetRoller *roller, DrawParam *dParam, EWidget *parent);
-void RollerWidgetSetSource(EWidgetRoller *roller, float *source);
+void RollerWidgetInit(EWidgetRoller *roller, vec2 scale, EWidget *parent);
 
 #ifdef __cplusplus
 }

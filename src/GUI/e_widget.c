@@ -6,7 +6,9 @@
 #include "wManager/window_manager.h"
 #include "wManager/manager_includes.h"
 
-#include <GUI/GUIManager.h>
+#include "ZamGUI.h"
+
+#include "GUI/GUIManager.h"
 
 #include "Tools/e_math.h"
 #include "Tools/e_shaders.h"
@@ -57,7 +59,6 @@ void WidgetAcceptStack(EWidget* ew){
 void WidgetSetParent(EWidget* ew, EWidget* parent){
 
     ew->parent = parent;
-    ew->child = NULL;
     
     if(parent != NULL)
     {
@@ -105,7 +106,7 @@ int WidgetFindIdChild(EWidget* widget)
     return counter;
 }
 
-ChildStack * WidgetFindChild(EWidget* widget, int num)
+ChildStack *WidgetFindChild(EWidget* widget, int num)
 {
     ChildStack *child = widget->child;
     int counter = 0;
@@ -142,6 +143,12 @@ void WidgetSetPosition(EWidget* ew, float xpos, float ypos){
     ew->position.y = ypos;
 }
 
+void WidgetSetBase(EWidget* ew, float xpos, float ypos){
+    
+    ew->base.x = xpos;
+    ew->base.y = ypos;
+}
+
 void WidgetUpdate(EWidget* ew){
     
 }
@@ -149,7 +156,7 @@ void WidgetUpdate(EWidget* ew){
 void WidgetDraw(EWidget* ew){
 
     if(ew->widget_flags & ENGINE_FLAG_WIDGET_VISIBLE){
-        GUIAddRectFilled(ew->position, v2_add(ew->position, ew->scale), ew->color, 5, GUIDrawFlags_RoundCornersAll);
+        GUIAddRectFilled(v2_add(ew->base, ew->position), v2_add(v2_add(ew->position, ew->scale), ew->base), ew->color, 5, GUIDrawFlags_RoundCornersAll);
     }    
 }
 
@@ -168,6 +175,8 @@ void WidgetInit(EWidget* ew, EWidget* parent){
     ew->offset.x = 0;
     ew->offset.y = 0;
     ew->transparent = 1.0f;
+    ew->rounding = 0.f;
+    ew->child = NULL;
 
     WidgetSetParent(ew, parent);
 
@@ -178,6 +187,7 @@ void WidgetInit(EWidget* ew, EWidget* parent){
     ew->callbacks.stack = (CallbackStruct *) AllocateMemory(MAX_GUI_CALLBACKS, sizeof(CallbackStruct));
     ew->callbacks.size = 0;
 
+    ew->go.init = true;
 }
 
 void WidgetConnect(EWidget* widget, int trigger, widget_callback callback, void* args){
@@ -211,11 +221,9 @@ void WidgetConfirmTrigger(EWidget* widget, int trigger, void *entry){
     }
 }
 
-int WidgetCheck(ChildStack* child){
+int WidgetCheck(EWidget *widget){
     
     ZWindow *window = (ZWindow *)engine.window;
-
-    EWidget *widget = child->node;
 
     if(widget == NULL)
         return NULL;
@@ -229,8 +237,8 @@ int WidgetCheck(ChildStack* child){
     xpos *= 2;
     ypos *= 2;
 
-    if(xpos > (widget->position.x) && xpos < (widget->position.x + widget->scale.x) &&
-            ypos > (widget->position.y) && ypos < (widget->position.y + widget->scale.y)){
+    if(xpos > (widget->position.x + widget->base.x) && xpos < (widget->position.x + widget->base.x + widget->scale.x) &&
+            ypos > (widget->position.y + widget->base.y) && ypos < (widget->position.y + widget->base.y + widget->scale.y)){
                 return true;
             }
 
@@ -244,19 +252,23 @@ EWidget* WidgetCheckMouseInner(ChildStack* child){
     ChildStack* next = child->before;    
 
     EWidget *widget = child->node;
+    EWidget *lastfind = NULL;
 
     if(widget == NULL)
         return NULL;
         
-    if(!(widget->widget_flags & ENGINE_FLAG_WIDGET_ACTIVE) || !(widget->widget_flags & ENGINE_FLAG_WIDGET_VISIBLE))
+    while((!(widget->widget_flags & ENGINE_FLAG_WIDGET_ACTIVE) || !(widget->widget_flags & ENGINE_FLAG_WIDGET_VISIBLE)) && next != NULL){
+
+        widget = next->node;
+
+        next = next->before;
+    }
+    
+    if(widget == NULL)
         return NULL;
 
-    if(WidgetCheck(child))
-    {        
-        widget->widget_flags |= ENGINE_FLAG_WIDGET_IN;
+    if(WidgetCheck(widget))
         return widget;
-    }else
-        widget->widget_flags |= ENGINE_FLAG_WIDGET_OUT;
 
     while(next != NULL)
     {
@@ -264,16 +276,15 @@ EWidget* WidgetCheckMouseInner(ChildStack* child){
 
         if(widget != NULL)
         {
-            if(WidgetCheck(next))
-            {
+            if(WidgetCheck(widget)){
                 widget->widget_flags |= ENGINE_FLAG_WIDGET_IN;
                 return widget;
-            }else
-                widget->widget_flags |= ENGINE_FLAG_WIDGET_OUT;
+            }
         }
 
         next = next->before;
     }
+
 
     return NULL;
 }
@@ -290,7 +301,7 @@ void WidgetEventsPipe(ChildStack *child)
     }
 
     if(e_var_sellected != NULL)
-    {
+    {      
         widget->widget_flags |= ENGINE_FLAG_WIDGET_IN;
 
         if((e_var_sellected->widget_flags & ENGINE_FLAG_WIDGET_WAS_OUT) && !(e_var_sellected->widget_flags & ENGINE_FLAG_WIDGET_WAS_IN))
@@ -345,17 +356,16 @@ void WidgetEventsPipe(ChildStack *child)
 
 }
 
-void WidgetRecreate(EWidget * widget){
-    
-}
-
 void WidgetDestroy(EWidget *widget){
+
+    if(!widget->go.init)
+        return;
 
     ChildStack *child = widget->child;
     ChildStack *lastChild;
 
     while(child != NULL)
-    {
+    {      
         GameObjectDestroy(child->node);
         lastChild = child;
         child = child->next;
@@ -364,6 +374,9 @@ void WidgetDestroy(EWidget *widget){
 
     FreeMemory(widget->callbacks.stack);
 
+    widget->go.init = false;
+
     if((widget->widget_flags & ENGINE_FLAG_WIDGET_ALLOCATED))
         FreeMemory(widget);
+
 }
