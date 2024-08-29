@@ -14,6 +14,8 @@
 #include "Objects/lightObject.h"
 #include "Objects/render_texture.h"
 
+#include "Tools/e_shaders.h"
+
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
 #include "Data/e_resource_shapes.h"
@@ -30,7 +32,7 @@ void PrimitiveObjectDestroy(PrimitiveObject *po)
     po->params = NULL;
 }
 
-void PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void *params){
+int PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void *params){
 
     GameObject3DInit((GameObject3D *)po);
 
@@ -107,11 +109,17 @@ void PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void
         FreeMemory(iParam.indices);
     }
 
-    GameObject3DInitTextures((GameObject3D *)po, dParam);
+    int res = GameObject3DInitTextures((GameObject3D *)po, dParam);
+
+    if(!res){
+        GameObjectDestroy(po);
+        return 0;
+    }
 
     if(type == ENGINE_PRIMITIVE3D_SKYBOX)
         Transform3DSetScale((GameObject3D *)po, -500, -500, -500);
 
+    return 1;
 }
 
 void PrimitiveObjectSetShadowDefaultDescriptor(PrimitiveObject *po, DrawParam *dParam)
@@ -170,21 +178,28 @@ void PrimitiveObjectSetDefaultDescriptor(PrimitiveObject *po, DrawParam *dParam)
     po->go.graphObj.blueprints.blue_print_packs[nums].render_point = dParam->render;
 
     BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(ModelBuffer3D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject3DDescriptorModelUpdate, 0);
-    BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(DirLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorDirLightsUpdate, 0);
+    /*BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(DirLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorDirLightsUpdate, 0);
     BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(PointLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorPointLightsUpdate, 0);
     BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(SpotLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorSpotLightsUpdate, 0);
-    BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(LightStatusBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DLigtStatusBufferUpdate, 0);
+    BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(LightStatusBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DLigtStatusBufferUpdate, 0);*/
 
-    BluePrintAddTextureImage(&po->go.graphObj.blueprints, nums, &po->go.images[0], VK_SHADER_STAGE_FRAGMENT_BIT);
-    BluePrintAddTextureImage(&po->go.graphObj.blueprints, nums, &po->go.images[1], VK_SHADER_STAGE_FRAGMENT_BIT);
+    if(po->go.num_images > 0)
+        BluePrintAddTextureImage(&po->go.graphObj.blueprints, nums, &po->go.images[0], VK_SHADER_STAGE_FRAGMENT_BIT);
+    //BluePrintAddTextureImage(&po->go.graphObj.blueprints, nums, &po->go.images[1], VK_SHADER_STAGE_FRAGMENT_BIT);
 
     PipelineSetting setting;
 
     PipelineSettingSetDefault(&po->go.graphObj, &setting);
+    
 
     if(strlen(dParam->vertShader) == 0){
-        PipelineSettingSetShader(&setting, &_binary_shaders_3d_object_vert_spv_start, (size_t)(&_binary_shaders_3d_object_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-        PipelineSettingSetShader(&setting, &_binary_shaders_3d_object_frag_spv_start, (size_t)(&_binary_shaders_3d_object_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
+        ShaderBuilder *vert = po->go.self.vert;
+        ShaderBuilder *frag = po->go.self.frag;
+
+        ShadersMakeDefault3DShader(vert, frag, po->go.num_images > 0);
+
+        PipelineSettingSetShader(&setting, (char *)vert->code, vert->size * sizeof(uint32_t), VK_SHADER_STAGE_VERTEX_BIT);
+        PipelineSettingSetShader(&setting, (char *)frag->code, frag->size * sizeof(uint32_t), VK_SHADER_STAGE_FRAGMENT_BIT);
 
         setting.fromFile = 0;
     }else{
@@ -253,7 +268,10 @@ void PrimitiveObjectAddShadow(PrimitiveObject *po, DrawParam *dParam)
 
 void PrimitiveObjectInitDefault(PrimitiveObject *po, DrawParam *dParam, char type, void *params)
 {
-        PrimitiveObjectInit(po, dParam, type, params);
+        int res = PrimitiveObjectInit(po, dParam, type, params);
+
+        if(!res)
+            return;
 
         if(dParam->flags & ENGINE_DRAW_PARAM_FLAG_ADD_SHADOW)
             PrimitiveObjectAddShadow(po, dParam);

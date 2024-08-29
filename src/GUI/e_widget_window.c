@@ -94,6 +94,31 @@ int WindowWidgetCloseButton(EWidget* widget, void* entry, void *arg){
     window->window.widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
 
     WidgetConfirmTrigger(window, ENGINE_WIDGET_TRIGGER_WINDOW_CLOSE, NULL);
+    
+    EWidget *child_widget = NULL;
+    ChildStack *child = window->surface.child;
+
+    while(child != NULL)
+    {
+        child_widget = child->node;
+
+        if(child_widget != NULL)
+            child_widget->widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
+            
+        child = child->next;
+    }
+
+    child = window->window.child;
+
+    while(child != NULL)
+    {
+        child_widget = child->node;
+
+        if(child_widget != NULL)
+            child_widget->widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
+            
+        child = child->next;
+    }
 
     return 0;
 }
@@ -332,12 +357,63 @@ void WindowWidgetShow(EWidgetWindow *window){
     window->window.widget_flags |= ENGINE_FLAG_WIDGET_VISIBLE;
 
     WidgetConfirmTrigger(window, ENGINE_WIDGET_TRIGGER_WINDOW_OPEN, NULL);
+
+    EWidget *widget = NULL;
+    ChildStack *child = window->surface.child;
+
+    while(child != NULL)
+    {
+        widget = child->node;
+
+        if(widget != NULL)
+            widget->widget_flags |= ENGINE_FLAG_WIDGET_VISIBLE;
+            
+        child = child->next;
+    }
+    
+    child = window->window.child;
+
+    while(child != NULL)
+    {
+        widget = child->node;
+
+        if(widget != NULL)
+            widget->widget_flags |= ENGINE_FLAG_WIDGET_VISIBLE;
+            
+        child = child->next;
+    }
+
 }
 
 void WindowWidgetHide(EWidgetWindow *window){
     window->window.widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
 
     WidgetConfirmTrigger(window, ENGINE_WIDGET_TRIGGER_WINDOW_CLOSE, NULL);
+
+    EWidget *widget = NULL;
+    ChildStack *child = window->surface.child;
+
+    while(child != NULL)
+    {
+        widget = child->node;
+
+        if(widget != NULL)
+            widget->widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
+            
+        child = child->next;
+    }
+    
+    child = window->window.child;
+
+    while(child != NULL)
+    {
+        widget = child->node;
+
+        if(widget != NULL)
+            widget->widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
+            
+        child = child->next;
+    }
 }
 
 EWidget *WindowWidgetGetSurface(EWidgetWindow *window){

@@ -292,6 +292,9 @@ EWidget* WidgetCheckMouseInner(ChildStack* child){
 
 void WidgetEventsPipe(ChildStack *child)
 {
+    if(child == NULL)
+        return;
+
     ZWindow *window = (ZWindow *)engine.window;
 
     EWidget *widget = child->node;

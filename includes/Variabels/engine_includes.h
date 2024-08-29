@@ -12,6 +12,8 @@
 
 #include "Core/e_memory.h"
 
+#include "Tools/e_direct.h"
+
 #include "e_vertex.h"
 #include "e_buffers_variables.h"
 
@@ -255,7 +257,7 @@ typedef struct{
 } VertextIterator;
 
 typedef struct{
-    char diffuse[256];
+    char *diffuse;
     char specular[256];
     char normal[256];
     char second[256];

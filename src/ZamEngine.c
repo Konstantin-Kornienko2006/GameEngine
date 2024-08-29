@@ -298,7 +298,6 @@ void ZEngineDraw(GameObject *go){
             return;
     }
 
-    
     engine.gameObjects.objects[engine.gameObjects.size] = go;
     engine.gameObjects.size ++;
 }

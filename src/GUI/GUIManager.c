@@ -294,8 +294,12 @@ GUIObj *GUIManagerAddObject(){
 
 uint32_t GUIManagerObjCount(){
     ChildStack *child = gui.draw_list;
-    
+
     uint32_t counter = 0;
+
+    if(child == NULL)
+        return counter;
+    
     while(child->next != NULL){
         counter++;
 

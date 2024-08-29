@@ -2,6 +2,8 @@
 
 #include <vulkan/vulkan.h>
 
+#include <direct.h>
+
 #include "wManager/window_manager.h"
 
 #include "Core/e_memory.h"
@@ -16,6 +18,7 @@
 
 #include "Tools/e_math.h"
 #include "Tools/e_tools.h"
+#include "Tools/shader_builder.h"
 
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
@@ -500,10 +503,13 @@ void GameObject3DDestroy(GameObject3D* go){
     if(go->num_instances > 0)
         BuffersDestroyBuffer(go->buffer.buffer);
 
+    FreeMemory(go->self.vert);
+    FreeMemory(go->self.frag);
+    
     go->self.init = false;
 }
 
-void GameObject3DInitTextures(GameObject3D *go, DrawParam *dParam)
+int GameObject3DInitTextures(GameObject3D *go, DrawParam *dParam)
 {
     go->images = AllocateMemoryP(3, sizeof(GameObjectImage), go);
 
@@ -511,39 +517,77 @@ void GameObject3DInitTextures(GameObject3D *go, DrawParam *dParam)
         return;
 
     int iter = 0;
+    
+    char *currPath = DirectGetCurrectFilePath();
+    int len = strlen(currPath);
+    currPath[len] = '\\';
 
     if(strlen(dParam->diffuse) != 0)
     {
-        int len = strlen(dParam->diffuse);
+        char *full_path = ToolsMakeString(currPath, dParam->diffuse);
+
+        if(!DirectIsFileExist(full_path)){
+            FreeMemory(full_path);            
+            FreeMemory(currPath);
+            return 0;
+        }
+
+        len = strlen(full_path);
         go->images[iter].path = AllocateMemoryP(len + 1, sizeof(char), go);
-        memcpy(go->images[iter].path, dParam->diffuse, len);
+        memcpy(go->images[iter].path, full_path, len);
         go->images[iter].path[len] = '\0';
         //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
          go->num_images ++;
          iter++;
+
+         FreeMemory(full_path);
     }
 
     if(strlen(dParam->normal) != 0)
     {
-        int len = strlen(dParam->normal);
+        char *full_path = ToolsMakeString(currPath, dParam->normal);
+
+        if(!DirectIsFileExist(full_path)){
+            FreeMemory(full_path);            
+            FreeMemory(currPath);
+            return 0;
+        }
+
+        len = strlen(dParam->normal);
         go->images[iter].path = AllocateMemoryP(len + 1, sizeof(char), go);
-        memcpy(go->images[iter].path, dParam->normal, len);
+        memcpy(go->images[iter].path, full_path, len);
         go->images[iter].path[len] = '\0';
         //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
          go->num_images ++;
          iter++;
+         
+         FreeMemory(full_path);
     }
 
     if(strlen(dParam->specular) != 0)
     {
-        int len = strlen(dParam->specular);
+        char *full_path = ToolsMakeString(currPath, dParam->normal);
+        
+        if(!DirectIsFileExist(full_path)){
+            FreeMemory(full_path);            
+            FreeMemory(currPath);
+            return 0;
+        }
+
+        len = strlen(dParam->specular);
         go->images[iter].path = AllocateMemoryP(len + 1, sizeof(char), go);
-        memcpy(go->images[iter].path, dParam->specular, len);
+        memcpy(go->images[iter].path, full_path, len);
         go->images[iter].path[len] = '\0';
         //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
         go->num_images ++;
         iter++;
+        
+         FreeMemory(full_path);
     }
+
+    FreeMemory(currPath);
+
+    return 1;
 }
 
 void GameObject3DInit(GameObject3D *go){
@@ -564,6 +608,10 @@ void GameObject3DInit(GameObject3D *go){
     go->graphObj.gItems.perspective = true;
 
     go->self.flags = 0;
+    
+    go->self.vert = AllocateMemory(1, sizeof(ShaderBuilder));
+    go->self.frag = AllocateMemory(1, sizeof(ShaderBuilder));
+    
     go->self.init = true;
 }
 

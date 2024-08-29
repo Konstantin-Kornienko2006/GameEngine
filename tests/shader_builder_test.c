@@ -5,13 +5,17 @@
 ShaderBuilder frag;
 ShaderBuilder vert;
 
+ShaderBuilder temp;
+
 int main(){
 
     memset(&vert, 0, sizeof(ShaderBuilder));
     memset(&frag, 0, sizeof(ShaderBuilder));
 
-    ShadersMakeDefault2DShader(&vert, &frag, true);
+    ShadersMakeDefault2DShader(&vert, &frag, false);
     
+    ShaderBuilderParcingShader(&temp, vert.code, vert.size);
+
     remove("D:\\Projects\\Temp\\frag.spv");
     remove("D:\\Projects\\Temp\\vert.spv");
 

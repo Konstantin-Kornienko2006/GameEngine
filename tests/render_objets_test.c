@@ -29,7 +29,7 @@ int main(){
 
     PrimitiveObjectInitDefault(&po, &dParam, ENGINE_PRIMITIVE3D_CUBE, NULL);
 
-    while (!EngineWindowIsClosed())
+    while (!ZEngineWindowIsClosed())
     {
         ZEnginePoolEvents();
 

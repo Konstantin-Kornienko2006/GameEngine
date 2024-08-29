@@ -225,7 +225,7 @@ void ShapeObjectCreateLine(ShapeObject *so, LineParams *line)
     FreeMemory(verts);
 }
 
-void ShapeObjectInit(ShapeObject *so, DrawParam *dParam, ShapeType type, void *param)
+int ShapeObjectInit(ShapeObject *so, DrawParam *dParam, ShapeType type, void *param)
 {
     char *name = "Shape_Object";
 
@@ -256,27 +256,37 @@ void ShapeObjectInit(ShapeObject *so, DrawParam *dParam, ShapeType type, void *p
 
     so->go.image = AllocateMemory(1, sizeof(GameObjectImage));
 
+    char *currPath = DirectGetCurrectFilePath();
+    int len = strlen(currPath);
+    currPath[len] = '\\';
+
     if(strlen(dParam->diffuse) != 0)
     {
-        int len = strlen(dParam->diffuse);
+        char *full_path = ToolsMakeString(currPath, dParam->diffuse);
+        
+        if(!DirectIsFileExist(full_path)){
+            GameObjectDestroy(so);
+            FreeMemory(full_path);            
+            FreeMemory(currPath);
+            return 0;
+        }
+
+        int len = strlen(full_path);
         so->go.image->path = AllocateMemory(len + 1, sizeof(char));
-        memcpy(so->go.image->path, dParam->diffuse, len);
+        memcpy(so->go.image->path, full_path, len);
         so->go.image->path[len] = '\0';
         //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
-        so->go.num_images ++;
+
+        so->go.num_images++;
+
+        FreeMemory(full_path);
     }
 
-    if(strlen(dParam->specular) != 0)
-    {
-        int len = strlen(dParam->specular);
-        so->go.image->path = AllocateMemory(len + 1, sizeof(char));
-        memcpy(so->go.image->path, dParam->specular, len);
-        so->go.image->path[len] = '\0';
-        //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
-        so->go.num_images ++;
-    }
+    FreeMemory(currPath);
 
     so->go.graphObj.num_shapes = 1;
+
+    return 1;
 }
 
 void ShapeObjectAddDefault(ShapeObject *so, void *render)
@@ -285,7 +295,7 @@ void ShapeObjectAddDefault(ShapeObject *so, void *render)
     so->go.graphObj.blueprints.blue_print_packs[nums].render_point = render;
 
     BluePrintAddUniformObject(&so->go.graphObj.blueprints, nums, sizeof(TransformBuffer2D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject2DTransformBufferUpdate, 0);
-    //BluePrintAddUniformObject(&so->go.graphObj.blueprints, nums, sizeof(ImageBufferObjects), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject2DImageBuffer, 0);
+    BluePrintAddUniformObject(&so->go.graphObj.blueprints, nums, sizeof(ImageBufferObjects), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject2DImageBuffer, 0);
 
     if(so->go.num_images > 0)
         BluePrintAddTextureImage(&so->go.graphObj.blueprints, nums, so->go.image, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -293,7 +303,6 @@ void ShapeObjectAddDefault(ShapeObject *so, void *render)
     PipelineSetting setting;
 
     PipelineSettingSetDefault(&so->go.graphObj, &setting);
-
     
     ShaderBuilder *vert = so->go.self.vert;
     ShaderBuilder *frag = so->go.self.frag;
@@ -319,7 +328,11 @@ void ShapeObjectAddDefault(ShapeObject *so, void *render)
 
 void ShapeObjectInitDefault(ShapeObject *so, DrawParam *dParam, ShapeType type, void *param)
 {
-    ShapeObjectInit(so, dParam, type, param);
+    int res = ShapeObjectInit(so, dParam, type, param);
+
+    if(!res)
+        return;
+
     ShapeObjectAddDefault(so, dParam->render);
     GameObject2DInitDraw((GameObject2D *)so);
 }

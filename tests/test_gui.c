@@ -44,6 +44,8 @@ int main(){
 
     Camera2DSetActive(&cam2D);
     Camera3DSetActive(&cam3D);
+
+    WindowWidgetInit(&window, "test", vec2_f(100, 200), vec2_f(200, 200));
     
     ImageWidgetInit(&image, "D:\\Projects\\Test\\res\\texture.jpg", NULL);
     WidgetSetScale(&image, 200, 200);

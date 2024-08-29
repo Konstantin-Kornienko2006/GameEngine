@@ -29,7 +29,6 @@ void GameObjectSetDestroyFunc(GameObject *go, void *func){
     go->DestroyPoint = func;
 }
 
-
 void GameObjectInit(GameObject* go){
 
     if(go == NULL)
@@ -54,6 +53,9 @@ void GameObjectUpdate(GameObject* go) {
 void GameObjectDraw(GameObject* go) {
 
     if(go == NULL)
+        return;
+
+    if(go->init == false)
         return;
 
     GameObjectUpdate(go);

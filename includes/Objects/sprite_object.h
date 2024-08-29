@@ -21,7 +21,8 @@ typedef struct{
 /// @brief Инициализация объекта-спрайта
 /// @param go - объект-спрайт
 /// @param dParam - параметры для рендера
-void SpriteObjectInit(SpriteObject *go, DrawParam *dParam);
+/// @return - прошла ли инициализация успешно (true) либо (false)
+int SpriteObjectInit(SpriteObject *go, DrawParam *dParam);
 /// @brief Инициализация стандартного объекта-спрайта
 /// @param go - объект-спрайт
 /// @param dParam - параметры для рендера

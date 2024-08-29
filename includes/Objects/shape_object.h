@@ -48,7 +48,7 @@ typedef struct{
 /// @param dParam - параметры для рендера
 /// @param type - тип многоугольника
 /// @param param - параметры многоугольника
-void ShapeObjectInit(ShapeObject *so, DrawParam *dParam, ShapeType type, void *param);
+int ShapeObjectInit(ShapeObject *so, DrawParam *dParam, ShapeType type, void *param);
 /// @brief Инициализация стандартного многоугольного двумерного объекта
 /// @param so - объект многоугольника
 /// @param dParam - параметры для рендера

@@ -125,3 +125,9 @@ add_executable(TestGUI tests/test_gui.c)
 target_link_libraries(TestGUI ${CMAKE_CURRENT_SOURCE_DIR}/Debug/libZamEngine.a ${CMAKE_CURRENT_SOURCE_DIR}/data/data1.bin Vulkan::Vulkan)
 add_test(NAME Test5
 		COMMAND TestGUI)
+		
+add_executable(TestPath tests/file_path_test.c)
+target_link_libraries(TestPath ${CMAKE_CURRENT_SOURCE_DIR}/Debug/libZamEngine.a ${CMAKE_CURRENT_SOURCE_DIR}/data/data1.bin Vulkan::Vulkan)
+add_test(NAME Test6
+		COMMAND TestPath)
+

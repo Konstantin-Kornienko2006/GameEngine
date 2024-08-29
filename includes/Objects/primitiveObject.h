@@ -60,7 +60,8 @@ typedef struct{
 /// @param dParam - параметры для рендера
 /// @param type - тип примитива
 /// @param params - параметры примитива
-void PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void *params);
+/// @return - прошла ли инициализация успешно (true) либо (false)
+int PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void *params);
 /// @brief Инициализация стандартного объекта-примитива
 /// @param po - объект-примитив
 /// @param dParam - параметры для рендера

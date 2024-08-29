@@ -37,6 +37,7 @@ void GameObject2DImageBuffer(GameObject2D *go, BluePrintDescriptor *descriptor)
     ImageBufferObjects ibo;
     ibo.offset = go->transform.img.offset;
     ibo.rotation = go->transform.img.rotation;
+    ibo.scale = go->transform.img.scale;
 
     ibo.rotation.x = 0;
     ibo.rotation.y = 0;
