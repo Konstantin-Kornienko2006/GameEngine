@@ -1,11 +1,17 @@
 #include <string.h>
 #include <stdio.h>
+
+#include "Objects/primitiveObject.h"
+
 #include "Tools/e_shaders.h"
    
 ShaderBuilder frag;
 ShaderBuilder vert;
 
 ShaderBuilder temp;
+ShaderBuilder temp2;
+
+PrimitiveObject po;
 
 int main(){
 
@@ -14,7 +20,10 @@ int main(){
 
     ShadersMakeDefault2DShader(&vert, &frag, false);
     
-    ShaderBuilderParcingShader(&temp, vert.code, vert.size);
+    uint32_t num = BluePrintInit(&po.go.graphObj.blueprints);
+
+    ShaderBuilderMakeUniformsFromShader(&temp, vert.code, vert.size, &po.go.graphObj.blueprints, num, 1);
+    ShaderBuilderMakeUniformsFromShader(&temp2, frag.code, frag.size, &po.go.graphObj.blueprints, num, 1);
 
     remove("D:\\Projects\\Temp\\frag.spv");
     remove("D:\\Projects\\Temp\\vert.spv");

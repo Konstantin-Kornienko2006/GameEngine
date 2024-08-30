@@ -55,41 +55,37 @@ void ModelDefaultDraw(ModelObject3D* mo, void *command){
 
                     ShaderPack *pack = &model->graphObj.gItems.shader_packs[l];
 
+                    /*if(render->type == ENGINE_RENDER_TYPE_CUBEMAP){
 
-                    for(int k=0; k < pack->num_pipelines; k++){
+                        mat4 res = MakeLookRender(render->currFrame, blue_pack->descriptors[k].indx_layer);
 
-                        if(render->type == ENGINE_RENDER_TYPE_CUBEMAP){
+                        vkCmdPushConstants( command, pack->pipelines[k].layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mat4), &res);
+                    }*/
 
-                            mat4 res = MakeLookRender(render->currFrame, blue_pack->descriptors[k].indx_layer);
+                    vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipeline.pipeline);
 
-                            vkCmdPushConstants( command, pack->pipelines[k].layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mat4), &res);
-                        }
+                    PipelineSetting *settings = &blue_pack->setting;
 
-                        vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[k].pipeline);
+                    vertexParam *vParam = &model->graphObj.shapes[settings->vert_indx].vParam;
+                    indexParam *iParam = &model->graphObj.shapes[settings->vert_indx].iParam;
 
-                        PipelineSetting *settings = &blue_pack->settings[k];
-
-                        vertexParam *vParam = &model->graphObj.shapes[settings->vert_indx].vParam;
-                        indexParam *iParam = &model->graphObj.shapes[settings->vert_indx].iParam;
-
-                        if(settings->flags & ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW){
-                            vkCmdSetViewport(command, 0, 1, (const VkViewport *)&settings->viewport);
-                            vkCmdSetScissor(command, 0, 1, (const VkRect2D *)&settings->scissor);
-                        }
-
-                        VkDeviceSize offsets[] = {0};
-                        VkBuffer vertexBuffers[] = {vParam->buffer.buffer};
-
-                        vkCmdBindVertexBuffers(command, 0, 1, vertexBuffers, offsets);
-
-                        vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[k].layout, 0, 1, (const VkDescriptorSet *)&pack->descriptor.descr_sets[engine.imageIndex], 0, NULL);
-
-                        if(settings->flags & ENGINE_PIPELINE_FLAG_DRAW_INDEXED){
-                            vkCmdBindIndexBuffer(command, iParam->buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-                            vkCmdDrawIndexed(command, iParam->indexesSize, 1, 0, 0, 0);
-                        }else
-                            vkCmdDraw(command, vParam->verticesSize, 1, 0, 0);
+                    if(settings->flags & ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW){
+                        vkCmdSetViewport(command, 0, 1, (const VkViewport *)&settings->viewport);
+                        vkCmdSetScissor(command, 0, 1, (const VkRect2D *)&settings->scissor);
                     }
+
+                    VkDeviceSize offsets[] = {0};
+                    VkBuffer vertexBuffers[] = {vParam->buffer.buffer};
+
+                    vkCmdBindVertexBuffers(command, 0, 1, vertexBuffers, offsets);
+
+                    vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipeline.layout, 0, 1, (const VkDescriptorSet *)&pack->descriptor.descr_sets[engine.imageIndex], 0, NULL);
+
+                    if(settings->flags & ENGINE_PIPELINE_FLAG_DRAW_INDEXED){
+                        vkCmdBindIndexBuffer(command, iParam->buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+                        vkCmdDrawIndexed(command, iParam->indexesSize, 1, 0, 0, 0);
+                    }else
+                        vkCmdDraw(command, vParam->verticesSize, 1, 0, 0);
                 }
             }
         }
@@ -424,19 +420,16 @@ void ModelRecreate(ModelObject3D* mo){
             {
                 BluePrintPack *pack = &model->graphObj.blueprints.blue_print_packs[l];
 
-                PipelineSetting *settings = pack->settings;
+                PipelineSetting *settings = &pack->setting;
 
-                for(int m=0; m < pack->num_settings;m++)
-                {
-                    settings[m].scissor.offset.x = 0;
-                    settings[m].scissor.offset.y = 0;
-                    settings[m].scissor.extent.height = engine.height;
-                    settings[m].scissor.extent.width = engine.width;
-                    settings[m].viewport.x = 0;
-                    settings[m].viewport.y = 0;
-                    settings[m].viewport.height = engine.height;
-                    settings[m].viewport.width = engine.width;
-                }
+                settings->scissor.offset.x = 0;
+                settings->scissor.offset.y = 0;
+                settings->scissor.extent.height = engine.height;
+                settings->scissor.extent.width = engine.width;
+                settings->viewport.x = 0;
+                settings->viewport.y = 0;
+                settings->viewport.height = engine.height;
+                settings->viewport.width = engine.width;
 
                 BuffersRecreateUniform(&model->graphObj.blueprints);
                 GraphicsObjectCreateDrawItems(&model->graphObj);
@@ -479,17 +472,6 @@ void ModelDestroy(ModelObject3D* mo){
     }
 }
 
-void ModelAddSettingPipeline(ModelStruct* model, uint32_t indx_pack, PipelineSetting setting){
-
-    uint32_t indx = model->graphObj.blueprints.blue_print_packs[indx_pack].num_settings;
-
-    PipelineSetting *settings = (PipelineSetting *)&model->graphObj.blueprints.blue_print_packs[indx_pack].settings;
-
-    memcpy(&settings[indx], &setting, sizeof(PipelineSetting));
-
-    model->graphObj.blueprints.blue_print_packs[indx_pack].num_settings ++;
-}
-
 void ModelSetLightEnable(void *obj, bool enable)
 {
     ModelObject3D *mo = (ModelObject3D *)obj;
@@ -522,13 +504,12 @@ void ModelSetShadowDescriptor(ModelStruct *model, uint32_t type, void *render, u
 
     PipelineSetting setting;
 
-    PipelineSettingSetDefault(&model->graphObj, &setting);
+    PipelineSettingSetDefault(&setting);
 
     PipelineSettingSetShader(&setting, &_binary_shaders_depth_vert_spv_start, (size_t)(&_binary_shaders_depth_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
     PipelineSettingSetShader(&setting, &_binary_shaders_depth_frag_spv_start, (size_t)(&_binary_shaders_depth_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
 
     setting.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    setting.fromFile = 0;
     setting.flags &= ~(ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW);
     setting.vert_indx = 1;
     setting.cull_mode = VK_CULL_MODE_FRONT_BIT;
@@ -550,13 +531,12 @@ void ModelSetOmniShadowDescriptor(ModelStruct *model, void *render, uint32_t lay
 
     PipelineSetting setting;
 
-    PipelineSettingSetDefault(&model->graphObj, &setting);
+    PipelineSettingSetDefault(&setting);
 
     PipelineSettingSetShader(&setting, &_binary_shaders_depth_vert_omni_spv_start, (size_t)(&_binary_shaders_depth_vert_omni_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
     PipelineSettingSetShader(&setting, &_binary_shaders_depth_frag_omni_spv_start, (size_t)(&_binary_shaders_depth_frag_omni_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
 
     setting.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    setting.fromFile = 0;
     setting.flags &= ~(ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW);
     setting.flags &= ~(ENGINE_PIPELINE_FLAG_ALPHA);
     setting.vert_indx = 1;
@@ -606,12 +586,11 @@ void ModelSetShadowDefaultDescriptor(ModelStruct *model, void *render)
 
     PipelineSetting setting;
 
-    PipelineSettingSetDefault(&model->graphObj, &setting);
+    PipelineSettingSetDefault(&setting);
 
     PipelineSettingSetShader(&setting, &_binary_shaders_model_shadow_vert_spv_start, (size_t)(&_binary_shaders_model_shadow_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
     PipelineSettingSetShader(&setting, &_binary_shaders_model_shadow_frag_spv_start, (size_t)(&_binary_shaders_model_shadow_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
 
-    setting.fromFile = 0;
     setting.vert_indx = 0;
 
     ModelAddSettingPipeline(model, num, setting);
@@ -637,12 +616,11 @@ void ModelSetDefaultDescriptor(ModelStruct *model, void *render)
 
     PipelineSetting setting;
 
-    PipelineSettingSetDefault(&model->graphObj, &setting);
+    PipelineSettingSetDefault(&setting);
 
     PipelineSettingSetShader(&setting, &_binary_shaders_model_vert_spv_start, (size_t)(&_binary_shaders_model_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
     PipelineSettingSetShader(&setting, &_binary_shaders_model_frag_spv_start, (size_t)(&_binary_shaders_model_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
 
-    setting.fromFile = 0;
     setting.vert_indx = 0;
     setting.flags &= ~(ENGINE_PIPELINE_FLAG_ALPHA);
 

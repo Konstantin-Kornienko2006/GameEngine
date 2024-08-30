@@ -1,5 +1,7 @@
 #include "Tools/shader_builder.h"
 
+#include "Core/e_blue_print.h"
+
 #include "spirv.h"
 
 #include <stdio.h>
@@ -1642,21 +1644,335 @@ void ShaderBuilderMake(ShaderBuilder *builder){
     builder->code[3] = builder->current_index + 1;
 }
 
+int iter = 0;
+uint32_t val = 0, op = 0, left_val = 0;
+void StartReading(){
+    left_val = 0;
+    iter = 15;
+    val = 0;
+    op = 0;
+}
+
+void NextCode(uint32_t *ptr, uint32_t offset){
+
+    iter += offset;
+    val = ptr[iter];
+    left_val = val >> 16;
+    op = val & 0x0000FFFF;
+}
+
+ShaderDataFlags FindDataFlags(uint32_t val){
+
+    switch(val){
+        case 0:
+            return SHADER_DATA_FLAG_UNIFORM_CONSTANT;
+        case 2:
+            return SHADER_DATA_FLAG_UNIFORM;
+        case 3:
+            return SHADER_DATA_FLAG_OUTPUT;
+        case 7:
+            return SHADER_DATA_FLAG_FUNCTION;
+    }
+
+    return 0;
+}
+
 void ShaderBuilderParcingShader(ShaderBuilder *builder, uint32_t *shader, uint32_t size){
 
     uint32_t *ptr = shader;
 
-    int iter = 16;
     int entry = 0;
-    while(iter != size){
-        uint32_t val = ptr[iter];
-        uint32_t op = val & 0x0000FFFF;
 
-        if(op == SpvOpEntryPoint){
-            entry = val >> 16;
+    StartReading();
+    NextCode(ptr, 1);
+
+    entry = val >> 16;
+
+    NextCode(ptr, 1);
+
+    switch(val){
+        case SpvExecutionModelFragment: 
+            builder->type = SHADER_TYPE_FRAGMENT;
+            NextCode(ptr, 1);
+            break;
+        case SpvExecutionModelVertex: 
+            builder->type = SHADER_TYPE_VERTEX;
+            NextCode(ptr, 1);
+            break;
+        case SpvExecutionModelGLCompute: 
+            builder->type = SHADER_TYPE_COMPUTED;
+            NextCode(ptr, 1);
+            break;
+        case SpvExecutionModelGeometry: 
+            builder->type = SHADER_TYPE_GEOMETRY;
+            NextCode(ptr, 1);
+            break;
+        case SpvExecutionModelTessellationControl: 
+            builder->type = SHADER_TYPE_TESELLATION_CONTROL;
+            NextCode(ptr, 1);
+            break;
+        case SpvExecutionModelTessellationEvaluation: 
+            builder->type = SHADER_TYPE_TESELLATION_EVALUATION;
+            NextCode(ptr, 1);
+            break;
+    }
+
+    builder->main_point_index = val;
+    
+    int j = 0;
+
+    while(val != 0x00040047){
+        NextCode(ptr, 1);
+    }
+
+    while(iter < size){
+
+        if(val == 0x00040047)
+        {
+            NextCode(ptr, 4);
+            continue;
         }
 
-        iter++;
+        if(val < SpvOpGroupLogicalXorKHR)
+        {
+            NextCode(ptr, 1);
+            continue;
+        }
+        
+        switch(op){
+            case SpvOpTypeVoid:
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_VOID;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                builder->num_variables++;
+                break;
+            case SpvOpTypeFunction:
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_FUNCTION;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].num_values = 1;
+                builder->num_variables++;
+                break;
+            case SpvOpTypeInt:
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_INT;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[1] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].num_values = 2;
+                builder->num_variables++;
+                break;
+            case SpvOpTypeFloat:
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_FLOAT;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].num_values = 1;
+                builder->num_variables++;
+                break;
+            case SpvOpTypeArray:
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_ARRAY;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].args[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].args[1] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].num_args = 2;
+                builder->num_variables++;
+                break;
+            case SpvOpTypeImage:
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_IMAGE;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].args[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[1] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[2] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[3] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[4] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[5] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].num_values = 6;
+                builder->variables[builder->num_variables].num_args = 1;
+                builder->num_variables++;
+                break;
+            case SpvOpTypeSampledImage:
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_SAMPLED_IMAGE;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].args[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].num_args = 1;
+                builder->num_variables++;
+                break;
+            case SpvOpConstant:
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_CONSTANT;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].args[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].num_args = 1;
+                builder->variables[builder->num_variables].num_values = 1;
+                builder->num_variables++;
+                break;
+            case SpvOpTypeVector:
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_VECTOR;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].args[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].num_args = 1;
+                builder->variables[builder->num_variables].num_values = 1;
+                builder->num_variables++;
+                break;
+            case SpvOpTypeMatrix:
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_MATRIX;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].args[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].values[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].num_args = 1;
+                builder->variables[builder->num_variables].num_values = 1;
+                builder->num_variables++;
+                break;
+            case SpvOpTypeStruct:            
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_STRUCT;
+                builder->variables[builder->num_variables].num_args = left_val - 2;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                for(j=0;j < builder->variables[builder->num_variables].num_args;j++){                    
+                    builder->variables[builder->num_variables].args[j] = val;
+                    NextCode(ptr, 1);
+                }
+                builder->num_variables++;
+                break;
+            case SpvOpTypePointer:
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_POINTER;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].flags = FindDataFlags(val); // Flags
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].args[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].num_args = 1;
+                builder->num_variables++;
+                break;
+            case SpvOpVariable:
+                builder->variables[builder->num_variables].type = SHADER_VARIABLE_TYPE_VARIABLE;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].args[0] = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].indx = val;
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].flags = FindDataFlags(val); //Flags
+                NextCode(ptr, 1);
+                builder->variables[builder->num_variables].num_args = 1;
+                builder->num_variables++;
+                break;
+            default:        
+                NextCode(ptr, 1);
+                break;
+        }
+    }
+}
+
+uint32_t ReturnSizeElem(ShaderBuilder *builder, ShaderVariable *var_elm){
+
+    ShaderVariable *elm_type = ShaderBuilderFindVar(builder, var_elm->args[0]);
+
+    if(elm_type->type == SHADER_VARIABLE_TYPE_FLOAT || elm_type->type == SHADER_VARIABLE_TYPE_INT)
+        return 4 * var_elm->values[0] /*count elem*/;
+}
+
+void ShaderBuilderMakeUniformsFromShader(ShaderBuilder *builder, uint32_t *code, uint32_t size, void *blueprints, uint32_t indx_pack, int with_parcing){
+
+    if(with_parcing)
+        ShaderBuilderParcingShader(builder, code, size);
+
+    ShaderVariable *currVar;
+    uint32_t size_buffer = 0, flags = 0;
+    for(int i=0;i < builder->num_variables;i++){
+        currVar = &builder->variables[i];
+        if(builder->variables[i].type == SHADER_VARIABLE_TYPE_VARIABLE){
+            flags = builder->variables[i].flags;
+            if(flags & SHADER_DATA_FLAG_UNIFORM){
+                size_buffer = 0;
+
+                ShaderVariable *var_point = ShaderBuilderFindVar(builder, builder->variables[i].args[0]);
+
+                ShaderVariable *var_orig = ShaderBuilderFindVar(builder, var_point->args[0]);
+
+                if(var_orig->type == SHADER_VARIABLE_TYPE_STRUCT){
+                    for(int j=0;j < var_orig->num_args;j++){
+                        ShaderVariable *var_elm = ShaderBuilderFindVar(builder, var_orig->args[j]);
+
+                        if(var_elm->type == SHADER_VARIABLE_TYPE_FLOAT || var_elm->type == SHADER_VARIABLE_TYPE_INT){
+                            size_buffer += 4;
+                        }else if(var_elm->type == SHADER_VARIABLE_TYPE_VECTOR){
+                            size_buffer += ReturnSizeElem(builder, var_elm);
+                        }else if(var_elm->type == SHADER_VARIABLE_TYPE_MATRIX){
+                            ShaderVariable *elm_type = ShaderBuilderFindVar(builder, var_elm->args[0]);
+
+                            if(elm_type->type == SHADER_VARIABLE_TYPE_FLOAT || elm_type->type == SHADER_VARIABLE_TYPE_INT)
+                                size_buffer += 4 * var_elm->values[0] /*count elem*/;
+                            else if(elm_type->type == SHADER_VARIABLE_TYPE_VECTOR){
+                                size_buffer += ReturnSizeElem(builder, elm_type);
+                            }
+
+                        }
+
+                    }
+                    
+                    BluePrintAddUniformObjectC(blueprints, indx_pack, size_buffer, builder->type == SHADER_TYPE_VERTEX ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT);
+
+                    printf("Size buffer is %i\n", size_buffer);
+                }
+
+
+            }else if(flags & SHADER_DATA_FLAG_UNIFORM_CONSTANT){
+
+                ShaderVariable *var_point = ShaderBuilderFindVar(builder, builder->variables[i].args[0]);
+
+                ShaderVariable *var_orig = ShaderBuilderFindVar(builder, var_point->args[0]);
+                
+                if(var_orig->type == SHADER_VARIABLE_TYPE_SAMPLED_IMAGE){
+
+                    BluePrintAddTextureC(blueprints, indx_pack, builder->type == SHADER_TYPE_VERTEX ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT);
+
+                    printf("Image added to blueprint\n", size_buffer);
+                }
+            }
+        }
     }
 
 }

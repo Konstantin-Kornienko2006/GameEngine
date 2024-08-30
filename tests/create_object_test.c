@@ -82,12 +82,12 @@ int main(){
 
     dParam.diffuse = "res\\texture.jpg";
 
-    PrimitiveObjectInitDefault(&po, &dParam, ENGINE_PRIMITIVE3D_CUBE, NULL);
-    Transform3DSetPosition(&po, 0, 0, -10);
-
     QuadParams params;
     params.size = 100;
     params.color = vec3_f(1, 1, 1);
+
+    PrimitiveObjectInitDefault(&po, &dParam, ENGINE_PRIMITIVE3D_CUBE, NULL);
+    Transform3DSetPosition(&po, 0, 0, -10);
 
     ShapeObjectInitDefault(&shape, &dParam, ENGINE_SHAPE_OBJECT_QUAD, &params);
     shape.go.transform.img.scale = vec2_f(2, 2);

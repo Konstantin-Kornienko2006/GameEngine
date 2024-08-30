@@ -135,15 +135,7 @@ void DescriptorUpdateIndex(BluePrintDescriptor *descriptor, char *data, uint32_t
 
 void DescriptorUpdate(BluePrintDescriptor *descriptor, char *data, uint32_t size_data)
 {
-    ZDevice *device = (ZDevice *)engine.device;
 
-    if(descriptor->uniform.size == 0)
-        return;
-
-    void *point;
-    vkMapMemory(device->e_device, descriptor->uniform.buffers[engine.imageIndex].memory, 0, size_data, 0, &point);
-    memcpy(point, data, size_data);
-    vkUnmapMemory(device->e_device, descriptor->uniform.buffers[engine.imageIndex].memory);
 }
 
 void DescriptorSetImage(VkWriteDescriptorSet* descriptorWrites, void *descr_set, uint32_t bind_indx, uint32_t array_size, BluePrintDescriptor *blueprint_descriptor)

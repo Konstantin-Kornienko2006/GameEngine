@@ -15,7 +15,7 @@ extern "C"
 typedef struct{
     char* code;
     size_t size;
-} shader;
+} ShaderObject;
 
 typedef struct{
     void *pipeline;
@@ -30,8 +30,7 @@ typedef struct{
 
 typedef struct{
     ShaderDescriptor descriptor;
-    PipelineStruct pipelines[MAX_PIPELINES];
-    uint32_t num_pipelines;
+    PipelineStruct pipeline;
 } ShaderPack;
 
 typedef struct{

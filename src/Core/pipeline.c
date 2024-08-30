@@ -17,6 +17,15 @@
 
 extern ZEngine engine;
 
+void PipelineSettingSetShader(PipelineSetting *setting, char *shader, size_t size, uint32_t type)
+{
+    uint32_t num = setting->num_stages;
+    setting->stages[num].some_shader = shader;
+    setting->stages[num].size_some_shader = size;
+    setting->stages[num].type_some_shader = type;
+    setting->num_stages ++;
+}
+
 void PipelineAcceptStack(void *pipeline, void *pipeline_layout)
 {
     PipelineStack *stack;
@@ -120,7 +129,7 @@ void PipelineDestroyStack(void *pipeline)
     }
 }
 
-void PipelineSettingSetDefault(GraphicsObject* graphObj, void *arg){
+void PipelineSettingSetDefault(void *arg){
 
     ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
 
@@ -130,7 +139,6 @@ void PipelineSettingSetDefault(GraphicsObject* graphObj, void *arg){
 
     setting->poligonMode = VK_POLYGON_MODE_FILL;
     setting->topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    setting->fromFile = 1;
     setting->scissor.offset.x = 0;
     setting->scissor.offset.y = 0;
     setting->scissor.extent = *(EIExtent2D*)&swapchain->swapChainExtent;
@@ -142,17 +150,7 @@ void PipelineSettingSetDefault(GraphicsObject* graphObj, void *arg){
     setting->viewport.maxDepth = 1.0f;
     setting->flags = ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW | ENGINE_PIPELINE_FLAG_DRAW_INDEXED | ENGINE_PIPELINE_FLAG_BIAS |\
                      ENGINE_PIPELINE_FLAG_ALPHA | ENGINE_PIPELINE_FLAG_FRAGMENT_SHADER | ENGINE_PIPELINE_FLAG_VERTEX_SHADER;
-    setting->fromFile = 0;
     setting->cull_mode = VK_CULL_MODE_BACK_BIT;
-}
-
-void PipelineSettingSetShader(PipelineSetting *setting, char *shader, size_t size, uint32_t type)
-{
-    uint32_t num = setting->num_stages;
-    setting->stages[num].some_shader = shader;
-    setting->stages[num].size_some_shader = size;
-    setting->stages[num].type_some_shader = type;
-    setting->num_stages ++;
 }
 
 void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t indx_desc)
@@ -160,9 +158,9 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t
     ZDevice *device = (ZDevice *)engine.device;
 
     BluePrintPack *pack = &graphObj->blueprints.blue_print_packs[indx_pack];
-    PipelineSetting *setting = &graphObj->blueprints.blue_print_packs[indx_pack].settings[indx_desc];
+    PipelineSetting *setting = &graphObj->blueprints.blue_print_packs[indx_pack].setting;
     ShaderDescriptor *descriptor = &graphObj->gItems.shader_packs[indx_pack].descriptor;
-    PipelineStruct *pipeline = &graphObj->gItems.shader_packs[indx_pack].pipelines[graphObj->gItems.shader_packs[indx_pack].num_pipelines];
+    PipelineStruct *pipeline = &graphObj->gItems.shader_packs[indx_pack].pipeline;
     RenderTexture *render = graphObj->blueprints.blue_print_packs[indx_pack].render_point;
 
     if(render == NULL)
@@ -182,19 +180,12 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t
             shaderStages[count_stages].stage = setting->stages[count_stages].type_some_shader;
             shaderStages[count_stages].pName = "main";
 
-            shader some_shader_code;
+            ShaderObject some_shader_code;
 
-            if(setting->fromFile)
-                some_shader_code = readFile(setting->stages[count_stages].some_shader);
-            else{
-                some_shader_code.code = setting->stages[count_stages].some_shader;
-                some_shader_code.size = setting->stages[count_stages].size_some_shader;
-            }
+            some_shader_code.code = setting->stages[count_stages].some_shader;
+            some_shader_code.size = setting->stages[count_stages].size_some_shader;
 
             shaderStages[count_stages].module = createShaderModule(some_shader_code);
-
-            if(setting->fromFile)
-                FreeMemory(some_shader_code.code);
 
             count_stages ++;
 
@@ -398,13 +389,10 @@ void PipelineCreateGraphics(GraphicsObject* graphObj){
     for(int i=0; i < graphObj->blueprints.num_blue_print_packs; i++){
 
         ShaderPack *pack = &graphObj->gItems.shader_packs[i];
-        BluePrintPack *b_pack = &graphObj->blueprints.blue_print_packs[i];
 
-        for(int j=0; j < b_pack->num_settings; j++){
+        for(int j=0; j <    graphObj->blueprints.num_blue_print_packs; j++){
 
             PipelineMakePipeline(graphObj, i, j);
-
-            pack->num_pipelines ++;
 
         }
     }
@@ -412,10 +400,6 @@ void PipelineCreateGraphics(GraphicsObject* graphObj){
 
 void PipelineDestroy(ShaderPack *pack)
 {
-
-    for(int i=0;i < pack->num_pipelines;i++)
-        PipelineDestroyStack(pack->pipelines[i].pipeline);
-
-    pack->num_pipelines = 0;
+    PipelineDestroyStack(pack->pipeline.pipeline);
 }
 

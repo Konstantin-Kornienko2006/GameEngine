@@ -101,33 +101,19 @@ int SpriteObjectInit(SpriteObject *so, DrawParam *dParam){
 
 void SpriteObjectAddDefault(SpriteObject *so, void *render)
 {
-
-    uint32_t nums = so->go.graphObj.blueprints.num_blue_print_packs;
-    so->go.graphObj.blueprints.blue_print_packs[nums].render_point = render;
-
-    BluePrintAddUniformObject(&so->go.graphObj.blueprints, 0, sizeof(TransformBuffer2D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject2DTransformBufferUpdate, 0);
-    BluePrintAddUniformObject(&so->go.graphObj.blueprints, 0, sizeof(ImageBufferObjects), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject2DImageBuffer, 0);
-
-    BluePrintAddTextureImage(&so->go.graphObj.blueprints, 0, so->go.image, VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    PipelineSetting setting;
-
-    PipelineSettingSetDefault(&so->go.graphObj, &setting);
-
+    uint32_t num_pack = BluePrintInit(&so->go.graphObj.blueprints);
+    
     ShaderBuilder *vert = so->go.self.vert;
     ShaderBuilder *frag = so->go.self.frag;
 
     ShadersMakeDefault2DShader(vert, frag, so->go.num_images > 0);
 
-    PipelineSettingSetShader(&setting, (char *)vert->code, vert->size * sizeof(uint32_t), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(&setting, (char *)frag->code, frag->size * sizeof(uint32_t), VK_SHADER_STAGE_FRAGMENT_BIT);
+    GraphicsObjectSetSomeShader(&so->go.graphObj, vert->code, vert->size, num_pack);
+    GraphicsObjectSetSomeShader(&so->go.graphObj, frag->code, frag->size, num_pack);
 
-    setting.fromFile = 0;
-    setting.flags |= ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE;
-
-    GameObject2DAddSettingPipeline((GameObject2D *)so, nums, &setting);
-
-    so->go.graphObj.blueprints.num_blue_print_packs ++;
+    BluePrintAddSomeUpdater(&so->go.graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
+    BluePrintAddSomeUpdater(&so->go.graphObj.blueprints, num_pack, 1, GameObject2DImageBuffer);
+    BluePrintSetTextureImageCreate(&so->go.graphObj.blueprints, num_pack, so->go.image, 0);
 }
 
 void SpriteObjectInitDefault(SpriteObject *so, DrawParam *dParam)

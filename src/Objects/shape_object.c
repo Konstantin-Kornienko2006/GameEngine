@@ -291,39 +291,31 @@ int ShapeObjectInit(ShapeObject *so, DrawParam *dParam, ShapeType type, void *pa
 
 void ShapeObjectAddDefault(ShapeObject *so, void *render)
 {
-    uint32_t nums = so->go.graphObj.blueprints.num_blue_print_packs;
-    so->go.graphObj.blueprints.blue_print_packs[nums].render_point = render;
-
-    BluePrintAddUniformObject(&so->go.graphObj.blueprints, nums, sizeof(TransformBuffer2D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject2DTransformBufferUpdate, 0);
-    BluePrintAddUniformObject(&so->go.graphObj.blueprints, nums, sizeof(ImageBufferObjects), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject2DImageBuffer, 0);
-
-    if(so->go.num_images > 0)
-        BluePrintAddTextureImage(&so->go.graphObj.blueprints, nums, so->go.image, VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    PipelineSetting setting;
-
-    PipelineSettingSetDefault(&so->go.graphObj, &setting);
+    uint32_t num_pack = BluePrintInit(&so->go.graphObj.blueprints);
     
     ShaderBuilder *vert = so->go.self.vert;
     ShaderBuilder *frag = so->go.self.frag;
 
     ShadersMakeDefault2DShader(vert, frag, so->go.num_images > 0);
 
-    PipelineSettingSetShader(&setting, (char *)vert->code, vert->size * sizeof(uint32_t), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(&setting, (char *)frag->code, frag->size * sizeof(uint32_t), VK_SHADER_STAGE_FRAGMENT_BIT);
+    GraphicsObjectSetSomeShader(&so->go.graphObj, vert->code, vert->size, num_pack);
+    GraphicsObjectSetSomeShader(&so->go.graphObj, frag->code, frag->size, num_pack);
 
-    setting.fromFile = 0;
-    setting.flags |= ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE;
+    BluePrintAddSomeUpdater(&so->go.graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
+    BluePrintAddSomeUpdater(&so->go.graphObj.blueprints, num_pack, 1, GameObject2DImageBuffer);
+    BluePrintSetTextureImageCreate(&so->go.graphObj.blueprints, num_pack, so->go.image, 0);
+
+    uint32_t flags = BluePrintGetSettingsValue(&so->go.graphObj.blueprints, num_pack, 3);
+    BluePrintSetSettingsValue(&so->go.graphObj.blueprints, num_pack, 3, flags | ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE);
 
     if(so->type == ENGINE_SHAPE_OBJECT_LINE)
     {
-        setting.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-        setting.flags &= ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED);
+        flags = BluePrintGetSettingsValue(&so->go.graphObj.blueprints, num_pack, 3);
+
+        BluePrintSetSettingsValue(&so->go.graphObj.blueprints, num_pack, 1, VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+        BluePrintSetSettingsValue(&so->go.graphObj.blueprints, num_pack, 3, flags & ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED));
     }
 
-    GameObject2DAddSettingPipeline((GameObject2D *)so, nums, &setting);
-
-    so->go.graphObj.blueprints.num_blue_print_packs ++;
 }
 
 void ShapeObjectInitDefault(ShapeObject *so, DrawParam *dParam, ShapeType type, void *param)

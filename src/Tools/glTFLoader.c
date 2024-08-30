@@ -896,7 +896,6 @@ void gltfModelSetDefaultDescriptor(ModelStruct *model, void *render, void *shado
     PipelineSettingSetShader(&setting, &_binary_shaders_model_vert_spv_start, (size_t)(&_binary_shaders_model_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
     PipelineSettingSetShader(&setting, &_binary_shaders_model_frag_spv_start, (size_t)(&_binary_shaders_model_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
 
-    setting.fromFile = 0;
     setting.vert_indx = 0;
 
     ModelAddSettingPipeline(model, num, setting);

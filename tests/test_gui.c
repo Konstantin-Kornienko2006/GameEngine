@@ -47,9 +47,6 @@ int main(){
 
     WindowWidgetInit(&window, "test", vec2_f(100, 200), vec2_f(200, 200));
     
-    ImageWidgetInit(&image, "D:\\Projects\\Test\\res\\texture.jpg", NULL);
-    WidgetSetScale(&image, 200, 200);
-    WidgetSetPosition(&image, 0, 0);
 
     float rot = 0;
         

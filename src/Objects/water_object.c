@@ -24,29 +24,15 @@ void WaterObjectUpdateBuffer(GameObject3D* go, BluePrintDescriptor *descriptor)
 
 
 void WaterObjectSetDefaultDescriptor(WaterObject *water, DrawParam *dParam)
-{
+{    
+    uint32_t num_pack = BluePrintInit(&water->go.graphObj.blueprints);
 
-    uint32_t nums = water->go.graphObj.blueprints.num_blue_print_packs;
-    water->go.graphObj.blueprints.blue_print_packs[nums].render_point = dParam->render;
+    GraphicsObjectSetSomeShader(&water->go.graphObj, &_binary_shaders_water_vert_spv_start, (size_t)(&_binary_shaders_water_vert_spv_size), num_pack);
+    GraphicsObjectSetSomeShader(&water->go.graphObj, &_binary_shaders_water_frag_spv_start, (size_t)(&_binary_shaders_water_frag_spv_size), num_pack);
 
-    BluePrintAddUniformObject(&water->go.graphObj.blueprints, nums, sizeof(ModelBuffer3D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject3DDescriptorModelUpdate, 0);
-    BluePrintAddUniformObject(&water->go.graphObj.blueprints, nums, sizeof(WaterBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)WaterObjectUpdateBuffer, 0);
-
-    BluePrintAddTextureImage(&water->go.graphObj.blueprints, nums, &water->go.images[0], VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    PipelineSetting setting;
-
-    PipelineSettingSetDefault(&water->go.graphObj, &setting);
-
-    PipelineSettingSetShader(&setting, &_binary_shaders_water_vert_spv_start, (size_t)(&_binary_shaders_water_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(&setting, &_binary_shaders_water_frag_spv_start, (size_t)(&_binary_shaders_water_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    setting.fromFile = 0;
-    setting.vert_indx = 0;
-
-    GameObject3DAddSettingPipeline((GameObject3D *)water, nums, &setting);
-
-    water->go.graphObj.blueprints.num_blue_print_packs ++;
+    BluePrintAddSomeUpdater(&water->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
+    BluePrintAddSomeUpdater(&water->go.graphObj.blueprints, num_pack, 1, WaterObjectUpdateBuffer);
+    BluePrintSetTextureImageCreate(&water->go.graphObj.blueprints, num_pack, &water->go.images[0], 0);
 }
 
 void WaterObjectInit(WaterObject *water, DrawParam *dParam, uint32_t size){

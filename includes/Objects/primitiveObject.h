@@ -71,15 +71,15 @@ void PrimitiveObjectInitDefault(PrimitiveObject *po, DrawParam *dParam, char typ
 /// @brief Установка стандартного чертежа для объекта
 /// @param po - объект-примитив
 /// @param dParam - параметры для рендера
-void PrimitiveObjectSetDefaultDescriptor(PrimitiveObject *po, DrawParam *dParam);
+void PrimitiveObjectSetDefaultDescriptor(PrimitiveObject *po);
 /// @brief Установка стандартного чертежа для инстанс-объекта-примитива
 /// @param po - объект-примитив
 /// @param dParam - параметры для рендера
-void PrimitiveObjectSetInstanceDescriptor(PrimitiveObject *po, DrawParam *dParam);
+void PrimitiveObjectSetInstanceDescriptor(PrimitiveObject *po);
 /// @brief Установка стандартного чертежа с шейдерами
 /// @param po - объект-примитив
 /// @param dParam -параметры для рендера
-void PrimitiveObjectSetShadowDefaultDescriptor(PrimitiveObject *po, DrawParam *dParam);
+void PrimitiveObjectSetShadowDefaultDescriptor(PrimitiveObject *po);
 
 void *PrimitiveObjectGetVertex(PrimitiveObject *po);
 void PrimitiveObjectDiffuseTextureSetData(PrimitiveObject *po, void *data, uint32_t size_data, uint32_t offset);

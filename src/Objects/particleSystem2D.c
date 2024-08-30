@@ -108,29 +108,25 @@ void Particle2DDefaultDraw(GameObject2D* go){
         {
             ShaderPack *pack = &go->graphObj.gItems.shader_packs[i];
 
-            for(int j=0; j < pack->num_pipelines; j++){
+            vkCmdBindPipeline(device->commandBuffers[engine.imageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipeline.pipeline);
 
-                vkCmdBindPipeline(device->commandBuffers[engine.imageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].pipeline);
+            PipelineSetting *settings = &go->graphObj.blueprints.blue_print_packs[i].setting;
 
-                PipelineSetting *settings = &go->graphObj.blueprints.blue_print_packs[i].settings[j];
+            vkCmdSetViewport(device->commandBuffers[engine.imageIndex], 0, 1, (const VkViewport *)&settings->viewport);
+            vkCmdSetScissor(device->commandBuffers[engine.imageIndex], 0, 1, (const VkRect2D *)&settings->scissor);
 
-                vkCmdSetViewport(device->commandBuffers[engine.imageIndex], 0, 1, (const VkViewport *)&settings->viewport);
-                vkCmdSetScissor(device->commandBuffers[engine.imageIndex], 0, 1, (const VkRect2D *)&settings->scissor);
+            VkBuffer vertexBuffers[] = {go->graphObj.shapes[settings->vert_indx].vParam.buffer.buffer};
+            VkDeviceSize offsets[] = {0};
 
-                VkBuffer vertexBuffers[] = {go->graphObj.shapes[settings->vert_indx].vParam.buffer.buffer};
-                VkDeviceSize offsets[] = {0};
+            vkCmdBindVertexBuffers(device->commandBuffers[engine.imageIndex], 0, 1, vertexBuffers, offsets);
 
-                vkCmdBindVertexBuffers(device->commandBuffers[engine.imageIndex], 0, 1, vertexBuffers, offsets);
+            vkCmdBindDescriptorSets(device->commandBuffers[engine.imageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipeline.layout, 0, 1, (const VkDescriptorSet *)&pack->descriptor.descr_sets[engine.imageIndex], 0, NULL);
 
-                vkCmdBindDescriptorSets(device->commandBuffers[engine.imageIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].layout, 0, 1, (const VkDescriptorSet *)&pack->descriptor.descr_sets[engine.imageIndex], 0, NULL);
-
-                if(settings->flags & ENGINE_PIPELINE_FLAG_DRAW_INDEXED){
-                    vkCmdBindIndexBuffer(device->commandBuffers[engine.imageIndex], go->graphObj.shapes[settings->vert_indx].iParam.buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-                    vkCmdDrawIndexed(device->commandBuffers[engine.imageIndex], go->graphObj.shapes[settings->vert_indx].iParam.indexesSize, 1, 0, 0, 0);
-                }else
-                    vkCmdDraw(device->commandBuffers[engine.imageIndex], go->graphObj.shapes[settings->vert_indx].vParam.verticesSize, 1, 0, 0);
-
-            }
+            if(settings->flags & ENGINE_PIPELINE_FLAG_DRAW_INDEXED){
+                vkCmdBindIndexBuffer(device->commandBuffers[engine.imageIndex], go->graphObj.shapes[settings->vert_indx].iParam.buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+                vkCmdDrawIndexed(device->commandBuffers[engine.imageIndex], go->graphObj.shapes[settings->vert_indx].iParam.indexesSize, 1, 0, 0, 0);
+            }else
+                vkCmdDraw(device->commandBuffers[engine.imageIndex], go->graphObj.shapes[settings->vert_indx].vParam.verticesSize, 1, 0, 0);
         }
     }
 
@@ -171,32 +167,17 @@ void Particle2DInit(ParticleObject2D* particle, DrawParam dParam){
 }
 
 void Particle2DAddDefault(ParticleObject2D* particle, void *render)
-{
-    uint32_t nums = particle->go.graphObj.blueprints.num_blue_print_packs;
-    particle->go.graphObj.blueprints.blue_print_packs[nums].render_point = render;
+{    
+    uint32_t num_pack = BluePrintInit(&particle->go.graphObj.blueprints);
+    
+    GraphicsObjectSetSomeShader(&particle->go.graphObj, &_binary_shaders_particle_vert2D_spv_start, (size_t)(&_binary_shaders_particle_vert2D_spv_size), num_pack);
+    GraphicsObjectSetSomeShader(&particle->go.graphObj, &_binary_shaders_particle_frag2D_spv_start, (size_t)(&_binary_shaders_particle_frag2D_spv_size), num_pack);
 
-    BluePrintAddUniformObject(&particle->go.graphObj.blueprints, nums, sizeof(TransformBuffer2D), VK_SHADER_STAGE_VERTEX_BIT, (void *)Particle2DDefaultUpdate, 0);
-
-    BluePrintAddTextureImage(&particle->go.graphObj.blueprints, 0, particle->go.image, VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    PipelineSetting setting;
-
-    PipelineSettingSetDefault(&particle->go.graphObj, &setting);
-
-    if(strlen(setting.stages[0].some_shader) == 0 || strlen(setting.stages[1].some_shader) == 0)
-    {
-        PipelineSettingSetShader(&setting, &_binary_shaders_particle_vert2D_spv_start, (size_t)(&_binary_shaders_particle_vert2D_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-        PipelineSettingSetShader(&setting, &_binary_shaders_particle_frag2D_spv_start, (size_t)(&_binary_shaders_particle_frag2D_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-        setting.fromFile = 0;
-    }
-
-    setting.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-    setting.flags &= ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED);
-
-    GameObject2DAddSettingPipeline((GameObject2D *)particle, nums, &setting);
-
-    particle->go.graphObj.blueprints.num_blue_print_packs ++;
+    BluePrintAddSomeUpdater(&particle->go.graphObj.blueprints, num_pack, 0, Particle2DDefaultUpdate);
+    BluePrintSetTextureImageCreate(&particle->go.graphObj.blueprints, num_pack, particle->go.image, 0);
+    
+    /*setting.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    setting.flags &= ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED);*/
 }
 
 void Particle2DAdd(ParticleObject2D* particle, vec2 position, vec2 direction, float speed, float gravity, float life){

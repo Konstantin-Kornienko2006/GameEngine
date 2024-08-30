@@ -54,28 +54,14 @@ void PainterObjectInit(EPainter *painter)
 }
 
 void PainterObjectAddDefault(EPainter *painter, void *render)
-{
-    uint32_t nums = painter->go.graphObj.blueprints.num_blue_print_packs;
-    painter->go.graphObj.blueprints.blue_print_packs[nums].render_point = render;
+{    
+    uint32_t num_pack = BluePrintInit(&painter->go.graphObj.blueprints);
+    
+    GraphicsObjectSetSomeShader(&painter->go.graphObj, &_binary_shaders_gui_painter_vert_spv_start, (size_t)(&_binary_shaders_gui_painter_vert_spv_size), num_pack);
+    GraphicsObjectSetSomeShader(&painter->go.graphObj, &_binary_shaders_gui_painter_frag_spv_start, (size_t)(&_binary_shaders_gui_painter_frag_spv_size), num_pack);
 
-    BluePrintAddUniformObject(&painter->go.graphObj.blueprints, nums, sizeof(PainterBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)PainterObjectPainterBufferUpdate, 0);
-    BluePrintAddUniformObject(&painter->go.graphObj.blueprints, nums, sizeof(DrawObjectsBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)PainterObjectDrawObjectsBufferUpdate, 0);
-
-    PipelineSetting setting = {};
-
-    PipelineSettingSetDefault(&painter->go.graphObj, &setting);
-
-    if(strlen(setting.stages[0].some_shader) == 0 || strlen(setting.stages[1].some_shader) == 0)
-    {
-        PipelineSettingSetShader(&setting, &_binary_shaders_gui_painter_vert_spv_start, (size_t)(&_binary_shaders_gui_painter_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-        PipelineSettingSetShader(&setting, &_binary_shaders_gui_painter_frag_spv_start, (size_t)(&_binary_shaders_gui_painter_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-        setting.fromFile = 0;
-    }
-
-    GameObject2DAddSettingPipeline(&painter->go, nums, &setting);
-
-    painter->go.graphObj.blueprints.num_blue_print_packs ++;
+    BluePrintAddSomeUpdater(&painter->go.graphObj.blueprints, num_pack, 0, PainterObjectPainterBufferUpdate);
+    BluePrintAddSomeUpdater(&painter->go.graphObj.blueprints, num_pack, 1, PainterObjectDrawObjectsBufferUpdate);
 }
 
 void PainterObjectInitDefault(EPainter *painter, DrawParam *dParam)

@@ -37,8 +37,7 @@ typedef struct{
 } BluePrintPushConstant;
 
 typedef struct{
-    PipelineSetting settings[MAX_UNIFORMS];
-    uint32_t num_settings;
+    PipelineSetting setting;
     BluePrintDescriptor descriptors[MAX_UNIFORMS];
     uint32_t num_descriptors;
     BluePrintPushConstant push_constants[MAX_UNIFORMS];
@@ -52,13 +51,27 @@ typedef struct{
     uint32_t isShadow;
 } Blueprints;
 
+typedef void (*UpdateDescriptor)(void *go, void *data);
+
+uint32_t BluePrintInit(Blueprints *blueprints);
+
+void BluePrintSetSettingsValue(Blueprints *blueprints, uint32_t indx_pack, uint32_t type, uint32_t value);
+uint32_t BluePrintGetSettingsValue(Blueprints *blueprints, uint32_t indx_pack, uint32_t type);
+
+void BluePrintAddSomeUpdater(Blueprints *blueprints, uint32_t indx_pack, uint32_t descr_indx, UpdateDescriptor Updater);
+
 void BluePrintAddPushConstant(Blueprints *blueprints, uint32_t indx_pack, uint64_t size, uint32_t stage, uint32_t offset);
 
 BluePrintDescriptor *BluePrintAddExistUniformStorage(Blueprints *blueprints, uint32_t indx_pack, uint32_t flags, BufferContainer uniform, void *update_func, uint32_t layer_indx);
 BluePrintDescriptor *BluePrintAddUniformStorage(Blueprints *blueprints, uint32_t indx_pack, uint64_t size, uint32_t flags, void *update_func, uint32_t layer_indx);
+void BluePrintAddUniformObjectC(Blueprints *blueprints, uint32_t indx_pack, uint64_t size, uint32_t flags);
 void BluePrintAddUniformObject(Blueprints *blueprints, uint32_t indx_pack, uint64_t size, uint32_t flags, void *update_func, uint32_t layer_indx);
 
 void BluePrintRecreateUniform(BluePrintPack *pack);
+
+BluePrintDescriptor *BluePrintAddTextureC(Blueprints *blueprints, uint32_t indx_pack, uint32_t stage_bit);
+void BluePrintSetTextureImage(Blueprints *blueprints, uint32_t indx_pack, Texture2D *texture, uint32_t indx_img);
+void BluePrintSetTextureImageCreate(Blueprints *blueprints, uint32_t indx_pack, GameObjectImage *image, uint32_t indx_img);
 
 void BluePrintAddRenderImageCube(Blueprints *blueprints, uint32_t indx_pack, uint32_t indx_cube, void *obj);
 void BluePrintAddRenderImageVector(Blueprints *blueprints, uint32_t indx_pack, void *obj, uint32_t size);

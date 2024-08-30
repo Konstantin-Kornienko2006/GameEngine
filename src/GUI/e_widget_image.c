@@ -108,28 +108,24 @@ void ImageWidgetInit(EWidgetImage *img, char *image_path, EWidget *parent){
     img->image.image->path[len] = '\0';;
     img->image.num_images ++;
 
-    BluePrintAddUniformObject(&img->image.graphObj.blueprints, 0, sizeof(TransformBuffer2D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject2DTransformBufferUpdate, 0);
-
-    BluePrintAddTextureImage(&img->image.graphObj.blueprints, 0, img->image.image, VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    PipelineSetting setting;
-
-    PipelineSettingSetDefault(&img->image.graphObj, &setting);
+    uint32_t num_pack = BluePrintInit(&img->image.graphObj.blueprints);
     
     ShaderBuilder *vert = img->image.self.vert;
     ShaderBuilder *frag = img->image.self.frag;
 
-    ShadersMakeDefault2DShader(vert, frag, true);
+    ShadersMakeDefault2DShader(vert, frag, img->image.num_images > 0);
 
-    PipelineSettingSetShader(&setting, (char *)vert->code, vert->size * sizeof(uint32_t), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(&setting, (char *)frag->code, frag->size * sizeof(uint32_t), VK_SHADER_STAGE_FRAGMENT_BIT);
+    GraphicsObjectSetSomeShader(&img->image.graphObj, vert->code, vert->size, num_pack);
+    GraphicsObjectSetSomeShader(&img->image.graphObj, frag->code, frag->size, num_pack);
 
-    setting.fromFile = 0;
-    setting.flags |= ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE;
+    BluePrintAddSomeUpdater(&img->image.graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
+    BluePrintAddSomeUpdater(&img->image.graphObj.blueprints, num_pack, 1, GameObject2DImageBuffer);
+    BluePrintSetTextureImageCreate(&img->image.graphObj.blueprints, num_pack, img->image.image, 0);
 
-    GameObject2DAddSettingPipeline((GameObject2D *)&img->image, 0, &setting);
+    uint32_t flags = BluePrintGetSettingsValue(&img->image.graphObj.blueprints, num_pack, 3);
+    BluePrintSetSettingsValue(&img->image.graphObj.blueprints, num_pack, 3, flags | ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE);
 
-    img->image.graphObj.blueprints.num_blue_print_packs ++;
+    //----------------------------------------------------
 
     GameObject2DInitDraw(&img->image);
 

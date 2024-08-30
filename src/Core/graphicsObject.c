@@ -9,6 +9,8 @@
 #include "Core/e_texture.h"
 #include "Core/e_descriptor.h"
 
+#include "Tools/shader_builder.h"
+
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_descriptors.h"
 #include "Data/e_resource_engine.h"
@@ -142,6 +144,19 @@ void GraphicsObjectSetVertex(GraphicsObject* graphObj, void *vert, int vertCount
         BuffersUpdateIndex(&graphObj->shapes[num].iParam);
 
     graphObj->num_shapes ++;
+}
+
+void GraphicsObjectSetSomeShader(GraphicsObject* graphObj, uint32_t *code, uint32_t size, uint32_t pack_indx){
+
+    ShaderBuilder *temp = AllocateMemory(1, sizeof(ShaderBuilder));
+
+    ShaderBuilderMakeUniformsFromShader(temp, code, size, &graphObj->blueprints, pack_indx, 1);
+
+    PipelineSetting* setting = (PipelineSetting *)&graphObj->blueprints.blue_print_packs[pack_indx].setting;
+
+    PipelineSettingSetShader(setting, (char *)code, size * sizeof(uint32_t), temp->type == SHADER_TYPE_VERTEX ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    FreeMemory(temp);
 }
 
 void GraphicsObjectCreateDrawItems(GraphicsObject* graphObj){

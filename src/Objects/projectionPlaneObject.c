@@ -40,23 +40,11 @@ void ProjectionPlaneInit(GameObject2D *go, DrawParam dParam){
 }
 
 void ProjectionPlaneAddDefault(GameObject2D *go, void *render)
-{
-    uint32_t nums = go->graphObj.blueprints.num_blue_print_packs;
-    go->graphObj.blueprints.blue_print_packs[nums].render_point = render;
+{    
+    uint32_t num_pack = BluePrintInit(&go->graphObj.blueprints);
+    
+    GraphicsObjectSetSomeShader(&go->graphObj, &_binary_shaders_sprite_vert_spv_start, (size_t)(&_binary_shaders_sprite_vert_spv_size), num_pack);
+    GraphicsObjectSetSomeShader(&go->graphObj, &_binary_shaders_sprite_frag_spv_start, (size_t)(&_binary_shaders_sprite_frag_spv_size), num_pack);
 
-    BluePrintAddUniformObject(&go->graphObj.blueprints, nums, sizeof(ProjDataBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)ProjectionPlaneUpdate, 0);
-
-    PipelineSetting setting;
-
-    PipelineSettingSetDefault(&go->graphObj, &setting);
-
-    PipelineSettingSetShader(&setting, &_binary_shaders_sprite_vert_spv_start, (size_t)(&_binary_shaders_sprite_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(&setting, &_binary_shaders_sprite_frag_spv_start, (size_t)(&_binary_shaders_sprite_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    setting.fromFile = 0;
-    setting.vert_indx = 0;
-
-    GameObject2DAddSettingPipeline(go, nums, &setting);
-
-    go->graphObj.blueprints.num_blue_print_packs ++;
+    BluePrintAddSomeUpdater(&go->graphObj.blueprints, num_pack, 0, ProjectionPlaneUpdate);
 }

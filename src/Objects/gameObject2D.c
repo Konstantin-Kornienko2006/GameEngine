@@ -19,9 +19,7 @@
 
 extern ZEngine engine;
 
-typedef void (*Update_Descriptor2D)(GameObject2D* go, BluePrintDescriptor *descriptor);
-
-void GameObject2DTransformBufferUpdate(GameObject2D *go, BluePrintDescriptor *descriptor)
+void GameObject2DTransformBufferUpdate(GameObject2D *go, void *data)
 {
     TransformBuffer2D tbo;
 
@@ -29,10 +27,11 @@ void GameObject2DTransformBufferUpdate(GameObject2D *go, BluePrintDescriptor *de
     tbo.rotation = go->transform.rotation;
     tbo.scale = go->transform.scale;
 
-    DescriptorUpdate(descriptor, (char *)&tbo, sizeof(tbo));
+    
+    memcpy(data, &tbo, sizeof(tbo));
 }
 
-void GameObject2DImageBuffer(GameObject2D *go, BluePrintDescriptor *descriptor)
+void GameObject2DImageBuffer(GameObject2D *go, void *data)
 {
     ImageBufferObjects ibo;
     ibo.offset = go->transform.img.offset;
@@ -42,11 +41,13 @@ void GameObject2DImageBuffer(GameObject2D *go, BluePrintDescriptor *descriptor)
     ibo.rotation.x = 0;
     ibo.rotation.y = 0;
 
-    DescriptorUpdate(descriptor, (char *)&ibo, sizeof(ibo));
+    memcpy(data, &ibo, sizeof(ibo));
 }
 
 void GameObject2DDefaultUpdate(GameObject2D* go) {
 
+    ZDevice *device = (ZDevice *)engine.device;
+    
     for(int i=0; i < go->graphObj.gItems.num_shader_packs;i++)
     {
         BluePrintPack *pack = &go->graphObj.blueprints.blue_print_packs[i];
@@ -59,8 +60,14 @@ void GameObject2DDefaultUpdate(GameObject2D* go) {
 
                 if(descriptor->descrType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                 {
-                    Update_Descriptor2D update = descriptor->update;
-                    update(go, descriptor);
+                    if(descriptor->uniform.size == 0 || descriptor->update == NULL)
+                        continue;
+
+                    void *point;
+                    vkMapMemory(device->e_device, descriptor->uniform.buffers[engine.imageIndex].memory, 0, descriptor->buffsize, 0, &point);
+                    UpdateDescriptor update = descriptor->update;
+                    update(go, point);
+                    vkUnmapMemory(device->e_device, descriptor->uniform.buffers[engine.imageIndex].memory);
                 }
             }
         }
@@ -81,35 +88,33 @@ void GameObject2DDefaultDraw(GameObject2D* go){
         {
             ShaderPack *pack = &go->graphObj.gItems.shader_packs[i];
 
-            for(int j=0; j < pack->num_pipelines; j++){
-                vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].pipeline);
+            PipelineSetting *settings = &go->graphObj.blueprints.blue_print_packs[i].setting;
+            
+            vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipeline.pipeline);
 
-                PipelineSetting *settings = &go->graphObj.blueprints.blue_print_packs[i].settings[j];
+            vertexParam *vParam = &go->graphObj.shapes[settings->vert_indx].vParam;
+            indexParam *iParam = &go->graphObj.shapes[settings->vert_indx].iParam;
 
-                vertexParam *vParam = &go->graphObj.shapes[settings->vert_indx].vParam;
-                indexParam *iParam = &go->graphObj.shapes[settings->vert_indx].iParam;
+            if(vParam->verticesSize == 0)
+                continue;
 
-                if(vParam->verticesSize == 0)
-                    continue;
-
-                if(settings->flags & ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW){
-                    vkCmdSetViewport(command, 0, 1, (const VkViewport *)&settings->viewport);
-                    vkCmdSetScissor(command, 0, 1, (const VkRect2D *)&settings->scissor);
-                }
-
-                VkBuffer vertexBuffers[] = {vParam->buffer.buffer};
-                VkDeviceSize offsets[] = {0};
-
-                vkCmdBindVertexBuffers(command, 0, 1, vertexBuffers, offsets);
-                vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipelines[j].layout, 0, 1, &pack->descriptor.descr_sets[engine.imageIndex], 0, NULL);
-
-                if(settings->flags & ENGINE_PIPELINE_FLAG_DRAW_INDEXED){
-
-                    vkCmdBindIndexBuffer(command, iParam->buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-                    vkCmdDrawIndexed(command, iParam->indexesSize, 1, 0, 0, 0);
-                }else
-                    vkCmdDraw(command, vParam->verticesSize, 1, 0, 0);
+            if(settings->flags & ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW){
+                vkCmdSetViewport(command, 0, 1, (const VkViewport *)&settings->viewport);
+                vkCmdSetScissor(command, 0, 1, (const VkRect2D *)&settings->scissor);
             }
+
+            VkBuffer vertexBuffers[] = {vParam->buffer.buffer};
+            VkDeviceSize offsets[] = {0};
+
+            vkCmdBindVertexBuffers(command, 0, 1, vertexBuffers, offsets);
+            vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS, pack->pipeline.layout, 0, 1, &pack->descriptor.descr_sets[engine.imageIndex], 0, NULL);
+
+            if(settings->flags & ENGINE_PIPELINE_FLAG_DRAW_INDEXED){
+
+                vkCmdBindIndexBuffer(command, iParam->buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+                vkCmdDrawIndexed(command, iParam->indexesSize, 1, 0, 0, 0);
+            }else
+                vkCmdDraw(command, vParam->verticesSize, 1, 0, 0);
         }
     }
 }
@@ -119,23 +124,6 @@ void GameObject2DInitDraw(GameObject2D *go)
     GraphicsObjectCreateDrawItems(&go->graphObj);
 
     PipelineCreateGraphics(&go->graphObj);
-}
-
-void GameObject2DAddSettingPipeline(GameObject2D* go, uint32_t indx_pack, void *arg){
-
-    BluePrintPack *pack = &go->graphObj.blueprints.blue_print_packs[indx_pack];
-
-    if(pack->num_settings + 1 > MAX_UNIFORMS)
-        return;
-
-    PipelineSetting* setting = arg;
-
-
-    PipelineSetting* settings = pack->settings;
-    memcpy(&settings[pack->num_settings], setting, sizeof(PipelineSetting));
-
-    pack->num_settings++;
-
 }
 
 void GameObject2DClean(GameObject2D* go){
@@ -150,19 +138,16 @@ void GameObject2DRecreate(GameObject2D* go){
     {
         BluePrintPack *pack = &go->graphObj.blueprints.blue_print_packs[i];
 
-        PipelineSetting *settings = pack->settings;
+        PipelineSetting *settings = &pack->setting;
 
-        for(int j=0; j < pack->num_settings;j++)
-        {
-            settings[j].scissor.offset.x = 0;
-            settings[j].scissor.offset.y = 0;
-            settings[j].scissor.extent.height = engine.height;
-            settings[j].scissor.extent.width = engine.width;
-            settings[j].viewport.x = 0;
-            settings[j].viewport.y = 0;
-            settings[j].viewport.height = engine.height;
-            settings[j].viewport.width = engine.width;
-        }
+        settings->scissor.offset.x = 0;
+        settings->scissor.offset.y = 0;
+        settings->scissor.extent.height = engine.height;
+        settings->scissor.extent.width = engine.width;
+        settings->viewport.x = 0;
+        settings->viewport.y = 0;
+        settings->viewport.height = engine.height;
+        settings->viewport.width = engine.width;
     }
 
     BuffersRecreateUniform(&go->graphObj.blueprints);

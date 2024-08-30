@@ -33,16 +33,16 @@ void GameObject3DDefaultUpdate(GameObject3D* go);
 void GameObject3DDefaultDraw(GameObject3D* go);
 
 
-void GameObject3DDescriptorModelUpdate(GameObject3D* go, BluePrintDescriptor *descriptor);
-void GameObject3DDirLightModelUpdate(GameObject3D* go, BluePrintDescriptor *descriptor);
-void GameObject3DSpotLightModelUpdate(GameObject3D* go, BluePrintDescriptor *descriptor);
-void GameObject3DOmniLightModelUpdate(GameObject3D* go, BluePrintDescriptor *descriptor);
-void GameObject3DDescriptorLghtMatrixUpdate(GameObject3D* go, BluePrintDescriptor *descriptor);
-void GameObject3DDescriptorDirLightsUpdate(GameObject3D* go, BluePrintDescriptor *descriptor);
-void GameObject3DDescriptorPointLightsUpdate(GameObject3D* go, BluePrintDescriptor *descriptor);
-void GameObject3DDescriptorSpotLightsUpdate(GameObject3D* go, BluePrintDescriptor *descriptor);
-void GameObject3DLigtStatusBufferUpdate(GameObject3D* go, BluePrintDescriptor *descriptor);
-void GameObject3DSDFBufferUpdate(GameObject3D* go, BluePrintDescriptor *descriptor);
+void GameObject3DDescriptorModelUpdate      (GameObject3D* go, void *data);
+void GameObject3DDirLightModelUpdate        (GameObject3D* go, void *data);
+void GameObject3DSpotLightModelUpdate       (GameObject3D* go, void *data);
+void GameObject3DOmniLightModelUpdate       (GameObject3D* go, void *data);
+void GameObject3DDescriptorLghtMatrixUpdate (GameObject3D* go, void *data);
+void GameObject3DDescriptorDirLightsUpdate  (GameObject3D* go, void *data);
+void GameObject3DDescriptorPointLightsUpdate(GameObject3D* go, void *data);
+void GameObject3DDescriptorSpotLightsUpdate (GameObject3D* go, void *data);
+void GameObject3DLigtStatusBufferUpdate     (GameObject3D* go, void *data);
+void GameObject3DSDFBufferUpdate            (GameObject3D* go, void *data);
 
 void GameObject3DInitDraw(GameObject3D *go);
 void GameObject3DClean(GameObject3D* go);
@@ -65,8 +65,6 @@ void GameObject3DAddShadowDescriptor(GameObject3D *go, uint32_t type, void *rend
 void GameObject3DAddOmiShadow(GameObject3D *go, void *render, uint32_t layer_indx);
 
 void GameObject3DEnableLight(GameObject3D *go, bool enable);
-
-void GameObject3DAddSettingPipeline(GameObject3D* go, uint32_t indx_pack, void *arg);
 
 #ifdef __cplusplus
 }

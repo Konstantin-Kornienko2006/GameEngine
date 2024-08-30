@@ -9,6 +9,7 @@
 #include "ZamEngine.h"
 
 #include "Core/e_device.h"
+#include "Core/pipeline.h"
 
 #include "Data/e_resource_shapes.h"
 #include "Data/e_resource_export.h"
@@ -462,10 +463,7 @@ void GUIManagerInitFont(){
 void GUIManagerAddTexture(){
     BluePrintPack *pack = &gui.go.graphObj.blueprints.blue_print_packs[0];
 
-    if(pack->num_descriptors + 1 > MAX_UNIFORMS)
-        return;
-
-    BluePrintDescriptor *descriptor = &pack->descriptors[pack->num_descriptors];
+    BluePrintDescriptor *descriptor = &pack->descriptors[1];
 
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptor->descrCount = 1;
@@ -475,7 +473,6 @@ void GUIManagerAddTexture(){
     descriptor->flags = ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE | ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
     descriptor->textures = gui.font.texture;
 
-    pack->num_descriptors ++;
 }
 
 void GUIManagerInit(){
@@ -507,28 +504,24 @@ void GUIManagerInit(){
     gui.font.fontSize = 14;
        
     GUIManagerInitFont();
-    GUIManagerAddTexture();
 
     ////---------------------------------------------------------
         
-    PipelineSetting setting;
-
-    PipelineSettingSetDefault(&gui.go.graphObj, &setting);
+    uint32_t num_pack = BluePrintInit(&gui.go.graphObj.blueprints);
 
     ShaderBuilder *vert = gui.go.self.vert;
     ShaderBuilder *frag = gui.go.self.frag;
 
     ShadersMakeClear2DShader(vert, frag);
 
-    PipelineSettingSetShader(&setting, (char *)vert->code, vert->size * sizeof(uint32_t), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(&setting, (char *)frag->code, frag->size * sizeof(uint32_t), VK_SHADER_STAGE_FRAGMENT_BIT);
+    GraphicsObjectSetSomeShader(&gui.go.graphObj, vert->code, vert->size, num_pack);
+    GraphicsObjectSetSomeShader(&gui.go.graphObj, frag->code, frag->size, num_pack);
 
-    setting.fromFile = 0;
-    setting.flags |= ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE;
-
-    GameObject2DAddSettingPipeline((GameObject2D *)&gui, 0, &setting);
+    BluePrintAddSomeUpdater(&gui.go.graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
+    BluePrintSetTextureImage(&gui.go.graphObj.blueprints, num_pack, gui.font.texture, 0);
     
-    gui.go.graphObj.blueprints.num_blue_print_packs ++;
+    uint32_t flags = BluePrintGetSettingsValue(&gui.go.graphObj.blueprints, num_pack, 3);
+    BluePrintSetSettingsValue(&gui.go.graphObj.blueprints, num_pack, 3, flags | ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE);
 
     ////---------------------------------------------------------
 
@@ -1185,31 +1178,29 @@ void GUIManagerDraw(){
         {
             ShaderPack *shader_pack = &gui.go.graphObj.gItems.shader_packs[i];
 
-            for(int j=0; j < shader_pack->num_pipelines; j++){
-                vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, shader_pack->pipelines[j].pipeline);
+            vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, shader_pack->pipeline.pipeline);
 
-                PipelineSetting *settings = &pack->settings[j];
+            PipelineSetting *settings = &pack->setting;
 
-                if(settings->flags & ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW){
-                    vkCmdSetViewport(command, 0, 1, (const VkViewport *)&settings->viewport);
-                    vkCmdSetScissor(command, 0, 1, (const VkRect2D *)&settings->scissor);
-                }
-
-                uint32_t vCount, iCount;
-
-                GUIManagerGetVertexCount(&vCount, &iCount);
-
-                GUIManagerCopyVertex(vCount, iCount);
-
-                VkBuffer vertexBuffers[] = {gui.vertBuffer.buffer};
-                VkDeviceSize offsets[] = {0};
-
-                vkCmdBindVertexBuffers(command, 0, 1, vertexBuffers, offsets);
-                vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS, shader_pack->pipelines[j].layout, 0, 1, &shader_pack->descriptor.descr_sets[engine.imageIndex], 0, NULL);
-
-                vkCmdBindIndexBuffer(command, gui.indxBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(command, iCount, 1, 0, 0, 0);
+            if(settings->flags & ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW){
+                vkCmdSetViewport(command, 0, 1, (const VkViewport *)&settings->viewport);
+                vkCmdSetScissor(command, 0, 1, (const VkRect2D *)&settings->scissor);
             }
+
+            uint32_t vCount, iCount;
+
+            GUIManagerGetVertexCount(&vCount, &iCount);
+
+            GUIManagerCopyVertex(vCount, iCount);
+
+            VkBuffer vertexBuffers[] = {gui.vertBuffer.buffer};
+            VkDeviceSize offsets[] = {0};
+
+            vkCmdBindVertexBuffers(command, 0, 1, vertexBuffers, offsets);
+            vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_GRAPHICS, shader_pack->pipeline.layout, 0, 1, &shader_pack->descriptor.descr_sets[engine.imageIndex], 0, NULL);
+
+            vkCmdBindIndexBuffer(command, gui.indxBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(command, iCount, 1, 0, 0, 0);
         }
     }
 
