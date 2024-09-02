@@ -16,6 +16,9 @@ void Transform2DInit(Transform2D* transform){
 
     transform->scale.x = 1;
     transform->scale.y = 1;
+    
+    transform->img.scale.x = 1;
+    transform->img.scale.y = 1;
 
     transform->scaleOrig.x = engine.width;
     transform->scaleOrig.y = engine.height;

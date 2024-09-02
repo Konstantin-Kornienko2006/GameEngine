@@ -22,12 +22,13 @@ typedef enum{
 typedef struct GameObject{
     void (*InitPoint)(struct GameObject* go);
     void (*UpdatePoint)(struct GameObject* go);
-    void (*DrawPoint)(struct GameObject* go, void *cmd);
+    void (*DrawPoint)(struct GameObject* go);
     void (*CleanPoint)(struct GameObject* go);
     void (*RecreatePoint)(struct GameObject* go);
     void (*DestroyPoint)(struct GameObject* go);
     uint32_t obj_type;
     uint32_t flags;
+    bool init;
     void *vert;
     void *frag;
 } GameObject;

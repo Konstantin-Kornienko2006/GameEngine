@@ -6,65 +6,39 @@
 #include "Core/pipeline.h"
 
 #include "Tools/e_tools.h"
+#include "Tools/e_shaders.h"
 
 #include "Data/e_resource_shapes.h"
 #include "Data/e_resource_export.h"
 
 void GrassObjectSetDefaultDescriptor(GrassObject *grass, DrawParam *dParam)
-{
+{   
+    uint32_t num_pack = BluePrintInit(&grass->go.graphObj.blueprints);
+    
+    ShaderBuilder *vert = grass->go.self.vert;
+    ShaderBuilder *frag = grass->go.self.frag;
 
-    uint32_t nums = grass->go.graphObj.blueprints.num_blue_print_packs;
-    grass->go.graphObj.blueprints.blue_print_packs[nums].render_point = dParam->render;
+    ShadersMakeDefault3DShader(vert, frag, grass->go.num_images > 0);
 
-    BluePrintAddUniformObject(&grass->go.graphObj.blueprints, nums, sizeof(ModelBuffer3D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject3DDescriptorModelUpdate, 0);
-    BluePrintAddUniformObject(&grass->go.graphObj.blueprints, nums, sizeof(DirLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorDirLightsUpdate, 0);
-    BluePrintAddUniformObject(&grass->go.graphObj.blueprints, nums, sizeof(PointLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorPointLightsUpdate, 0);
-    BluePrintAddUniformObject(&grass->go.graphObj.blueprints, nums, sizeof(SpotLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorSpotLightsUpdate, 0);
-    BluePrintAddUniformObject(&grass->go.graphObj.blueprints, nums, sizeof(LightStatusBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DLigtStatusBufferUpdate, 0);
+    GraphicsObjectSetSomeShader(&grass->go.graphObj, vert->code, vert->size, num_pack);
+    GraphicsObjectSetSomeShader(&grass->go.graphObj, frag->code, frag->size, num_pack);
 
-    BluePrintAddTextureImage(&grass->go.graphObj.blueprints, nums, &grass->go.images[0], VK_SHADER_STAGE_FRAGMENT_BIT);
-    BluePrintAddTextureImage(&grass->go.graphObj.blueprints, nums, &grass->go.images[1], VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    PipelineSetting setting;
-
-    PipelineSettingSetDefault(&grass->go.graphObj, &setting);
-
-    PipelineSettingSetShader(&setting, &_binary_shaders_3d_object_vert_spv_start, (size_t)(&_binary_shaders_3d_object_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(&setting, &_binary_shaders_3d_object_frag_spv_start, (size_t)(&_binary_shaders_3d_object_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    setting.fromFile = 0;
-    setting.vert_indx = 0;
-    setting.cull_mode = VK_CULL_MODE_NONE;
-
-    GameObject3DAddSettingPipeline((GameObject3D *)grass, nums, &setting);
-
-    grass->go.graphObj.blueprints.num_blue_print_packs ++;
+    BluePrintAddSomeUpdater(&grass->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
+    BluePrintSetTextureImageCreate(&grass->go.graphObj.blueprints, num_pack, &grass->go.images[0], 0);
 }
 
 void GrassObjectSetInstanceDescriptor(GrassObject *grass, DrawParam *dParam)
 {
+    uint32_t num_pack = BluePrintInit(&grass->go.graphObj.blueprints);
 
-    uint32_t nums = grass->go.graphObj.blueprints.num_blue_print_packs;
-    grass->go.graphObj.blueprints.blue_print_packs[nums].render_point = dParam->render;
+    GraphicsObjectSetSomeShader(&grass->go.graphObj, &_binary_shaders_3d_object_instance_vert_spv_start, (size_t)(&_binary_shaders_3d_object_instance_vert_spv_size), num_pack);
+    GraphicsObjectSetSomeShader(&grass->go.graphObj, &_binary_shaders_3d_object_instance_frag_spv_start, (size_t)(&_binary_shaders_3d_object_instance_frag_spv_size), num_pack);
 
-    BluePrintAddUniformObject(&grass->go.graphObj.blueprints, nums, sizeof(ModelBuffer3D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject3DDescriptorModelUpdate, 0);
-
-    BluePrintAddTextureImage(&grass->go.graphObj.blueprints, nums, &grass->go.images[0], VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    PipelineSetting setting;
-
-    PipelineSettingSetDefault(&grass->go.graphObj, &setting);
-
-    PipelineSettingSetShader(&setting, &_binary_shaders_3d_object_instance_vert_spv_start, (size_t)(&_binary_shaders_3d_object_instance_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(&setting, &_binary_shaders_3d_object_instance_frag_spv_start, (size_t)(&_binary_shaders_3d_object_instance_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    setting.fromFile = 0;
-    setting.vert_indx = 0;
-    setting.cull_mode = VK_CULL_MODE_NONE;
-
-    GameObject3DAddSettingPipeline((GameObject3D *)grass, nums, &setting);
-
-    grass->go.graphObj.blueprints.num_blue_print_packs ++;
+    BluePrintAddSomeUpdater(&grass->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
+    BluePrintSetTextureImageCreate(&grass->go.graphObj.blueprints, num_pack, &grass->go.images[0], 0);
+    
+    /*setting.vert_indx = 0;
+    setting.cull_mode = VK_CULL_MODE_NONE;*/
 }
 
 void GrassObjectInit(GrassObject *grass, DrawParam *dParam)

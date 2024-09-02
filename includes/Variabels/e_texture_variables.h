@@ -13,7 +13,7 @@ extern "C"
 typedef enum{
     ENGINE_TEXTURE2D_FLAG_GENERATED = 0x1,
     ENGINE_TEXTURE2D_FLAG_VIEW = 0x2,
-    ENGINE_TEXTURE2D_IS_FONT = 0x4
+    ENGINE_TEXTURE2D_IS_FONT = 0x4,
 } EngineTexture2DFlag;
 
 typedef struct{

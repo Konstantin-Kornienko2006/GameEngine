@@ -38,34 +38,24 @@ void QuadObjectInit(QuadObject *qu, uint32_t type)
 
 void QuadObjectAddDefault(QuadObject *qu, void *render)
 {
-    uint32_t nums = qu->go.graphObj.blueprints.num_blue_print_packs;
-    qu->go.graphObj.blueprints.blue_print_packs[nums].render_point = render;
+    uint32_t num_pack = BluePrintInit(&qu->go.graphObj.blueprints);
+    
+    GraphicsObjectSetSomeShader(&qu->go.graphObj, &_binary_shaders_quad_vert_spv_start, (size_t)(&_binary_shaders_quad_vert_spv_size), num_pack);
 
-    BluePrintAddUniformObject(&qu->go.graphObj.blueprints, nums, sizeof(TransformBuffer2D), VK_SHADER_STAGE_VERTEX_BIT, (void *)QuadObjectUpdate, 0);
-
-    PipelineSetting setting = {};
-
-    PipelineSettingSetDefault(&qu->go.graphObj, &setting);
-
-    switch(qu->type == ENGINE_QUAD_TYPE_DEPTH){
+     switch(qu->type == ENGINE_QUAD_TYPE_DEPTH){
         case ENGINE_QUAD_TYPE_DEPTH:
-            PipelineSettingSetShader(&setting, &_binary_shaders_quad_frag_spv_start, (size_t)(&_binary_shaders_quad_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
+            GraphicsObjectSetSomeShader(&qu->go.graphObj,  &_binary_shaders_quad_frag_spv_start, (size_t)(&_binary_shaders_quad_frag_spv_size), num_pack);
             break;
         case ENGINE_QUAD_TYPE_CUBE:
-            PipelineSettingSetShader(&setting, &_binary_shaders_quad_frag_2_spv_start, (size_t)(&_binary_shaders_quad_frag_2_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
+            GraphicsObjectSetSomeShader(&qu->go.graphObj,  &_binary_shaders_quad_frag_2_spv_start, (size_t)(&_binary_shaders_quad_frag_2_spv_size), num_pack);
             break;
         case ENGINE_QUAD_TYPE_IMAGE:
-            PipelineSettingSetShader(&setting, &_binary_shaders_quad_frag_3_spv_start, (size_t)(&_binary_shaders_quad_frag_3_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
+            GraphicsObjectSetSomeShader(&qu->go.graphObj,  &_binary_shaders_quad_frag_3_spv_start, (size_t)(&_binary_shaders_quad_frag_3_spv_size), num_pack);
             break;
     }
 
-    PipelineSettingSetShader(&setting, &_binary_shaders_quad_vert_spv_start, (size_t)(&_binary_shaders_quad_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-
-    setting.flags &= ~(ENGINE_PIPELINE_FLAG_ALPHA);
-    setting.fromFile = 0;
-    setting.vert_indx = 0;
-
-    GameObject2DAddSettingPipeline((GameObject2D *)qu, nums, &setting);
-
-    qu->go.graphObj.blueprints.num_blue_print_packs ++;
+    BluePrintAddSomeUpdater(&qu->go.graphObj.blueprints, num_pack, 0, QuadObjectUpdate);
+    
+    /*setting.flags &= ~(ENGINE_PIPELINE_FLAG_ALPHA);
+    setting.vert_indx = 0;*/
 }

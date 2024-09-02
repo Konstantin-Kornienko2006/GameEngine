@@ -8,6 +8,8 @@
 #include "Core/e_buffer.h"
 #include "Core/e_blue_print.h"
 
+#include "Tools/e_shaders.h"
+
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
 #include "Data/e_resource_export.h"
@@ -56,7 +58,7 @@ void SpriteObjectCreateQuad(SpriteObject *so)
     FreeMemory(verts);
 }
 
-void SpriteObjectInit(SpriteObject *so, DrawParam *dParam){
+int SpriteObjectInit(SpriteObject *so, DrawParam *dParam){
 
     GameObject2DInit((GameObject2D *)so);
 
@@ -64,47 +66,63 @@ void SpriteObjectInit(SpriteObject *so, DrawParam *dParam){
 
     so->go.image = AllocateMemory(1, sizeof(GameObjectImage));
 
+    char *currPath = DirectGetCurrectFilePath();
+    int len = strlen(currPath);
+    currPath[len] = '\\';
+
     if(strlen(dParam->diffuse) != 0)
     {
-        int len = strlen(dParam->diffuse);
+        char *full_path = ToolsMakeString(currPath, dParam->normal);
+        
+        if(!DirectIsFileExist(full_path)){
+            GameObjectDestroy(so);
+            FreeMemory(full_path);            
+            FreeMemory(currPath);
+            return 0;
+        }
+
+        int len = strlen(full_path);
         so->go.image->path = AllocateMemory(len + 1, sizeof(char));
-        memcpy(so->go.image->path, dParam->diffuse, len);
+        memcpy(so->go.image->path, full_path, len);
         so->go.image->path[len] = '\0';
         //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
+
+        so->go.num_images ++;
+
+        FreeMemory(full_path);   
     }
 
+    FreeMemory(currPath);
+
     so->go.graphObj.num_shapes = 1;
+    
+    return 1;
 }
 
 void SpriteObjectAddDefault(SpriteObject *so, void *render)
 {
+    uint32_t num_pack = BluePrintInit(&so->go.graphObj.blueprints);
+    
+    ShaderBuilder *vert = so->go.self.vert;
+    ShaderBuilder *frag = so->go.self.frag;
 
-    uint32_t nums = so->go.graphObj.blueprints.num_blue_print_packs;
-    so->go.graphObj.blueprints.blue_print_packs[nums].render_point = render;
+    ShadersMakeDefault2DShader(vert, frag, so->go.num_images > 0);
 
-    BluePrintAddUniformObject(&so->go.graphObj.blueprints, 0, sizeof(TransformBuffer2D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject2DTransformBufferUpdate, 0);
-    BluePrintAddUniformObject(&so->go.graphObj.blueprints, 0, sizeof(ImageBufferObjects), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject2DImageBuffer, 0);
+    GraphicsObjectSetSomeShader(&so->go.graphObj, vert->code, vert->size, num_pack);
+    GraphicsObjectSetSomeShader(&so->go.graphObj, frag->code, frag->size, num_pack);
 
-    BluePrintAddTextureImage(&so->go.graphObj.blueprints, 0, so->go.image, VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    PipelineSetting setting;
-
-    PipelineSettingSetDefault(&so->go.graphObj, &setting);
-
-    PipelineSettingSetShader(&setting, &_binary_shaders_sprite_vert_spv_start, (size_t)(&_binary_shaders_sprite_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(&setting, &_binary_shaders_sprite_frag_spv_start, (size_t)(&_binary_shaders_sprite_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    setting.fromFile = 0;
-    setting.flags |= ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE;
-
-    GameObject2DAddSettingPipeline((GameObject2D *)so, nums, &setting);
-
-    so->go.graphObj.blueprints.num_blue_print_packs ++;
+    BluePrintAddSomeUpdater(&so->go.graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
+    BluePrintAddSomeUpdater(&so->go.graphObj.blueprints, num_pack, 1, GameObject2DImageBuffer);
+    BluePrintSetTextureImageCreate(&so->go.graphObj.blueprints, num_pack, so->go.image, 0);
 }
 
 void SpriteObjectInitDefault(SpriteObject *so, DrawParam *dParam)
 {
-    SpriteObjectInit(so, dParam);
+    int res = SpriteObjectInit(so, dParam);
+
+    if(!res)
+        return;
+
     SpriteObjectAddDefault(so, dParam->render);
     GameObject2DInitDraw((GameObject2D *)so);
 }

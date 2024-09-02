@@ -55,13 +55,33 @@ typedef struct{
     int stackCount;
 } ConeParam;
 
-
-void PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void *params);
+/// @brief Инциализация объекта-примитива
+/// @param po - объект-примитив
+/// @param dParam - параметры для рендера
+/// @param type - тип примитива
+/// @param params - параметры примитива
+/// @return - прошла ли инициализация успешно (true) либо (false)
+int PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void *params);
+/// @brief Инициализация стандартного объекта-примитива
+/// @param po - объект-примитив
+/// @param dParam - параметры для рендера
+/// @param type - тип примитива
+/// @param params - параметры примитива
 void PrimitiveObjectInitDefault(PrimitiveObject *po, DrawParam *dParam, char type, void *params);
-
-void PrimitiveObjectSetDefaultDescriptor(PrimitiveObject *po, DrawParam *dParam);
-void PrimitiveObjectSetInstanceDescriptor(PrimitiveObject *po, DrawParam *dParam);
-void PrimitiveObjectSetShadowDefaultDescriptor(PrimitiveObject *po, DrawParam *dParam);
+/// @brief Установка стандартного чертежа для объекта
+/// @param po - объект-примитив
+/// @param dParam - параметры для рендера
+void PrimitiveObjectSetDefaultDescriptor(PrimitiveObject *po);
+/// @brief Установка стандартного чертежа для инстанс-объекта-примитива
+/// @param po - объект-примитив
+/// @param dParam - параметры для рендера
+void PrimitiveObjectSetInstanceDescriptor(PrimitiveObject *po);
+/// @brief Установка стандартного чертежа с шейдерами
+/// @param po - объект-примитив
+/// @param dParam -параметры для рендера
+void PrimitiveObjectSetShadowDefaultDescriptor(PrimitiveObject *po);
+void PrimitiveObjectSetBigDesriptor(PrimitiveObject *po);
+void PrimitiveObjectSetShader(PrimitiveObject *po, char * vert_path, char *frag_path);
 
 void *PrimitiveObjectGetVertex(PrimitiveObject *po);
 void PrimitiveObjectDiffuseTextureSetData(PrimitiveObject *po, void *data, uint32_t size_data, uint32_t offset);

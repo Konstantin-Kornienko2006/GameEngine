@@ -18,6 +18,7 @@ typedef struct {
 
 typedef struct{
     vec2 offset;
+    vec2 scale;
     vec2 rotation;
 } ImageBufferObjects;
 

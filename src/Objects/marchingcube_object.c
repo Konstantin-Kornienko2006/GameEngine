@@ -7,6 +7,7 @@
 #include "Core/pipeline.h"
 
 #include "Tools/e_math.h"
+#include "Tools/e_shaders.h"
 
 #include "Data/e_resource_export.h"
 
@@ -568,29 +569,19 @@ void MarchingCubeObjectInit(MarchingCubeObject *mco, float *grid, uint32_t size,
 }
 
 void MarchingCubeObjectSetDefaultDescriptor(MarchingCubeObject *mco, DrawParam *dParam)
-{
-    uint32_t nums = mco->go.graphObj.blueprints.num_blue_print_packs;
-    mco->go.graphObj.blueprints.blue_print_packs[nums].render_point = dParam->render;
+{    
+    uint32_t num_pack = BluePrintInit(&mco->go.graphObj.blueprints);
+    
+    ShaderBuilder *vert = mco->go.self.vert;
+    ShaderBuilder *frag = mco->go.self.frag;
 
-    BluePrintAddUniformObject(&mco->go.graphObj.blueprints, nums, sizeof(ModelBuffer3D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject3DDescriptorModelUpdate, 0);
+    ShadersMakeDefault3DShader(vert, frag, mco->go.num_images > 0);
 
-    PipelineSetting setting;
+    GraphicsObjectSetSomeShader(&mco->go.graphObj, vert->code, vert->size, num_pack);
+    GraphicsObjectSetSomeShader(&mco->go.graphObj, frag->code, frag->size, num_pack);
 
-    PipelineSettingSetDefault(&mco->go.graphObj, &setting);
-
-    PipelineSettingSetShader(&setting, &_binary_shaders_default_vert3D_spv_start, (size_t)(&_binary_shaders_default_vert3D_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(&setting, &_binary_shaders_default_frag3D_spv_start, (size_t)(&_binary_shaders_default_frag3D_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    setting.fromFile = 0;
-    setting.vert_indx = 0;
-    setting.cull_mode = VK_CULL_MODE_NONE;
-    setting.poligonMode = VK_POLYGON_MODE_LINE;
-    //setting.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-    //setting.flags &= ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED);
-
-    GameObject3DAddSettingPipeline((GameObject3D *)mco, nums, &setting);
-
-    mco->go.graphObj.blueprints.num_blue_print_packs ++;
+    BluePrintAddSomeUpdater(&mco->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
+    BluePrintSetTextureImageCreate(&mco->go.graphObj.blueprints, num_pack, &mco->go.images[0], 0);
 }
 
 void MarchingCubeObjectDefaultInit(MarchingCubeObject *mco, float *grid, uint32_t size, float isolevel, DrawParam *dParam)

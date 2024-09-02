@@ -19,10 +19,10 @@ typedef struct{
     int size;
 } EWidgetList;
 
-void ListWidgetInit(EWidgetList *list, int size_x, int size_y, DrawParam *dParam, EWidget *parent);
+void ListWidgetInit(EWidgetList *list, vec2 scale, EWidget *parent);
 
 void ListWidgetSetColor(EWidgetList *list, vec3 color);
-EWidgetButton *ListWidgetAddItem(EWidgetList *list, const char *text, DrawParam *dParam);
+EWidgetButton *ListWidgetAddItem(EWidgetList *list, const char *text);
 void ListWidgetRemoveItem(EWidgetList *list, int num);
 
 #ifdef __cplusplus

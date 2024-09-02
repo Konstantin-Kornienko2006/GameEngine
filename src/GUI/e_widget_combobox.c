@@ -1,85 +1,74 @@
 #include "GUI/e_widget_combobox.h"
 
-int ComboboxWidgetPressMain(EWidget* widget, void* entry, EWidgetCombobox *cmb){
+int ComboboxWidgetPressMain(EWidget* widget, void* entry, void *arg){
 
-    if(!cmb->show)
-    {
-        cmb->show = true;
-        Transform2DSetScale(&cmb->widget, cmb->size_x, (cmb->list.size + 1) * cmb->size_y);
-    }else{
-        cmb->show = false;
-        Transform2DSetScale(&cmb->widget, cmb->size_x, cmb->size_y);
-    }
+    EWidgetCombobox *combo = widget;
 
-    WidgetConfirmTrigger(cmb, ENGINE_WIDGET_TRIGGER_COMBOBOX_PRESS, NULL);
+    WidgetConfirmTrigger(combo, ENGINE_WIDGET_TRIGGER_COMBOBOX_PRESS, NULL);
+
+    combo->show = !combo->show;
 
     return 0;
 }
 
-int ComboboxWidgetPressSub(EWidget* widget, int id, EWidgetCombobox *cmb){
+int ComboboxWidgetPressSub(EWidget* widget, int id, void *arg){
 
     EWidgetList *list = widget;
 
-    ChildStack *child = WidgetFindChild(list, id);
+    EWidgetCombobox *parent = widget->parent;
 
-    if(child == NULL)
+    EWidgetButton *butt = WidgetFindChild(list, id)->node;
+
+    if(parent == NULL)
         return;
 
-    EWidgetButton *butt = child->node;
+    ButtonWidgetSetText(parent, butt->text);
 
-    char temp[1024];
+    parent->currId = id;
 
-    TextWidgetGetText(&butt->text, temp);
-
-    ButtonWidgetSetText(&cmb->button, temp);
-
-    cmb->currId = id;
-
-    if(!cmb->show)
-    {
-        cmb->show = true;
-        Transform2DSetScale(&cmb->widget, cmb->size_x, (cmb->list.size + 1) * cmb->size_y);
-    }else{
-        cmb->show = false;
-        Transform2DSetScale(&cmb->widget, cmb->size_x, cmb->size_y);
-    }
-
-    WidgetConfirmTrigger(cmb, ENGINE_WIDGET_TRIGGER_COMBOBOX_CHANGE_SELLECTED_ITEM, id);
+    WidgetConfirmTrigger(parent, ENGINE_WIDGET_TRIGGER_COMBOBOX_CHANGE_SELLECTED_ITEM, id);
 
     return 0;
 }
 
-void ComboboxWidgetInit(EWidgetCombobox *combobox, vec2 scale, DrawParam *dParam, EWidget *parent){
+extern void ButtonWidgetDraw(EWidgetButton *button);
 
-    WidgetInit(&combobox->widget, dParam, parent);
-    WidgetAddDefault(&combobox->widget, dParam->render);
-    GameObject2DInitDraw(&combobox->widget);
+void ComboboxWidgetDraw(EWidgetCombobox *combobox){
+    
+    if(combobox->button.widget.widget_flags & ENGINE_FLAG_WIDGET_VISIBLE){
+        ButtonWidgetDraw(&combobox->button);
 
-    memcpy(combobox->widget.go.name, "Combobox", 8);
-    combobox->widget.type = ENGINE_WIDGET_TYPE_COMBOBOX;
+        WidgetSetPosition(&combobox->list, combobox->button.widget.position.x , combobox->button.widget.position.x + combobox->button.widget.scale.y);
+    }
 
-    ButtonWidgetInit(&combobox->button, " ", dParam, &combobox->widget);
-    ButtonWidgetSetColor(&combobox->button, 0.4, 0.4, 0.4);
+}
+
+void ComboboxWidgetInit(EWidgetCombobox *combobox, vec2 scale, EWidget *parent){
+
+    ButtonWidgetInit(combobox, scale," ", parent);
+    ButtonWidgetSetColor(combobox, 0.4, 0.4, 0.4);
+
+    GameObjectSetDrawFunc(combobox, ComboboxWidgetDraw);
+
+    combobox->button.widget.type = ENGINE_WIDGET_TYPE_COMBOBOX;
+    combobox->button.widget.rounding = 0.f;
 
     combobox->size_x = scale.x;
     combobox->size_y = scale.y;
     combobox->currId = -1;
+    combobox->show = false;
 
-    Transform2DSetScale(&combobox->widget, combobox->size_x, combobox->size_y);
-    Transform2DSetScale(&combobox->button, combobox->size_x, combobox->size_y);
+    ListWidgetInit(&combobox->list, scale, combobox);
+    WidgetConnect(combobox, ENGINE_WIDGET_TRIGGER_BUTTON_PRESS, ComboboxWidgetPressMain,  NULL);
+    WidgetConnect(&combobox->list, ENGINE_WIDGET_TRIGGER_LIST_PRESS_ITEM, ComboboxWidgetPressSub,  NULL);
 
-    ListWidgetInit(&combobox->list, combobox->size_x, combobox->size_y, dParam, &combobox->widget);
-    WidgetConnect(&combobox->button, ENGINE_WIDGET_TRIGGER_BUTTON_PRESS, ComboboxWidgetPressMain,  combobox);
-    WidgetConnect(&combobox->list, ENGINE_WIDGET_TRIGGER_LIST_PRESS_ITEM, ComboboxWidgetPressSub,  combobox);
-
-    Transform2DSetPosition(&combobox->list, 0, combobox->size_y * 2);
     combobox->show = false;
 
 }
 
-void ComboboxWidgetAddItem(EWidgetCombobox *combobox, const char* text, DrawParam *dParam){
-    EWidgetButton *butt = ListWidgetAddItem(&combobox->list, text, dParam);
+void ComboboxWidgetAddItem(EWidgetCombobox *combobox, const char* text){
+    EWidgetButton *butt = ListWidgetAddItem(&combobox->list, text);
 
     butt->widget.widget_flags |= ENGINE_FLAG_WIDGET_ALLOCATED;
-    Transform2DSetScale(&combobox->list, combobox->size_x, (combobox->list.size + 1) * combobox->size_y);
+    butt->widget.rounding = 0.f;
 }

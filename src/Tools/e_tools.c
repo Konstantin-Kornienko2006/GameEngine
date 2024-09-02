@@ -138,7 +138,7 @@ QueueFamilyIndices findQueueFamilies(void* arg) {
     return indices;
 }
 
-shader readFile(const char* filename) {
+ShaderObject readFile(const char* filename) {
     FILE* file = fopen(filename, "r");
 
     if (file == NULL) {
@@ -163,14 +163,14 @@ shader readFile(const char* filename) {
 
     fclose(file);
 
-    shader shdr;
+    ShaderObject shdr;
     shdr.code = temp;
     shdr.size = size;
 
     return shdr;
 }
 
-void* createShaderModule(shader shdr) {
+void* createShaderModule(ShaderObject shdr) {
     ZDevice *device = (ZDevice *)engine.device;
 
     VkShaderModuleCreateInfo createInfo = {};

@@ -16,6 +16,7 @@ typedef struct{
     vec2 scaleOrig;
     struct{
         vec2 offset;
+        vec2 scale;
         vec2 rotation;
     }img;
     mat4 model;

@@ -35,8 +35,17 @@ typedef struct{
 
 void GameObject3DApplyVertexes(GameObject3D* go);
 void GameObject3DRebuildVertexes(GameObject3D* go);
-
+/// @brief Инициализация объекта частиц
+/// @param particle - объект частиц
+/// @param dParam - параметры для отрисовки
 void Particle3DInit(ParticleObject3D* particle, DrawParam dParam);
+/// @brief Функция для добавления новой частицы
+/// @param particle - объект частиц
+/// @param position - положение частицы в пространстве
+/// @param direction - направление движения частицы
+/// @param speed - скорость движения частицы
+/// @param gravity - гравитация цастицы
+/// @param life - срок жизни частицы
 void Particle3DAdd(ParticleObject3D* particle, vec3 position, vec3 direction, float speed, float gravity, float life);
 
 #ifdef __cplusplus

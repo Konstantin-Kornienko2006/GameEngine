@@ -29,13 +29,13 @@ void GameObjectSetDestroyFunc(GameObject *go, void *func){
     go->DestroyPoint = func;
 }
 
-
 void GameObjectInit(GameObject* go){
 
     if(go == NULL)
         return;
 
-    go->InitPoint(go);
+    if(go->InitPoint != NULL)
+        go->InitPoint(go);
 }
 
 void GameObjectUpdate(GameObject* go) {
@@ -46,19 +46,22 @@ void GameObjectUpdate(GameObject* go) {
     if(go->UpdatePoint == NULL)
         return;
 
-    go->UpdatePoint(go);
+    if(go->UpdatePoint != NULL)
+        go->UpdatePoint(go);
 }
 
 void GameObjectDraw(GameObject* go) {
 
-    ZDevice *device = (ZDevice *)engine.device;
-
     if(go == NULL)
+        return;
+
+    if(go->init == false)
         return;
 
     GameObjectUpdate(go);
 
-    go->DrawPoint(go, device->commandBuffers[engine.imageIndex]);
+    if(go->DrawPoint != NULL)
+        go->DrawPoint(go);
 }
 
 void GameObjectClean(GameObject* go){
@@ -66,7 +69,8 @@ void GameObjectClean(GameObject* go){
     if(go == NULL)
         return;
 
-    go->CleanPoint(go);
+    if(go->CleanPoint != NULL)
+        go->CleanPoint(go);
 }
 
 void GameObjectRecreate(GameObject* go){
@@ -74,15 +78,20 @@ void GameObjectRecreate(GameObject* go){
     if(go == NULL)
         return;
 
-    go->RecreatePoint(go);
+    if(go->RecreatePoint != NULL)
+        go->RecreatePoint(go);
 }
 
 void GameObjectDestroy(GameObject* go){
 
-    EngineDeviceWaitIdle();
-
     if(go == NULL)
         return;
+        
+    if(!go->init)
+        return;
+
+    EngineDeviceWaitIdle();
+
 
     void (*destroy)(GameObject* go) = go->DestroyPoint;
 

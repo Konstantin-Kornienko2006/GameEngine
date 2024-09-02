@@ -262,13 +262,15 @@ int TextureImageCreate(GameObjectImage *image, struct BluePrintDescriptor_T *des
 
     if(image == NULL)
     {
-        descr->textures[descr->size] = images[0].texture;
+        descr->textures = &images[0].texture;
+        descr->flags |= ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
         return 0;
     }
 
     if(image->path == NULL && image->buffer == NULL)
     {
-        descr->textures[descr->size] = images[0].texture;
+        descr->textures = &images[0].texture;
+        descr->flags |= ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
         return 0;
     }
 
@@ -282,7 +284,8 @@ int TextureImageCreate(GameObjectImage *image, struct BluePrintDescriptor_T *des
 
     if(temp_tex != NULL)
     {
-        descr->textures[descr->size] = *TextureFindTexture(image->path);
+        descr->textures = temp_tex;
+        descr->flags |= ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
         return 0;
     }
 
@@ -307,7 +310,7 @@ int TextureImageCreate(GameObjectImage *image, struct BluePrintDescriptor_T *des
     if (!fileData.data) {
         printf("failed to load texture image!");
 
-        descr->textures[descr->size] = images[0].texture;
+        descr->textures = &images[0].texture;
 
         return 0;
     }
@@ -598,7 +601,7 @@ void TextureCreate(struct BluePrintDescriptor_T *descriptor, uint32_t type, Game
         TextureCreateTextureImageView(texture, type);
         TextureCreateSampler(&texture->sampler, texture->textureType, texture->image_data.mip_levels);
 
-        descr->textures[descr->size] = *texture;
+        descr->textures = texture;
         descr->size ++;
 
         image->imgHeight = texture->image_data.texHeight;

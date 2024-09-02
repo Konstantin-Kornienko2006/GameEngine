@@ -11,6 +11,7 @@
 #include "Objects/lightObject.h"
 #include "Objects/render_texture.h"
 
+#include "GUI/GUIManager.h"
 #include "GUI/e_widget_entry.h"
 
 #include "wManager/window_manager.h"
@@ -80,7 +81,7 @@ void ZEngineInitSystem(int width, int height, const char* name){
     
     InitWindow(engine.window);
     EngineInitVulkan();
-
+    
     ZWindow *window = (ZWindow *)engine.window;
     wManagerSetCharCallback(window->e_window, EngineCharacterCallback);
     wManagerSetKeyCallback(window->e_window, EngineKeyCallback);
@@ -95,6 +96,14 @@ void ZEngineInitSystem(int width, int height, const char* name){
     engine.DataR.e_var_num_images ++;
     
     memset(&engine.renders, 0, sizeof(EngineRenderItems));
+    
+    engine.main_render = AllocateMemory(1, sizeof(RenderTexture));
+    
+    RenderTextureInit(engine.main_render, ENGINE_RENDER_TYPE_WINDOW, 0, 0, 0);
+
+    ZEngineSetRender(engine.main_render, 1);
+
+    GUIManagerInit();
 }
 
 void ZEngineSetRender(void *obj, uint32_t count)
@@ -181,6 +190,8 @@ void ZEngineRender(){
             for( int i=0;i < engine.gameObjects.size;i++)
                 GameObjectDraw(engine.gameObjects.objects[i]);
 
+            GUIManagerDraw();
+
             RenderTextureEndRendering(engine.current_render, device->commandBuffers[engine.imageIndex]);
         }
     }
@@ -265,6 +276,8 @@ void ZEngineRender(){
 
     engine.gameObjects.size = 0;
 
+    GUIManagerClear();
+
     /*free(engine.DataR.e_var_lights);
     engine.DataR.e_var_lights = calloc(0, sizeof(LightObject *));
     engine.DataR.e_var_num_lights = 0;*/
@@ -285,7 +298,6 @@ void ZEngineDraw(GameObject *go){
             return;
     }
 
-    
     engine.gameObjects.objects[engine.gameObjects.size] = go;
     engine.gameObjects.size ++;
 }
@@ -318,6 +330,74 @@ void ZEngineSetCursorPoscallback(void * callback){
     ZWindow *window = (ZWindow *)engine.window;
 
     wManagerSetCursorPosCallback(window->e_window, callback);
+}
+
+void ZEngineGetWindowSize(int *width, int *height){
+
+    *width = engine.width;
+    *height = engine.height;
+}
+
+void ZEngineFixedCursorCenter(){
+    ZWindow *window = (ZWindow *)engine.window;
+
+    wManagerSetCursorPos(window->e_window, engine.width / 2, engine.height / 2);
+}
+
+void ZEngineGetCursorPos(double *xpos, double *ypos){
+    ZWindow *window = (ZWindow *)engine.window;
+
+    wManagerGetCursorPos(window->e_window, xpos, ypos);
+}
+
+void ZEngineSetCursorPos(float xpos, float ypos){
+    ZWindow *window = (ZWindow *)engine.window;
+
+    wManagerSetCursorPos(window->e_window, xpos, ypos);
+}
+
+void ZEngineHideCursor(char state){
+    ZWindow *window = (ZWindow *)engine.window;
+
+    switch(state){
+        case 0 :
+            wManagerSetInputMode(window->e_window, ENGINE_CURSOR, ENGINE_CURSOR_DISABLED);
+            break;
+        case 1 :
+            wManagerSetInputMode(window->e_window, ENGINE_CURSOR, ENGINE_CURSOR_HIDDEN);
+            break;
+        case 2 :
+            wManagerSetInputMode(window->e_window, ENGINE_CURSOR, ENGINE_CURSOR_NORMAL);
+            break;
+    }
+}
+
+int ZEngineGetMousePress(int Key){
+    ZWindow *window = (ZWindow *)engine.window;
+
+    int state = wManagerGetMouseButton(window->e_window, Key);
+
+    return state;
+}
+
+int ZEngineWindowIsClosed(){
+    return wManagerWindowIsClosed();
+}
+
+double ZEngineGetTime(){
+    return wManagerGetTime();
+}
+
+const char *ZEngineGetClipBoardString(){
+    ZWindow *window = (ZWindow *)engine.window;
+
+    return wManagerGetClipboardString(window->e_window);
+}
+
+void ZEngineSetClipBoardString(const char *string){
+    ZWindow *window = (ZWindow *)engine.window;
+
+    wManagerSetClipboardString(window->e_window, string);
 }
 
 void ZEngineCleanUp(){
@@ -379,6 +459,10 @@ void ZEngineCleanUp(){
         engine.DataR.e_var_num_lights = 0;
     }
 
+    RenderTextureDestroy(engine.main_render);
+    FreeMemory(engine.main_render);
+
+    GUIManagerDestroy();
 
     BuffersClearAll();
     DescriptorClearAll();

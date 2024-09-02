@@ -288,7 +288,7 @@ void BuffersCreate(uint64_t size, uint32_t usage, uint32_t properties, BufferObj
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     if (vkCreateBuffer(device->e_device, &bufferInfo, NULL, &buffer->buffer) != VK_SUCCESS) {
-        printf("failed to create buffer!");
+        printf("Error : Failed to create buffer!\n");
         exit(1);
     }
 
@@ -301,7 +301,7 @@ void BuffersCreate(uint64_t size, uint32_t usage, uint32_t properties, BufferObj
     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
     if (vkAllocateMemory(device->e_device, &allocInfo, NULL, &buffer->memory) != VK_SUCCESS) {
-        printf("failed to allocate buffer memory!");
+        printf("Error : Failed to allocate buffer memory!\n");
         exit(1);
     }
 
@@ -374,11 +374,7 @@ void BuffersClearAll()
 
     ChildStack *next = NULL;
     
-    uint32_t counter = 0;
-       
-    counter = 0;
-
-    child = engine.cache.alloc_buffers_memory_head;
+    uint32_t counter = 0;       
 
     while(child != NULL){    
         

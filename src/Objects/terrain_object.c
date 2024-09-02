@@ -296,7 +296,7 @@ void TerrainObjectGenerateTerrainHeights(TerrainObject *to)
 
 void TerrainObjectSetShadowDefaultDescriptor(TerrainObject *to, DrawParam *dParam)
 {
-    uint32_t nums = to->go.graphObj.blueprints.num_blue_print_packs;
+    /*uint32_t nums = to->go.graphObj.blueprints.num_blue_print_packs;
     to->go.graphObj.blueprints.blue_print_packs[nums].render_point = dParam->render;
 
     BluePrintAddUniformObject(&to->go.graphObj.blueprints, nums, sizeof(ModelBuffer3D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject3DDescriptorModelUpdate, 0);
@@ -352,17 +352,16 @@ void TerrainObjectSetShadowDefaultDescriptor(TerrainObject *to, DrawParam *dPara
     PipelineSettingSetShader(&setting, &_binary_shaders_terrain_shadow_vert_spv_start, (size_t)(&_binary_shaders_terrain_shadow_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
     PipelineSettingSetShader(&setting, &_binary_shaders_terrain_shadow_frag_spv_start, (size_t)(&_binary_shaders_terrain_shadow_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
 
-    setting.fromFile = 0;
     setting.vert_indx = 0;
 
     GameObject3DAddSettingPipeline((GameObject3D *)to, nums, &setting);
 
-    to->go.graphObj.blueprints.num_blue_print_packs ++;
+    to->go.graphObj.blueprints.num_blue_print_packs ++;*/
 }
 
 void TerrainObjectAddDefault(TerrainObject *to, DrawParam *dParam)
 {
-    uint32_t nums = to->go.graphObj.blueprints.num_blue_print_packs;
+    /*uint32_t nums = to->go.graphObj.blueprints.num_blue_print_packs;
     to->go.graphObj.blueprints.blue_print_packs[nums].render_point = dParam->render;
 
     BluePrintAddUniformObject(&to->go.graphObj.blueprints, nums, sizeof(ModelBuffer3D), VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, (void *)GameObject3DDescriptorModelUpdate, 0);
@@ -421,7 +420,6 @@ void TerrainObjectAddDefault(TerrainObject *to, DrawParam *dParam)
     PipelineSettingSetShader(&setting, &_binary_shaders_terrain_tesc_spv_start, (size_t)(&_binary_shaders_terrain_tesc_spv_size), VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
     PipelineSettingSetShader(&setting, &_binary_shaders_terrain_tese_spv_start, (size_t)(&_binary_shaders_terrain_tese_spv_size), VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
 
-    setting.fromFile = 0;
     setting.vert_indx = 0;
     //setting.poligonMode = VK_POLYGON_MODE_LINE;
     setting.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
@@ -430,7 +428,7 @@ void TerrainObjectAddDefault(TerrainObject *to, DrawParam *dParam)
 
     GameObject3DAddSettingPipeline((GameObject3D *)to, nums, &setting);
 
-    to->go.graphObj.blueprints.num_blue_print_packs ++;
+    to->go.graphObj.blueprints.num_blue_print_packs ++;*/
 
 }
 

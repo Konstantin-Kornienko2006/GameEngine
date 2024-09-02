@@ -1,25 +1,108 @@
 #include <ZamEngine.h>
 
 #include <Core/engine.h>
+#include <Core/e_camera.h>
+
 #include <Objects/render_texture.h>
 #include <Objects/primitiveObject.h>
-#include <wManager/window_manager.h>
+#include <Objects/shape_object.h>
+
+#include "Tools/e_math.h"
+
+Camera2D cam2D;
+Camera3D cam3D;
 
 PrimitiveObject po;
 
+ShapeObject shape;
+
+bool firstMouse = true;
+
+double lastX, lastY;
+
+double yaw = 90, pitch = 0, sensitivity = 2.0f;
+
+void CamRotateView(float deltaTime){
+
+    double xpos, ypos;
+
+    ZEngineGetCursorPos(&xpos, &ypos);
+
+    if (firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    double xoffset = xpos - lastX;
+    double yoffset = lastY - ypos; 
+    lastX = xpos;
+    lastY = ypos;
+
+    xoffset *= sensitivity * deltaTime;
+    yoffset *= sensitivity * deltaTime;
+
+    yaw   += xoffset;
+    pitch += yoffset;
+
+    if(pitch > 89.0f)
+        pitch = 89.0f;
+    if(pitch < -89.0f)
+        pitch = -89.0f;
+
+    vec3 direction = Camera3DGetRotation();
+    vec3 next_rotation, result;
+    next_rotation.x = cos(yaw * (M_PI / 180)) * cos(pitch * (M_PI / 180));
+    next_rotation.y = -sin(pitch * (M_PI / 180));
+    next_rotation.z = sin(yaw * (M_PI / 180)) * cos(pitch * (M_PI / 180));
+
+    next_rotation = v3_norm(next_rotation);
+
+    Camera3DSetRotation(next_rotation.x, next_rotation.y, next_rotation.z);
+}
+
+
+void Update(float dTime){
+    CamRotateView(dTime);
+}
+
 int main(){
 
-    EngineCreateSilent();
+    ZEngineInitSystem(800, 600, "Test");
+
+    Camera2DInit(&cam2D);
+    Camera3DInit(&cam3D);
+
+    Camera2DSetActive(&cam2D);
+    Camera3DSetActive(&cam3D);
         
     DrawParam dParam;
     memset(&dParam, 0, sizeof(DrawParam));
 
-    PrimitiveObjectInit(&po, &dParam, ENGINE_PRIMITIVE3D_CUBE, NULL);
-   
-    printf("Allocated count : %i\n", GetAllocatedMemoryCount());  
+    dParam.diffuse = "res\\texture.jpg";
+
+    QuadParams params;
+    params.size = 100;
+    params.color = vec3_f(1, 1, 1);
+
+    PrimitiveObjectInitDefault(&po, &dParam, ENGINE_PRIMITIVE3D_CUBE, NULL);
+    Transform3DSetPosition(&po, 0, 0, -10);
+
+    while (!ZEngineWindowIsClosed())
+    {
+        ZEnginePoolEvents();
+
+        Update(0.1);
+
+        ZEngineDraw(&po);
+        //ZEngineDraw(&shape);
+
+        ZEngineRender();
+    }
+    
     GameObjectDestroy((GameObject *)&po);
     
-    printf("Allocated count : %i\n", GetAllocatedMemoryCount()); 
     EngineDeviceWaitIdle();
     
     ZEngineCleanUp();

@@ -17,6 +17,15 @@
 
 extern ZEngine engine;
 
+void PipelineSettingSetShader(PipelineSetting *setting, char *shader, size_t size, uint32_t type)
+{
+    uint32_t num = setting->num_stages;
+    setting->stages[num].some_shader = shader;
+    setting->stages[num].size_some_shader = size;
+    setting->stages[num].type_some_shader = type;
+    setting->num_stages ++;
+}
+
 void PipelineAcceptStack(void *pipeline, void *pipeline_layout)
 {
     PipelineStack *stack;
@@ -120,7 +129,7 @@ void PipelineDestroyStack(void *pipeline)
     }
 }
 
-void PipelineSettingSetDefault(GraphicsObject* graphObj, void *arg){
+void PipelineSettingSetDefault(void *arg){
 
     ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
 
@@ -130,7 +139,6 @@ void PipelineSettingSetDefault(GraphicsObject* graphObj, void *arg){
 
     setting->poligonMode = VK_POLYGON_MODE_FILL;
     setting->topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    setting->fromFile = 1;
     setting->scissor.offset.x = 0;
     setting->scissor.offset.y = 0;
     setting->scissor.extent = *(EIExtent2D*)&swapchain->swapChainExtent;
@@ -142,28 +150,21 @@ void PipelineSettingSetDefault(GraphicsObject* graphObj, void *arg){
     setting->viewport.maxDepth = 1.0f;
     setting->flags = ENGINE_PIPELINE_FLAG_DYNAMIC_VIEW | ENGINE_PIPELINE_FLAG_DRAW_INDEXED | ENGINE_PIPELINE_FLAG_BIAS |\
                      ENGINE_PIPELINE_FLAG_ALPHA | ENGINE_PIPELINE_FLAG_FRAGMENT_SHADER | ENGINE_PIPELINE_FLAG_VERTEX_SHADER;
-    setting->fromFile = 0;
     setting->cull_mode = VK_CULL_MODE_BACK_BIT;
 }
 
-void PipelineSettingSetShader(PipelineSetting *setting, char *shader, size_t size, uint32_t type)
-{
-    uint32_t num = setting->num_stages;
-    setting->stages[num].some_shader = shader;
-    setting->stages[num].size_some_shader = size;
-    setting->stages[num].type_some_shader = type;
-    setting->num_stages ++;
-}
-
-void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t indx_desc)
+void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack)
 {
     ZDevice *device = (ZDevice *)engine.device;
 
     BluePrintPack *pack = &graphObj->blueprints.blue_print_packs[indx_pack];
-    PipelineSetting *setting = &graphObj->blueprints.blue_print_packs[indx_pack].settings[indx_desc];
+    PipelineSetting *setting = &graphObj->blueprints.blue_print_packs[indx_pack].setting;
     ShaderDescriptor *descriptor = &graphObj->gItems.shader_packs[indx_pack].descriptor;
-    PipelineStruct *pipeline = &graphObj->gItems.shader_packs[indx_pack].pipelines[graphObj->gItems.shader_packs[indx_pack].num_pipelines];
+    PipelineStruct *pipeline = &graphObj->gItems.shader_packs[indx_pack].pipeline;
     RenderTexture *render = graphObj->blueprints.blue_print_packs[indx_pack].render_point;
+
+    if(render == NULL)
+        render = graphObj->blueprints.blue_print_packs[indx_pack].render_point = engine.main_render;
 
     //Шейдеры
     VkPipelineShaderStageCreateInfo shaderStages[6];
@@ -179,19 +180,12 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t
             shaderStages[count_stages].stage = setting->stages[count_stages].type_some_shader;
             shaderStages[count_stages].pName = "main";
 
-            shader some_shader_code;
+            ShaderObject some_shader_code;
 
-            if(setting->fromFile)
-                some_shader_code = readFile(setting->stages[count_stages].some_shader);
-            else{
-                some_shader_code.code = setting->stages[count_stages].some_shader;
-                some_shader_code.size = setting->stages[count_stages].size_some_shader;
-            }
+            some_shader_code.code = setting->stages[count_stages].some_shader;
+            some_shader_code.size = setting->stages[count_stages].size_some_shader;
 
             shaderStages[count_stages].module = createShaderModule(some_shader_code);
-
-            if(setting->fromFile)
-                FreeMemory(some_shader_code.code);
 
             count_stages ++;
 
@@ -316,13 +310,18 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t
         viewportState.pScissors = &scissor;
     }
 
-    VkPushConstantRange *push_ranges = AllocateMemory(pack->num_push_constants, sizeof(VkPushConstantRange));
 
-    for(int l=0 ;l < pack->num_push_constants;l++)
-    {
-        push_ranges[l].offset = pack->push_constants[l].offset;
-        push_ranges[l].size = pack->push_constants[l].size;
-        push_ranges[l].stageFlags = pack->push_constants[l].stageFlags;
+    VkPushConstantRange *push_ranges = NULL;
+    
+    if(pack->num_push_constants > 0){
+        push_ranges = AllocateMemory(pack->num_push_constants, sizeof(VkPushConstantRange));
+
+        for(int l=0 ;l < pack->num_push_constants;l++)
+        {
+            push_ranges[l].offset = pack->push_constants[l].offset;
+            push_ranges[l].size = pack->push_constants[l].size;
+            push_ranges[l].stageFlags = pack->push_constants[l].stageFlags;
+        }
     }
 
 
@@ -395,98 +394,13 @@ void PipelineCreateGraphics(GraphicsObject* graphObj){
     for(int i=0; i < graphObj->blueprints.num_blue_print_packs; i++){
 
         ShaderPack *pack = &graphObj->gItems.shader_packs[i];
-        BluePrintPack *b_pack = &graphObj->blueprints.blue_print_packs[i];
 
-        for(int j=0; j < b_pack->num_settings; j++){
-
-            PipelineMakePipeline(graphObj, i, j);
-
-            pack->num_pipelines ++;
-
-        }
+        PipelineMakePipeline(graphObj, i);
     }
-}
-
-void PipelineCreateRenderPass() {
-    ZDevice *device = (ZDevice *)engine.device;
-    ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
-
-    VkAttachmentDescription colorAttachment = {};
-    colorAttachment.format = swapchain->swapChainImageFormat;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentReference colorAttachmentRef = {};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentDescription depthAttachment = {};
-    depthAttachment.format = findDepthFormat();
-    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-
-    VkAttachmentReference depthAttachmentRef = {};
-    depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-
-    VkSubpassDependency* dependency = AllocateMemory(2, sizeof(VkSubpassDependency));
-    dependency[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency[0].dstSubpass = 0;
-    dependency[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT; //VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT; //0;
-    dependency[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-    dependency[1].srcSubpass = 0;
-    dependency[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-    dependency[1].srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-    dependency[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependency[1].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    dependency[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    VkAttachmentDescription attachments[] = {colorAttachment, depthAttachment};
-
-    VkRenderPassCreateInfo renderPassInfo = {};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 2;
-    renderPassInfo.pAttachments = attachments;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = dependency;
-
-    if (vkCreateRenderPass(device->e_device, &renderPassInfo, NULL, (VkRenderPass *)&renderPass) != VK_SUCCESS) {
-        printf("failed to create render pass!");
-        exit(1);
-    }
-
-    FreeMemory(dependency);
-    dependency = NULL;    
 }
 
 void PipelineDestroy(ShaderPack *pack)
 {
-
-    for(int i=0;i < pack->num_pipelines;i++)
-        PipelineDestroyStack(pack->pipelines[i].pipeline);
-
-    pack->num_pipelines = 0;
+    PipelineDestroyStack(pack->pipeline.pipeline);
 }
 

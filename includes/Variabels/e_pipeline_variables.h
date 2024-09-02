@@ -41,7 +41,6 @@ typedef struct{
     char cull_mode;
     EngineShaderStage stages[6];
     uint32_t num_stages;
-    char fromFile;
     char dynamicState;
     EPViewport viewport;
     EIRect2D scissor;

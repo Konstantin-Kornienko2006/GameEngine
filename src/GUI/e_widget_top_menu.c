@@ -69,10 +69,10 @@ int ToggleMenu(EWidget *widget, void *entry, EWidgetList *list)
         iter ++;
     }
 
-    if(!(list->widget.widget_flags & ENGINE_FLAG_WIDGET_VISIBLE))
+    /*if(!(list->widget.widget_flags & ENGINE_FLAG_WIDGET_VISIBLE))
         list->widget.widget_flags |= ENGINE_FLAG_WIDGET_VISIBLE;
     else
-        list->widget.widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
+        list->widget.widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);*/
 
     return 0;
 }
@@ -118,7 +118,7 @@ void TopMenuWidgetResize(EWidgetTopMenu *top_menu)
 {
     if(top_menu->window != NULL)
     {
-        vec2 size = Transform2DGetScale(&top_menu->window->widget);
+        vec2 size = Transform2DGetScale(&top_menu->window->surface);
 
         Transform2DSetScale(&top_menu->widget, size.x, size.y);
         Transform2DSetScale(&top_menu->top, size.x, 20);
@@ -134,16 +134,11 @@ void TopMenuWidgetResize(EWidgetTopMenu *top_menu)
 
 void TopMenuWidgetInit(EWidgetTopMenu *top_menu, DrawParam *dParam,EWidgetWindow *window)
 {
-    WidgetInit(&top_menu->widget, NULL, window);
-    WidgetAddDefault(&top_menu->widget, dParam->render);
-    GameObject2DInitDraw(&top_menu->widget);
+    WidgetInit(&top_menu->widget, window);
 
-    memcpy(top_menu->widget.go.name, "Widget_Menu", 10);
     top_menu->widget.type = ENGINE_WIDGET_TYPE_MENU;
 
-    WidgetInit(&top_menu->top, NULL, &top_menu->widget);
-    WidgetAddDefault(&top_menu->top, dParam->render);
-    GameObject2DInitDraw(&top_menu->top);
+    WidgetInit(&top_menu->top, &top_menu->widget);
     top_menu->widget.transparent = 0.0f;
     top_menu->window = window;
 
@@ -162,7 +157,7 @@ int TopMenuWidgetAddMenu(EWidgetTopMenu *top_menu, char *name, DrawParam *dParam
     top_menu->num_elems ++;
 
     EWidgetButton *b_menu = AllocateMemory(1, sizeof(EWidgetButton));
-    ButtonWidgetInit(b_menu, name, dParam, &top_menu->top);
+    //ButtonWidgetInit(b_menu, name, &top_menu->top);
 
     Transform2DSetPosition(b_menu, (top_menu->num_elems - 1) * 240, 0);
     Transform2DSetScale(b_menu, 120, 20);
@@ -178,7 +173,7 @@ void TopMenuWidgetAddItem(EWidgetTopMenu *top_menu, int num_menu, char *name, Dr
 
     if(top_menu->list[num_menu].list != NULL)
     {
-        button = ListWidgetAddItem(top_menu->list[num_menu].list, name, dParam);
+        //button = ListWidgetAddItem(top_menu->list[num_menu].list, name, dParam);
 
         return top_menu->list[num_menu].list;
     }
@@ -192,15 +187,15 @@ void TopMenuWidgetAddItem(EWidgetTopMenu *top_menu, int num_menu, char *name, Dr
     else
         point = top_menu->window;
 
-    ListWidgetInit(l_menu, 110, 20, dParam, point);
+    //ListWidgetInit(l_menu, 110, 20, dParam, point);
     ListWidgetSetColor(l_menu, (vec3){ 0.6, 0.6, 0.6});
 
     vec2 pos = Transform2DGetPosition(top_menu->list[top_menu->num_elems - 1].button);
     Transform2DSetPosition(l_menu, pos.x, 40);
-    l_menu->widget.widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
+    //l_menu->widget.widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
     top_menu->list[num_menu].list = l_menu;
 
-    button = ListWidgetAddItem(top_menu->list[num_menu].list, name, dParam);
+    //button = ListWidgetAddItem(top_menu->list[num_menu].list, name, dParam);
 
     WidgetConnect(top_menu->list[top_menu->num_elems - 1].list, ENGINE_WIDGET_TRIGGER_LIST_PRESS_ITEM, MenuPressItem, NULL);
     WidgetConnect(top_menu->list[top_menu->num_elems - 1].button, ENGINE_WIDGET_TRIGGER_BUTTON_PRESS, ToggleMenu, top_menu->list[top_menu->num_elems - 1].list);

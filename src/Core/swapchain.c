@@ -2,11 +2,15 @@
 
 #include <vulkan/vulkan.h>
 
+#include "GUI/GUIManager.h"
+
 #include "Core/e_memory.h"
 #include "Core/e_device.h"
 #include "Core/e_window.h"
 
 #include "Objects/render_texture.h"
+
+#include "Tools/e_math.h"
 
 #include "Variabels/e_device_variables.h"
 
@@ -174,6 +178,8 @@ void RecreateSwapChain() {
     vkDeviceWaitIdle(device->e_device);
 
     CleanupSwapChain();
+
+    GUIManagerClear();
     
     for(int i=0; i < engine.gameObjects.size;i++)
     {
@@ -182,13 +188,14 @@ void RecreateSwapChain() {
         
     SwapChainCreate();
     SwapChainCreateImageViews();
-    PipelineCreateRenderPass();
     ToolsCreateDepthResources();
 
     for(int i=0;i < engine.renders.size;i++)
     {
         RenderTextureRecreate(engine.renders.objects[i]);
     }
+
+    GUIManagerRecreate();
         
     for(int i=0; i < engine.gameObjects.size;i++)
     {
@@ -206,8 +213,6 @@ void CleanupSwapChain() {
     vkFreeCommandBuffers(device->e_device, device->commandPool, engine.imagesCount, (const VkCommandBuffer *) device->commandBuffers);
     FreeMemory(device->commandBuffers);
     device->commandBuffers = NULL;
-
-    vkDestroyRenderPass(device->e_device, renderPass, NULL);
 
     for (size_t i = 0; i < engine.imagesCount; i++) {
         vkDestroyImageView(device->e_device, swapchain->swapChainImageViews[i], NULL);

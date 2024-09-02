@@ -20,16 +20,15 @@ typedef struct{
     void *GraphicsPipelineLayout;
 } PipelineStack;
 
+void PipelineSettingSetShader(PipelineSetting *setting, char *shader, size_t size, uint32_t type);
+
 void PipelineDestroyStack(void *pipeline);
 
 void PipelineClearAll();
 
-void PipelineSettingSetDefault(GraphicsObject* graphObj, void *setting);
-void PipelineSettingSetShader(PipelineSetting *setting, char *shader, size_t size, uint32_t type);
+void PipelineSettingSetDefault(void *setting);
 
 void PipelineCreateGraphics(GraphicsObject* graphObj);
-
-void PipelineCreateRenderPass();
 
 void PipelineDestroy(ShaderPack *pipeline);
 

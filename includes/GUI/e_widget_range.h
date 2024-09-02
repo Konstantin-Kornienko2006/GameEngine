@@ -2,7 +2,6 @@
 #define E_WIDGET_RANGE_H
 
 #include "e_widget.h"
-#include "e_widget_text.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -12,14 +11,14 @@ extern "C"
 typedef struct{
     EWidget widget;
     EWidget range;
-    EWidget line;
     float min;
     float max;
     float *dest;
+    vec2 rangePos;
     vec3 selfColor;
 } EWidgetRange;
 
-void RangeWidgetInit(EWidgetRange *range, float size_x, float size_y, float min, float max, DrawParam *dParam, EWidget *parent);
+void RangeWidgetInit(EWidgetRange *range, vec2 scale, float min, float max, EWidget *parent);
 void RangeWidgetSetValueDestin(EWidgetRange *range, float *val_dest);
 void RangeWidgetSetValue(EWidgetRange *range, float val);
 

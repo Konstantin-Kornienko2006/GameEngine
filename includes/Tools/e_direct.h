@@ -9,6 +9,7 @@
 #include <unistd.h>
 #endif
 
-char* e_GetCurrectFilePath();
+char* DirectGetCurrectFilePath();
+int DirectIsFileExist(const char *path);
 
 #endif // E_DIRECT_H

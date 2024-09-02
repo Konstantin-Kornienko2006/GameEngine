@@ -7,6 +7,7 @@
 #include "Core/e_blue_print.h"
 
 #include "Tools/e_math.h"
+#include "Tools/e_shaders.h"
 
 #include "Data/e_resource_shapes.h"
 #include "Data/e_resource_export.h"
@@ -710,66 +711,33 @@ void TreeObjectInitInstances(GameObject3D *go){
 
 void TreeObjectSetInstanceDescriptor(TreeObject *to, DrawParam *dParam){
 
-    uint32_t nums = to->go.graphObj.blueprints.num_blue_print_packs;
-    to->go.graphObj.blueprints.blue_print_packs[nums].render_point = dParam->render;
+    uint32_t num_pack = BluePrintInit(&to->go.graphObj.blueprints);
 
-    BluePrintAddUniformObject(&to->go.graphObj.blueprints, nums, sizeof(ModelBuffer3D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject3DDescriptorModelUpdate, 0);
+    GraphicsObjectSetSomeShader(&to->go.graphObj, &_binary_shaders_3d_object_instance_vert_spv_start, (size_t)(&_binary_shaders_3d_object_instance_vert_spv_size), num_pack);
+    GraphicsObjectSetSomeShader(&to->go.graphObj, &_binary_shaders_3d_object_instance_frag_spv_start, (size_t)(&_binary_shaders_3d_object_instance_frag_spv_size), num_pack);
 
-    PipelineSetting setting;
+    BluePrintAddSomeUpdater(&to->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
 
-    PipelineSettingSetDefault(&to->go.graphObj, &setting);
-
-    PipelineSettingSetShader(&setting, &_binary_shaders_tree_instance_vert_spv_start, (size_t)(&_binary_shaders_tree_instance_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(&setting, &_binary_shaders_tree_instance_frag_spv_start, (size_t)(&_binary_shaders_tree_instance_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    setting.fromFile = 0;
-    setting.vert_indx = 0;
+    /*setting.vert_indx = 0;
     setting.cull_mode = VK_CULL_MODE_NONE;
-    setting.poligonMode = VK_POLYGON_MODE_FILL;
+    setting.poligonMode = VK_POLYGON_MODE_FILL;*/
     //setting.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     //setting.flags &= ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED);
-
-    GameObject3DAddSettingPipeline((GameObject3D *)to, nums, &setting);
-
-    to->go.graphObj.blueprints.num_blue_print_packs ++;
 }
 
 void TreeObjectSetDefaultDescriptor(TreeObject *to, uint32_t type, DrawParam *dParam)
 {
-    uint32_t nums = to->go.graphObj.blueprints.num_blue_print_packs;
-    to->go.graphObj.blueprints.blue_print_packs[nums].render_point = dParam->render;
+    uint32_t num_pack = BluePrintInit(&to->go.graphObj.blueprints);
+    
+    ShaderBuilder *vert = to->go.self.vert;
+    ShaderBuilder *frag = to->go.self.frag;
 
-    BluePrintAddUniformObject(&to->go.graphObj.blueprints, nums, sizeof(ModelBuffer3D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject3DDescriptorModelUpdate, 0);
+    ShadersMakeDefault3DShader(vert, frag, to->go.num_images > 0);
 
-    PipelineSetting setting;
+    GraphicsObjectSetSomeShader(&to->go.graphObj, vert->code, vert->size, num_pack);
+    GraphicsObjectSetSomeShader(&to->go.graphObj, frag->code, frag->size, num_pack);
 
-    PipelineSettingSetDefault(&to->go.graphObj, &setting);
-
-    switch(type)
-    {
-        case ENGINE_TREE_OBJECT_TYPE_VERTEX:
-            PipelineSettingSetShader(&setting, &_binary_shaders_tree_vert_spv_start, (size_t)(&_binary_shaders_tree_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-            PipelineSettingSetShader(&setting, &_binary_shaders_tree_frag_spv_start, (size_t)(&_binary_shaders_tree_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
-            break;
-        case ENGINE_TREE_OBJECT_TYPE_SDF:
-            BluePrintAddUniformObject(&to->go.graphObj.blueprints, nums, sizeof(SDFBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DSDFBufferUpdate, 0);
-
-            PipelineSettingSetShader(&setting, &_binary_shaders_tree_sdf_vert_spv_start, (size_t)(&_binary_shaders_tree_sdf_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-            PipelineSettingSetShader(&setting, &_binary_shaders_tree_sdf_frag_spv_start, (size_t)(&_binary_shaders_tree_sdf_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
-            break;
-    }
-
-
-    setting.fromFile = 0;
-    setting.vert_indx = 0;
-    setting.cull_mode = VK_CULL_MODE_NONE;
-    setting.poligonMode = VK_POLYGON_MODE_FILL;
-    //setting.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-    //setting.flags &= ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED);
-
-    GameObject3DAddSettingPipeline((GameObject3D *)to, nums, &setting);
-
-    to->go.graphObj.blueprints.num_blue_print_packs ++;
+    BluePrintAddSomeUpdater(&to->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
 }
 
 void TreeObjectInitDefault(TreeObject *to, uint32_t type, DrawParam *dParam, void *arg)

@@ -703,151 +703,172 @@ void ModelglTFDestroy(ModelObject3D* mo){
 
 void Load3DglTFModel(void *ptr, char *path, char *name, uint8_t type, DrawParam *dParam){
 
-  ModelObject3D *mo = (ModelObject3D *)ptr;
+    ModelObject3D *mo = (ModelObject3D *)ptr;
 
-  Transform3DInit(&mo->transform);
+    char *currPath = DirectGetCurrectFilePath();
+    int len = strlen(currPath);
+    currPath[len] = '\\';
+    
+    char *full_path = ToolsMakeString(currPath, path);
+        
+    Transform3DInit(&mo->transform);
 
-  GameObjectSetUpdateFunc((GameObject *)mo, (void *)ModelDefaultUpdate);
-  GameObjectSetDrawFunc((GameObject *)mo, (void *)ModelDefaultDraw);
-  GameObjectSetCleanFunc((GameObject *)mo, (void *)ModelClean);
-  GameObjectSetRecreateFunc((GameObject *)mo, (void *)ModelRecreate);
-  GameObjectSetDestroyFunc((GameObject *)mo, (void *)ModelglTFDestroy);
+    GameObjectSetUpdateFunc((GameObject *)mo, (void *)ModelDefaultUpdate);
+    GameObjectSetDrawFunc((GameObject *)mo, (void *)ModelDefaultDraw);
+    GameObjectSetCleanFunc((GameObject *)mo, (void *)ModelClean);
+    GameObjectSetRecreateFunc((GameObject *)mo, (void *)ModelRecreate);
+    GameObjectSetDestroyFunc((GameObject *)mo, (void *)ModelglTFDestroy);
 
-  mo->self.obj_type = ENGINE_GAME_OBJECT_TYPE_3D;
-  mo->self.flags = 0;
+    mo->self.obj_type = ENGINE_GAME_OBJECT_TYPE_3D;
+    mo->self.flags = 0;
 
-  mo->obj = AllocateMemory(1, sizeof(glTFStruct));
+    mo->obj = AllocateMemory(1, sizeof(glTFStruct));
 
-  glTFStruct *glTF = mo->obj;
+    glTFStruct *glTF = mo->obj;
 
-  glTF->path = path;
+    glTF->path = full_path;
 
-  char *some_file[256];
-  ToolsAddStrings(some_file, 256, path, name);
+    char *some_file[256];
+    ToolsAddStrings(some_file, 256, full_path, name);
 
-  int len = strlen(name);
-  glTF->name = AllocateMemory(len + 1, sizeof(char));
-  memcpy(glTF->name, name, len);
-  glTF->name[len] = '\0';
+    FreeMemory(full_path);            
+    FreeMemory(currPath);
 
-  char *ascii[256];
-  char *binary[256];
+    len = strlen(name);
+    glTF->name = AllocateMemory(len + 1, sizeof(char));
+    memcpy(glTF->name, name, len);
+    glTF->name[len] = '\0';
 
-  switch (type) {
-      case 0://(models)
-          ToolsAddStrings(ascii, 256, some_file, ".gltf");
-          ToolsAddStrings(binary, 256, some_file, ".bin");
-          break;
-      case 1://(buffers, models)
-          ToolsAddStrings(ascii, 256, some_file, ".gltf");
-          ToolsAddStrings(binary, 256, some_file, ".gltf");
-          break;
-      case 2://(textures, buffers, models)
-          ToolsAddStrings(ascii, 256, some_file, ".glb");
-          ToolsAddStrings(binary, 256, some_file, ".glb");
-          break;
-      default:
-          break;
-  }
+    char *ascii[256];
+    char *binary[256];
 
-  cgltf_options options = {0};
-  cgltf_data* data = NULL;
-  cgltf_result result = cgltf_parse_file(&options, ascii, &data);
-  if (result == cgltf_result_success)
-  {
-      result = cgltf_load_buffers(&options, data, binary);
+    switch (type) {
+        case 0://(models)
+            ToolsAddStrings(ascii, 256, some_file, ".gltf");
+            ToolsAddStrings(binary, 256, some_file, ".bin");
+            break;
+        case 1://(buffers, models)
+            ToolsAddStrings(ascii, 256, some_file, ".gltf");
+            ToolsAddStrings(binary, 256, some_file, ".gltf");
+            break;
+        case 2://(textures, buffers, models)
+            ToolsAddStrings(ascii, 256, some_file, ".glb");
+            ToolsAddStrings(binary, 256, some_file, ".glb");
+            break;
+        default:
+            break;
+    }
 
-      if (result == cgltf_result_success)
-      {
-          SetupMeshState(glTF, data);
+    if(!DirectIsFileExist(ascii)){
+        GameObjectDestroy(ptr);
+        FreeMemory(full_path);            
+        FreeMemory(currPath);
+        return 0;
+    }
+    
+    if(!DirectIsFileExist(binary)){
+        GameObjectDestroy(ptr);
+        return 0;
+    }
+  
+    cgltf_options options = {0};
+    cgltf_data* data = NULL;
+    cgltf_result result = cgltf_parse_file(&options, ascii, &data);
+    if (result == cgltf_result_success)
+    {
+        result = cgltf_load_buffers(&options, data, binary);
 
-          mo->nodes = (ModelNode *) AllocateMemory(glTF->num_meshes, sizeof(ModelNode));
-          mo->num_draw_nodes = glTF->num_meshes;
+        if (result == cgltf_result_success)
+        {
+            SetupMeshState(glTF, data);
 
-          int iter = 0;
+            mo->nodes = (ModelNode *) AllocateMemory(glTF->num_meshes, sizeof(ModelNode));
+            mo->num_draw_nodes = glTF->num_meshes;
 
-          for(int i=0; i < glTF->num_nodes;i++)
-          {
+            int iter = 0;
 
-              engine_gltf_node *node = &glTF->nodes[i];
+            for(int i=0; i < glTF->num_nodes;i++)
+            {
 
-              if(node->isModel)
-              {
-                  mo->nodes[iter].id_node = node->id_node;
+                engine_gltf_node *node = &glTF->nodes[i];
+
+                if(node->isModel)
+                {
+                    mo->nodes[iter].id_node = node->id_node;
 
 
-                  mo->nodes[iter].models = AllocateMemory(node->num_mesh, sizeof(ModelStruct));
-                  mo->nodes[iter].num_models = node->num_mesh;
+                    mo->nodes[iter].models = AllocateMemory(node->num_mesh, sizeof(ModelStruct));
+                    mo->nodes[iter].num_models = node->num_mesh;
 
-                  for(int j=0;j < node->num_mesh;j++)
-                  {
-                      ModelStruct *model = &mo->nodes[iter].models[j];
-                      engine_model_mesh *mesh = node->mesh[j];
+                    for(int j=0;j < node->num_mesh;j++)
+                    {
+                        ModelStruct *model = &mo->nodes[iter].models[j];
+                        engine_model_mesh *mesh = node->mesh[j];
 
-                      model->diffuse = mesh->image;
-                      model->specular = mesh->specular;
-                      model->normal = mesh->normal;
+                        model->diffuse = mesh->image;
+                        model->specular = mesh->specular;
+                        model->normal = mesh->normal;
 
-                      if(dParam != NULL)
-                      {
-                          if(model->diffuse == NULL)
-                          {
-                              model->diffuse = AllocateMemory(1, sizeof(GameObjectImage));
+                        if(dParam != NULL)
+                        {
+                            if(model->diffuse == NULL)
+                            {
+                                model->diffuse = AllocateMemory(1, sizeof(GameObjectImage));
 
-                              if(strlen(dParam->diffuse) != 0)
-                              {
-                                  int len = strlen(dParam->diffuse);
-                                  model->diffuse->path = AllocateMemory(len + 1, sizeof(char));
-                                  memcpy(model->diffuse->path, dParam->diffuse, len);
-                                  model->diffuse->path[len] = '\0';
-                              }
-                          }
+                                if(strlen(dParam->diffuse) != 0)
+                                {
+                                    int len = strlen(dParam->diffuse);
+                                    model->diffuse->path = AllocateMemory(len + 1, sizeof(char));
+                                    memcpy(model->diffuse->path, dParam->diffuse, len);
+                                    model->diffuse->path[len] = '\0';
+                                }
+                            }
 
-                          if(model->specular == NULL)
-                          {
-                              model->specular = AllocateMemory(1, sizeof(GameObjectImage));
+                            if(model->specular == NULL)
+                            {
+                                model->specular = AllocateMemory(1, sizeof(GameObjectImage));
 
-                              if(strlen(dParam->specular) != 0)
-                              {
-                                  int len = strlen(dParam->specular);
-                                  model->specular->path = AllocateMemory(len + 1, sizeof(char));
-                                  memcpy(model->specular->path, dParam->specular, len);
-                                  model->specular->path[len] = '\0';
-                              }
-                          }
+                                if(strlen(dParam->specular) != 0)
+                                {
+                                    int len = strlen(dParam->specular);
+                                    model->specular->path = AllocateMemory(len + 1, sizeof(char));
+                                    memcpy(model->specular->path, dParam->specular, len);
+                                    model->specular->path[len] = '\0';
+                                }
+                            }
 
-                          if(model->normal == NULL)
-                          {
-                              model->normal = AllocateMemory(1, sizeof(GameObjectImage));
+                            if(model->normal == NULL)
+                            {
+                                model->normal = AllocateMemory(1, sizeof(GameObjectImage));
 
-                              if(strlen(dParam->normal) != 0)
-                              {
-                                  int len = strlen(dParam->normal);
-                                  model->normal->path = AllocateMemory(len + 1, sizeof(char));
-                                  memcpy(model->normal->path, dParam->normal, len);
-                                  model->normal->path[len] = '\0';
-                              }
-                          }
-                      }
+                                if(strlen(dParam->normal) != 0)
+                                {
+                                    int len = strlen(dParam->normal);
+                                    model->normal->path = AllocateMemory(len + 1, sizeof(char));
+                                    memcpy(model->normal->path, dParam->normal, len);
+                                    model->normal->path[len] = '\0';
+                                } 
+                            }
+                        }
 
-                      GraphicsObjectInit(&model->graphObj, ENGINE_VERTEX_TYPE_MODEL_OBJECT);
+                        GraphicsObjectInit(&model->graphObj, ENGINE_VERTEX_TYPE_MODEL_OBJECT);
 
-                      model->graphObj.gItems.perspective = true;
+                        model->graphObj.gItems.perspective = true;
 
-                      GraphicsObjectSetVertex(&model->graphObj, mesh->verts, mesh->num_verts, sizeof(ModelVertex3D), mesh->indices, mesh->num_indices, sizeof(uint32_t));
+                        GraphicsObjectSetVertex(&model->graphObj, mesh->verts, mesh->num_verts, sizeof(ModelVertex3D), mesh->indices, mesh->num_indices, sizeof(uint32_t));
 
-                      ModelDefaultInit(model, dParam);
-                  }
+                        ModelDefaultInit(model, dParam);
+                    }
 
-                  iter++;
-              }
+                    iter++;
+                }
 
-          }
-      }
+            }
+        }
 
-      /* TODO make awesome stuff */
-      cgltf_free(data);
-  }
+        /* TODO make awesome stuff */
+        cgltf_free(data);
+    }
 
 }
 
@@ -875,7 +896,6 @@ void gltfModelSetDefaultDescriptor(ModelStruct *model, void *render, void *shado
     PipelineSettingSetShader(&setting, &_binary_shaders_model_vert_spv_start, (size_t)(&_binary_shaders_model_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
     PipelineSettingSetShader(&setting, &_binary_shaders_model_frag_spv_start, (size_t)(&_binary_shaders_model_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);
 
-    setting.fromFile = 0;
     setting.vert_indx = 0;
 
     ModelAddSettingPipeline(model, num, setting);

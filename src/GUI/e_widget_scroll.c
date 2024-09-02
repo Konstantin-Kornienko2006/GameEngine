@@ -9,7 +9,7 @@ int ScrollWidgetPress(EWidgetScroll *widget, void* entry, void* args){
 
     double xpos, ypos;
 
-    EngineGetCursorPos(&xpos, &ypos);
+    ZEngineGetCursorPos(&xpos, &ypos);
     scroll_mouse.x = xpos;
     scroll_mouse.y = ypos;
 
@@ -23,7 +23,7 @@ int ScrollWidgetMove(EWidget* widget, void* entry, EWidgetScroll* scroll){
     vec2 te, te2;
     double xpos, ypos;
 
-    EngineGetCursorPos(&xpos, &ypos);
+    ZEngineGetCursorPos(&xpos, &ypos);
     te.x = xpos;
     te.y = ypos;
 
@@ -54,11 +54,8 @@ int ScrollWidgetMove(EWidget* widget, void* entry, EWidgetScroll* scroll){
 
 void ScrollWidgetInit(EWidgetScroll *scroll, uint32_t width, uint32_t height, DrawParam *dParam, EWidget *parent)
 {
-    WidgetInit(scroll, dParam, parent);
-    WidgetAddDefault(scroll, dParam->render);
-    GameObject2DInitDraw(scroll);
+    WidgetInit(scroll, parent);
 
-    memcpy(scroll->widget.go.name, "Widget_Scroll", 11);
     scroll->widget.type = ENGINE_WIDGET_TYPE_SCROLL;
 
     scroll->widget.color = (vec3){1.0f, 1.0f, 1.0f};
@@ -66,9 +63,7 @@ void ScrollWidgetInit(EWidgetScroll *scroll, uint32_t width, uint32_t height, Dr
 
     scroll->widget.transparent = 0.0f;
 
-    WidgetInit(&scroll->scroll, dParam, scroll);
-    WidgetAddDefault(&scroll->scroll, dParam->render);
-    GameObject2DInitDraw(&scroll->scroll);
+    WidgetInit(&scroll->scroll, scroll);
     scroll->scroll.color = (vec3){1.0f, 0.0f, 0.0f};
 
     Transform2DSetScale(&scroll->scroll, 20, 20);
