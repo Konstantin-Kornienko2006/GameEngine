@@ -258,8 +258,8 @@ typedef struct{
 
 typedef struct{
     char *diffuse;
-    char specular[256];
-    char normal[256];
+    char *specular;
+    char *normal;
     char second[256];
     char font[256];
     char vertShader[256];

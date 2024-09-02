@@ -271,10 +271,10 @@ void PathEllipticalArcTo(const vec2 center, const vec2 radius, float rot, float 
 
 GUIObj *GUIManagerAddObject(){
 
-    GUIObj *object = calloc(1, sizeof(GUIObj));
+    GUIObj *object = AllocateMemory(1, sizeof(GUIObj));
 
     if(gui.draw_list->node == NULL){
-        gui.draw_list->next = calloc(1, sizeof(ChildStack));
+        gui.draw_list->next = AllocateMemory(1, sizeof(ChildStack));
         gui.draw_list->node = object;
     }
     else{
@@ -286,7 +286,7 @@ GUIObj *GUIManagerAddObject(){
             child = child->next;
         }
 
-        child->next = calloc(1, sizeof(ChildStack));
+        child->next = AllocateMemory(1, sizeof(ChildStack));
         child->node = object;
     }
 
@@ -369,8 +369,8 @@ void GUIManagerCopyVertex(uint32_t vCount, uint32_t iCount){
 }
 
 void GUIManagerObjDestroy(GUIObj *obj){
-    free(obj->indeces);
-    free(obj->points);
+    FreeMemory(obj->indeces);
+    FreeMemory(obj->points);
 }
 
 void GUIManagerClear(){
@@ -388,13 +388,13 @@ void GUIManagerClear(){
         
         if(child->node != NULL){
             GUIManagerObjDestroy(child->node);
-            free(child->node);
+            FreeMemory(child->node);
         }
 
         before = child;  
         child = child->next;
 
-        free(before);
+        FreeMemory(before);
         before = NULL;
     }
     
@@ -517,7 +517,6 @@ void GUIManagerInit(){
     GraphicsObjectSetSomeShader(&gui.go.graphObj, vert->code, vert->size, num_pack);
     GraphicsObjectSetSomeShader(&gui.go.graphObj, frag->code, frag->size, num_pack);
 
-    BluePrintAddSomeUpdater(&gui.go.graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
     BluePrintSetTextureImage(&gui.go.graphObj.blueprints, num_pack, gui.font.texture, 0);
     
     uint32_t flags = BluePrintGetSettingsValue(&gui.go.graphObj.blueprints, num_pack, 3);
@@ -527,7 +526,7 @@ void GUIManagerInit(){
 
     gui._FringeScale = 1.0f;
 
-    gui.draw_list = calloc(1, sizeof(ChildStack));
+    gui.draw_list = AllocateMemory(1, sizeof(ChildStack));
 
     BuffersCreate(sizeof(Vertex2D) * MAX_VERTEX_SIZE, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &gui.vertBuffer, ENGINE_BUFFER_ALLOCATE_UNIFORM);
     BuffersCreate(sizeof(uint32_t) * MAX_INDEX_SIZE, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &gui.indxBuffer, ENGINE_BUFFER_ALLOCATE_UNIFORM);
@@ -538,15 +537,15 @@ void GUIManagerInit(){
 void GUIManagerDrawPrimRect(vec2 a, vec2 c, vec3 color){
 
     if(gui.draw_list == NULL)
-        gui.draw_list = calloc(1, sizeof(ChildStack));
+        gui.draw_list = AllocateMemory(1, sizeof(ChildStack));
 
     a = v2_sub(a, vec2_f(engine.width, engine.height));
     c = v2_sub(c, vec2_f(engine.width, engine.height));
 
     GUIObj *rect = GUIManagerAddObject();
 
-    rect->indeces = calloc(6, sizeof(uint32_t));
-    rect->points = calloc(4, sizeof(Vertex2D));
+    rect->indeces = AllocateMemory(6, sizeof(uint32_t));
+    rect->points = AllocateMemory(4, sizeof(Vertex2D));
 
     if(a.x != 0)
         a.x /= engine.width;
@@ -628,14 +627,14 @@ void GUISetText(float xpos, float ypos, vec3 color, float font_size, uint32_t *t
     float y = 0.0f;
     
     if(gui.draw_list == NULL)
-        gui.draw_list = calloc(1, sizeof(ChildStack));
+        gui.draw_list = AllocateMemory(1, sizeof(ChildStack));
         
     GUIObj *rect = GUIManagerAddObject();
 
     uint32_t *tempI = text;
 
-    rect->points = calloc(len * 4, sizeof(Vertex2D));
-    rect->indeces = calloc(len * 6, sizeof(uint32_t));
+    rect->points = AllocateMemory(len * 4, sizeof(Vertex2D));
+    rect->indeces = AllocateMemory(len * 6, sizeof(uint32_t));
     
     float mulX = font_size / engine.width / GUIFontResizer;
     float mulY = font_size / engine.height / GUIFontResizer;
@@ -699,7 +698,7 @@ void AddConvexPolyFilled(const vec2 *points, const int points_count, vec3 col)
     const vec2 uv = TexUvWhitePixel;
     
     if(gui.draw_list == NULL)
-        gui.draw_list = calloc(1, sizeof(ChildStack));
+        gui.draw_list = AllocateMemory(1, sizeof(ChildStack));
         
     GUIObj *rect = GUIManagerAddObject();
 
@@ -768,8 +767,8 @@ void AddConvexPolyFilled(const vec2 *points, const int points_count, vec3 col)
         const int vtx_count = points_count;
         
         
-        rect->indeces = calloc(idx_count, sizeof(uint32_t));
-        rect->points = calloc(vtx_count, sizeof(Vertex2D));
+        rect->indeces = AllocateMemory(idx_count, sizeof(uint32_t));
+        rect->points = AllocateMemory(vtx_count, sizeof(Vertex2D));
 
         for (int i = 0; i < vtx_count; i++)
         {
@@ -803,12 +802,12 @@ void GUIManagerAddPolyline(const vec2* points, int points_count, vec3 color, Dra
 
     
     if(gui.draw_list == NULL)
-        gui.draw_list = calloc(1, sizeof(ChildStack));
+        gui.draw_list = AllocateMemory(1, sizeof(ChildStack));
         
     GUIObj *rect = GUIManagerAddObject();
 
-    rect->indeces = calloc(count * 6, sizeof(uint32_t));
-    rect->points = calloc(count * 4, sizeof(Vertex2D));
+    rect->indeces = AllocateMemory(count * 6, sizeof(uint32_t));
+    rect->points = AllocateMemory(count * 4, sizeof(Vertex2D));
 
     uint32_t v_iter = 0;
     uint32_t i_iter = 0;
@@ -1256,7 +1255,7 @@ void GUIManagerDestroy(){
     GameObject2DDestroy((GameObject2D *)&gui); 
     
     if(gui.draw_list != NULL){
-        free(gui.draw_list);
+        FreeMemory(gui.draw_list);
         gui.draw_list = NULL;
     }
 }

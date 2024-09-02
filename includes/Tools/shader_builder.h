@@ -5,12 +5,11 @@
 
 #define EXTEND_IMPORT_POINT_INDEX 0x1
 
-#define SHADER_MAX_LENGTH 512
-#define SHADER_MAX_IODATA 32
-#define SHADER_MAX_VARIABLES 64
+#define SHADER_MAX_LENGTH 2048
+#define SHADER_MAX_IODATA 64
 #define SHADER_MAX_DEBUG_NAMES 64
-#define SHADER_MAX_FUNCTIONS 32
-#define SHADER_MAX_DECORATIONS 32
+#define SHADER_MAX_FUNCTIONS 64
+#define SHADER_MAX_DECORATIONS 64
 
 typedef enum{
     SHADER_TYPE_FRAGMENT,
@@ -87,23 +86,23 @@ typedef struct{
     uint32_t indx;
     uint32_t res_store_indx;
     ShaderOperandType op_type;
-    uint32_t var_indx[8];
+    uint32_t var_indx[16];
     uint32_t num_vars;
 } ShaderOperand;
 
 typedef struct ShaderVariable{
     ShaderVariableType type;
     uint32_t indx;
-    uint32_t args[10];
+    uint32_t args[32];
     uint32_t num_args;
-    uint32_t values[10];
+    uint32_t values[32];
     uint32_t num_values;
     ShaderDataFlags flags;
     uint32_t result_type_indx;
 } ShaderVariable;
 
 typedef struct VectorExtract{
-    uint32_t elems[4];
+    uint32_t elems[8];
     uint32_t size;
 } VectorExtract;
 
@@ -123,7 +122,7 @@ typedef struct{
     uint32_t func_type_indx;
     uint32_t indx;
     uint32_t function_control;
-    ShaderFuncParam params[6];
+    ShaderFuncParam params[16];
     uint32_t num_params;
     ShaderLabel labels[32];
     uint32_t num_labels;
@@ -132,7 +131,7 @@ typedef struct{
 typedef struct{
     uint32_t indx;
     char name[64];
-    char child_name[6][64];
+    char child_name[16][64];
     uint32_t num_childs;
 } ShaderDebugInfo;
 
@@ -144,13 +143,11 @@ typedef struct{
     uint32_t str_size;
 } ShaderDecoration;
 
-typedef struct{
+typedef struct{   
     uint32_t code[SHADER_MAX_LENGTH];
     uint32_t size;
     InputOutputData ioData[SHADER_MAX_IODATA];
     uint32_t num_io_data;
-    ShaderVariable variables[SHADER_MAX_VARIABLES];
-    uint32_t num_variables;
     ShaderFunc functions[SHADER_MAX_FUNCTIONS];
     uint32_t num_functions;
     ShaderDebugInfo infos[SHADER_MAX_DEBUG_NAMES];
@@ -162,6 +159,7 @@ typedef struct{
     uint32_t curr_descr_set;
     ShaderFunc *main_point_index;
     uint32_t gl_struct_indx;
+    struct ChildStack *alloc_head; 
 } ShaderBuilder;
 
 void ShaderBuilderInit(ShaderBuilder *builder, ShaderType type);
@@ -192,5 +190,7 @@ uint32_t ShaderBuilderAddIOData(ShaderBuilder *builder, ShaderVariableType type,
 
 void ShaderBuilderMakeUniformsFromShader(ShaderBuilder *builder, uint32_t *code, uint32_t size, void *blueprints, uint32_t indx_pack, int with_parcing);
 void ShaderBuilderParcingShader(ShaderBuilder *builder, uint32_t *shader, uint32_t size);
+
+void ShaderBuilderClear(ShaderBuilder *builder);
 
 #endif // SHADER_BUILDER_H

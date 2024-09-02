@@ -433,6 +433,18 @@ void GameObject3DAddOmiShadow(GameObject3D *go, void *render, uint32_t layer_ind
     go->graphObj.blueprints.num_blue_print_packs ++;*/
 }
 
+void GameObject3DSetDescriptorUpdate(GameObject3D* go, uint32_t shader_indx, uint32_t bind_index, UpdateDescriptor Updater){    
+    BluePrintAddSomeUpdater(&go->graphObj.blueprints, shader_indx, bind_index, Updater);
+}
+
+void GameObject3DSetDescriptorTexture(GameObject3D* go, uint32_t shader_indx, uint32_t bind_index, Texture2D *texture){
+    BluePrintSetTextureImage(&go->graphObj.blueprints, shader_indx, texture, bind_index);
+}
+
+void GameObject3DSetDescriptorTextureCreate(GameObject3D* go, uint32_t shader_indx, uint32_t bind_index, GameObjectImage *image){
+    BluePrintSetTextureImageCreate(&go->graphObj.blueprints, shader_indx, image, bind_index);
+}
+
 
 void GameObject3DClean(GameObject3D* go){
     GraphicsObjectClean(&go->graphObj);
@@ -531,46 +543,51 @@ int GameObject3DInitTextures(GameObject3D *go, DrawParam *dParam)
          FreeMemory(full_path);
     }
 
-    if(strlen(dParam->normal) != 0)
-    {
-        char *full_path = ToolsMakeString(currPath, dParam->normal);
+    if(dParam->normal != NULL){
+        if(strlen(dParam->normal) != 0)
+        {
+            char *full_path = ToolsMakeString(currPath, dParam->normal);
 
-        if(!DirectIsFileExist(full_path)){
-            FreeMemory(full_path);            
-            FreeMemory(currPath);
-            return 0;
+            if(!DirectIsFileExist(full_path)){
+                FreeMemory(full_path);            
+                FreeMemory(currPath);
+                return 0;
+            }
+
+            len = strlen(full_path);
+            go->images[iter].path = AllocateMemoryP(len + 1, sizeof(char), go);
+            memcpy(go->images[iter].path, full_path, len);
+            go->images[iter].path[len] = '\0';
+            //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
+            go->num_images ++;
+            iter++;
+            
+            FreeMemory(full_path);
         }
-
-        len = strlen(dParam->normal);
-        go->images[iter].path = AllocateMemoryP(len + 1, sizeof(char), go);
-        memcpy(go->images[iter].path, full_path, len);
-        go->images[iter].path[len] = '\0';
-        //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
-         go->num_images ++;
-         iter++;
-         
-         FreeMemory(full_path);
     }
+    
 
-    if(strlen(dParam->specular) != 0)
-    {
-        char *full_path = ToolsMakeString(currPath, dParam->normal);
-        
-        if(!DirectIsFileExist(full_path)){
-            FreeMemory(full_path);            
-            FreeMemory(currPath);
-            return 0;
+    if(dParam->specular != NULL){
+        if(strlen(dParam->specular) != 0)
+        {
+            char *full_path = ToolsMakeString(currPath, dParam->normal);
+            
+            if(!DirectIsFileExist(full_path)){
+                FreeMemory(full_path);            
+                FreeMemory(currPath);
+                return 0;
+            }
+
+            len = strlen(full_path);
+            go->images[iter].path = AllocateMemoryP(len + 1, sizeof(char), go);
+            memcpy(go->images[iter].path, full_path, len);
+            go->images[iter].path[len] = '\0';
+            //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
+            go->num_images ++;
+            iter++;
+            
+            FreeMemory(full_path);
         }
-
-        len = strlen(dParam->specular);
-        go->images[iter].path = AllocateMemoryP(len + 1, sizeof(char), go);
-        memcpy(go->images[iter].path, full_path, len);
-        go->images[iter].path[len] = '\0';
-        //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
-        go->num_images ++;
-        iter++;
-        
-         FreeMemory(full_path);
     }
 
     FreeMemory(currPath);

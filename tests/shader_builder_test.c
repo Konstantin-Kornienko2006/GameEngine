@@ -20,14 +20,6 @@ int main(){
 
     ShadersMakeDefault2DShader(&vert, &frag, false);
     
-    uint32_t num = BluePrintInit(&po.go.graphObj.blueprints);
-
-    ShaderBuilderMakeUniformsFromShader(&temp, vert.code, vert.size, &po.go.graphObj.blueprints, num, 1);
-    ShaderBuilderMakeUniformsFromShader(&temp2, frag.code, frag.size, &po.go.graphObj.blueprints, num, 1);
-
-    remove("D:\\Projects\\Temp\\frag.spv");
-    remove("D:\\Projects\\Temp\\vert.spv");
-
     ShaderBuilderWriteToFile(&vert, "D:\\Projects\\Temp\\vert.spv");
     ShaderBuilderWriteToFile(&frag, "D:\\Projects\\Temp\\frag.spv");
 

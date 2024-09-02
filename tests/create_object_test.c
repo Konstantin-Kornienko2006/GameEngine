@@ -89,9 +89,6 @@ int main(){
     PrimitiveObjectInitDefault(&po, &dParam, ENGINE_PRIMITIVE3D_CUBE, NULL);
     Transform3DSetPosition(&po, 0, 0, -10);
 
-    ShapeObjectInitDefault(&shape, &dParam, ENGINE_SHAPE_OBJECT_QUAD, &params);
-    shape.go.transform.img.scale = vec2_f(2, 2);
-
     while (!ZEngineWindowIsClosed())
     {
         ZEnginePoolEvents();
@@ -99,13 +96,12 @@ int main(){
         Update(0.1);
 
         ZEngineDraw(&po);
-        ZEngineDraw(&shape);
+        //ZEngineDraw(&shape);
 
         ZEngineRender();
     }
     
     GameObjectDestroy((GameObject *)&po);
-    GameObjectDestroy((GameObject *)&shape);
     
     EngineDeviceWaitIdle();
     

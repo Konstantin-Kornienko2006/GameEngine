@@ -147,8 +147,8 @@ void GraphicsObjectSetVertex(GraphicsObject* graphObj, void *vert, int vertCount
 }
 
 void GraphicsObjectSetSomeShader(GraphicsObject* graphObj, uint32_t *code, uint32_t size, uint32_t pack_indx){
-
     ShaderBuilder *temp = AllocateMemory(1, sizeof(ShaderBuilder));
+
 
     ShaderBuilderMakeUniformsFromShader(temp, code, size, &graphObj->blueprints, pack_indx, 1);
 
@@ -168,7 +168,7 @@ void GraphicsObjectCreateDrawItems(GraphicsObject* graphObj){
         BluePrintPack *pack = &graphObj->blueprints.blue_print_packs[i];
 
         DescriptorCreate(&graphObj->gItems.shader_packs[i].descriptor, pack->descriptors, &graphObj->blueprints, pack->num_descriptors, engine.imagesCount);
-    }
+    }    
 }
 
 void GraphicsObjectClean(GraphicsObject *graphObj)

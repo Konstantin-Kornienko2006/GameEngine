@@ -80,6 +80,8 @@ void PrimitiveObjectSetInstanceDescriptor(PrimitiveObject *po);
 /// @param po - объект-примитив
 /// @param dParam -параметры для рендера
 void PrimitiveObjectSetShadowDefaultDescriptor(PrimitiveObject *po);
+void PrimitiveObjectSetBigDesriptor(PrimitiveObject *po);
+void PrimitiveObjectSetShader(PrimitiveObject *po, char * vert_path, char *frag_path);
 
 void *PrimitiveObjectGetVertex(PrimitiveObject *po);
 void PrimitiveObjectDiffuseTextureSetData(PrimitiveObject *po, void *data, uint32_t size_data, uint32_t offset);

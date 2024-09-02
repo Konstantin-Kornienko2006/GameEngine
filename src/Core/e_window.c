@@ -95,9 +95,9 @@ void createInstance(){
     memset(&appInfo, 0, sizeof(VkApplicationInfo));
 
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Test";
+    appInfo.pApplicationName = engine.app_name;
     appInfo.applicationVersion = VK_MAKE_VERSION(0,0,0);
-    appInfo.pEngineName = "My Engine";
+    appInfo.pEngineName = "ZamEngine";
     appInfo.applicationVersion = VK_MAKE_VERSION(0,0,0);
     appInfo.apiVersion = VK_API_VERSION_1_0;
 

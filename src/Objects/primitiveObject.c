@@ -156,29 +156,52 @@ void PrimitiveObjectSetShadowDefaultDescriptor(PrimitiveObject *po)
 
 
     uint32_t num_pack = BluePrintInit(&po->go.graphObj.blueprints);
-
     
-    ShaderBuilder *vert = po->go.self.vert;
-    ShaderBuilder *frag = po->go.self.frag;
-
-    ShadersMakeDefault3DShader(vert, frag, po->go.num_images > 0);
-
-    GraphicsObjectSetSomeShader(&po->go.graphObj, vert->code, vert->size, num_pack);
-    GraphicsObjectSetSomeShader(&po->go.graphObj, frag->code, frag->size, num_pack);
-
+    GraphicsObjectSetSomeShader(&po->go.graphObj, &_binary_shaders_3d_object_shadow_vert_spv_start, (size_t)(&_binary_shaders_3d_object_shadow_vert_spv_size), num_pack);
+    GraphicsObjectSetSomeShader(&po->go.graphObj, &_binary_shaders_3d_object_shadow_frag_spv_start, (size_t)(&_binary_shaders_3d_object_shadow_frag_spv_size), num_pack);
 
     BluePrintAddSomeUpdater(&po->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
     BluePrintSetTextureImageCreate(&po->go.graphObj.blueprints, num_pack, &po->go.images[0], 0);
 
 }
 
+void PrimitiveObjectSetBigDesriptor(PrimitiveObject *po){
+
+    uint32_t num_pack = BluePrintInit(&po->go.graphObj.blueprints);
+
+    /*BluePrintAddUniformObject(&po->go.graphObj.blueprints, num_pack, sizeof(ModelBuffer3D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject3DDescriptorModelUpdate, 0);
+    BluePrintAddUniformObject(&po->go.graphObj.blueprints, num_pack, sizeof(DirLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorDirLightsUpdate, 0);
+    BluePrintAddUniformObject(&po->go.graphObj.blueprints, num_pack, sizeof(PointLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorPointLightsUpdate, 0);
+    BluePrintAddUniformObject(&po->go.graphObj.blueprints, num_pack, sizeof(SpotLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorSpotLightsUpdate, 0);
+    BluePrintAddUniformObject(&po->go.graphObj.blueprints, num_pack, sizeof(LightStatusBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DLigtStatusBufferUpdate, 0);
+    BluePrintAddTextureImage(&po->go.graphObj.blueprints, num_pack, &po->go.images[0], VK_SHADER_STAGE_FRAGMENT_BIT);
+    BluePrintAddTextureImage(&po->go.graphObj.blueprints, num_pack, &po->go.images[1], VK_SHADER_STAGE_FRAGMENT_BIT);
+    
+    PipelineSetting* setting = (PipelineSetting *)&po->go.graphObj.blueprints.blue_print_packs[num_pack].setting;
+
+    PipelineSettingSetShader(setting, &_binary_shaders_3d_object_vert_spv_start, (size_t)(&_binary_shaders_3d_object_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
+    PipelineSettingSetShader(setting, &_binary_shaders_3d_object_frag_spv_start, (size_t)(&_binary_shaders_3d_object_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);*/
+    
+    uint32_t v_size = (size_t)(&_binary_shaders_3d_object_vert_spv_size);
+    v_size /=sizeof(uint32_t);
+    uint32_t f_size = (size_t)(&_binary_shaders_3d_object_frag_spv_size);
+    f_size /=sizeof(uint32_t);
+
+    GraphicsObjectSetSomeShader(&po->go.graphObj, &_binary_shaders_3d_object_vert_spv_start, v_size, num_pack);
+    GraphicsObjectSetSomeShader(&po->go.graphObj, &_binary_shaders_3d_object_frag_spv_start, f_size, num_pack);
+    
+    GameObject3DSetDescriptorUpdate(po, num_pack, 0, GameObject3DDescriptorModelUpdate);
+    GameObject3DSetDescriptorUpdate(po, num_pack, 1, GameObject3DDescriptorDirLightsUpdate);
+    GameObject3DSetDescriptorUpdate(po, num_pack, 2, GameObject3DDescriptorPointLightsUpdate);
+    GameObject3DSetDescriptorUpdate(po, num_pack, 3, GameObject3DDescriptorSpotLightsUpdate);
+    GameObject3DSetDescriptorUpdate(po, num_pack, 4, GameObject3DLigtStatusBufferUpdate);
+    GameObject3DSetDescriptorTextureCreate(po, num_pack, 5, &po->go.images[0]);
+    GameObject3DSetDescriptorTextureCreate(po, num_pack, 6, NULL);
+
+}
+
 void PrimitiveObjectSetDefaultDescriptor(PrimitiveObject *po)
 {
-    /*BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(ModelBuffer3D), VK_SHADER_STAGE_VERTEX_BIT, (void *)GameObject3DDescriptorModelUpdate, 0);
-    BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(DirLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorDirLightsUpdate, 0);
-    BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(PointLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorPointLightsUpdate, 0);
-    BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(SpotLightBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DDescriptorSpotLightsUpdate, 0);
-    BluePrintAddUniformObject(&po->go.graphObj.blueprints, nums, sizeof(LightStatusBuffer), VK_SHADER_STAGE_FRAGMENT_BIT, (void *)GameObject3DLigtStatusBufferUpdate, 0);*/
 
     uint32_t num_pack = BluePrintInit(&po->go.graphObj.blueprints);
     
@@ -189,9 +212,9 @@ void PrimitiveObjectSetDefaultDescriptor(PrimitiveObject *po)
 
     GraphicsObjectSetSomeShader(&po->go.graphObj, vert->code, vert->size, num_pack);
     GraphicsObjectSetSomeShader(&po->go.graphObj, frag->code, frag->size, num_pack);
-
-    BluePrintAddSomeUpdater(&po->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
-    BluePrintSetTextureImageCreate(&po->go.graphObj.blueprints, num_pack, &po->go.images[0], 0);
+    
+    GameObject3DSetDescriptorUpdate(po, num_pack, 0, GameObject3DDescriptorModelUpdate);
+    GameObject3DSetDescriptorTextureCreate(po, num_pack, 1, &po->go.images[0]);
 }
 
 void PrimitiveObjectSetInstanceDescriptor(PrimitiveObject *po)
@@ -203,6 +226,42 @@ void PrimitiveObjectSetInstanceDescriptor(PrimitiveObject *po)
 
     BluePrintAddSomeUpdater(&po->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
     BluePrintSetTextureImageCreate(&po->go.graphObj.blueprints, num_pack, &po->go.images[0], 0);
+}
+
+void PrimitiveObjectSetShader(PrimitiveObject *po, char * vert_path, char *frag_path){
+
+    char *currPath = DirectGetCurrectFilePath();
+    int len = strlen(currPath);
+    currPath[len] = '\\';
+    
+    char *full_path_vert = ToolsMakeString(currPath, vert_path);
+
+    if(!DirectIsFileExist(full_path_vert)){
+        FreeMemory(full_path_vert);            
+        FreeMemory(currPath);
+        return 0;
+    }
+
+    char *full_path_frag = ToolsMakeString(currPath, frag_path);
+
+    if(!DirectIsFileExist(full_path_vert)){
+        FreeMemory(full_path_vert);  
+        FreeMemory(full_path_frag);            
+        FreeMemory(currPath);
+        return 0;
+    }
+
+    uint32_t num_pack = BluePrintInit(&po->go.graphObj.blueprints);
+
+    ShaderObject vert_code = readFile(full_path_vert);
+    vert_code.size = vert_code.size / sizeof(uint32_t);
+    ShaderObject frag_code = readFile(full_path_frag);
+    frag_code.size = frag_code.size / sizeof(uint32_t);
+    
+    GraphicsObjectSetSomeShader(&po->go.graphObj, vert_code.code, vert_code.size, num_pack);
+    GraphicsObjectSetSomeShader(&po->go.graphObj, frag_code.code, frag_code.size, num_pack);
+    
+    BluePrintAddSomeUpdater(&po->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
 }
 
 

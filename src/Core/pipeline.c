@@ -153,7 +153,7 @@ void PipelineSettingSetDefault(void *arg){
     setting->cull_mode = VK_CULL_MODE_BACK_BIT;
 }
 
-void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t indx_desc)
+void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack)
 {
     ZDevice *device = (ZDevice *)engine.device;
 
@@ -310,13 +310,18 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack, uint32_t
         viewportState.pScissors = &scissor;
     }
 
-    VkPushConstantRange *push_ranges = AllocateMemory(pack->num_push_constants, sizeof(VkPushConstantRange));
 
-    for(int l=0 ;l < pack->num_push_constants;l++)
-    {
-        push_ranges[l].offset = pack->push_constants[l].offset;
-        push_ranges[l].size = pack->push_constants[l].size;
-        push_ranges[l].stageFlags = pack->push_constants[l].stageFlags;
+    VkPushConstantRange *push_ranges = NULL;
+    
+    if(pack->num_push_constants > 0){
+        push_ranges = AllocateMemory(pack->num_push_constants, sizeof(VkPushConstantRange));
+
+        for(int l=0 ;l < pack->num_push_constants;l++)
+        {
+            push_ranges[l].offset = pack->push_constants[l].offset;
+            push_ranges[l].size = pack->push_constants[l].size;
+            push_ranges[l].stageFlags = pack->push_constants[l].stageFlags;
+        }
     }
 
 
@@ -390,11 +395,7 @@ void PipelineCreateGraphics(GraphicsObject* graphObj){
 
         ShaderPack *pack = &graphObj->gItems.shader_packs[i];
 
-        for(int j=0; j <    graphObj->blueprints.num_blue_print_packs; j++){
-
-            PipelineMakePipeline(graphObj, i, j);
-
-        }
+        PipelineMakePipeline(graphObj, i);
     }
 }
 

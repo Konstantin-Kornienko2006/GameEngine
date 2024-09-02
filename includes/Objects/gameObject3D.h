@@ -32,6 +32,9 @@ typedef struct GameObject3D{
 void GameObject3DDefaultUpdate(GameObject3D* go);
 void GameObject3DDefaultDraw(GameObject3D* go);
 
+void GameObject3DSetDescriptorUpdate(GameObject3D* go, uint32_t shader_indx, uint32_t bind_index, UpdateDescriptor Updater);
+void GameObject3DSetDescriptorTexture(GameObject3D* go, uint32_t shader_indx, uint32_t bind_index, Texture2D *texture);
+void GameObject3DSetDescriptorTextureCreate(GameObject3D* go, uint32_t shader_indx, uint32_t bind_index, GameObjectImage *image);
 
 void GameObject3DDescriptorModelUpdate      (GameObject3D* go, void *data);
 void GameObject3DDirLightModelUpdate        (GameObject3D* go, void *data);
