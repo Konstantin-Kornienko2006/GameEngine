@@ -82,7 +82,6 @@ void BluePrintAddRenderImageArray(Blueprints *blueprints, uint32_t indx_pack, vo
 void BluePrintAddRenderImage(Blueprints *blueprints, uint32_t indx_pack, void *render);
 void BluePrintAddTextureImageArray(Blueprints *blueprints, uint32_t indx_pack, GameObjectImage *images, uint32_t size);
 
-BluePrintDescriptor *BluePrintAddExistTextureImage(Blueprints *blueprints, uint32_t indx_pack, void *texture);
 BluePrintDescriptor *BluePrintAddTextureImage(Blueprints *blueprints, uint32_t indx_pack, GameObjectImage *image, uint32_t stage_bit);
 
 void BluePrintClearAll(Blueprints *blueprints);

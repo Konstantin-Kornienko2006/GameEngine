@@ -11,7 +11,9 @@ extern "C"
 typedef enum{
     ENGINE_GAME_OBJECT_FLAG_LIGHT = 0x1,
     ENGINE_GAME_OBJECT_FLAG_WIRED = 0x2,
-    ENGINE_GAME_OBJECT_FLAG_SELF_CAMERA = 0x4
+    ENGINE_GAME_OBJECT_FLAG_SELF_CAMERA = 0x4,
+    ENGINE_GAME_OBJECT_FLAG_INIT = 0x8,
+    ENGINE_GAME_OBJECT_FLAG_SHADED = 0x10
 } EngineGmaeObjectFlag;
 
 typedef enum{
@@ -28,7 +30,6 @@ typedef struct GameObject{
     void (*DestroyPoint)(struct GameObject* go);
     uint32_t obj_type;
     uint32_t flags;
-    bool init;
     void *vert;
     void *frag;
 } GameObject;

@@ -1,5 +1,5 @@
 #include "Objects/sky_object.h"
-#include "Objects/lightObject.h"
+#include "Objects/light_object.h"
 #include "Objects/render_texture.h"
 
 #include <vulkan/vulkan.h>
@@ -35,7 +35,7 @@ void SkyObjectSkyBufferUpdate(SkyObject *so, BluePrintDescriptor *descriptor)
     sb.dir_light.y = 0.3f;
     sb.dir_light.z = 0;
 
-    if(engine.DataR.e_var_num_lights > 0)
+    /*if(engine.DataR.e_var_num_lights > 0)
     {
         LightObject **lights = (LightObject **)engine.DataR.e_var_lights;
 
@@ -44,7 +44,7 @@ void SkyObjectSkyBufferUpdate(SkyObject *so, BluePrintDescriptor *descriptor)
             if(lights[i]->type == ENGINE_LIGHT_TYPE_DIRECTIONAL)
                 sb.dir_light = lights[i]->direction;
         }
-    }
+    }*/
 
     DescriptorUpdate(descriptor, (char *)&sb, sizeof(sb));
 }
@@ -91,7 +91,7 @@ void SkyObjectInit(SkyObject *so, DrawParam *dParam, EngineSkyType type)
 
 void SkyObjectAddDefault(SkyObject *so, void *render)
 {
-    uint32_t num_pack = BluePrintInit(&so->go.graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&so->go.graphObj.blueprints);
 
     switch(so->type){
         case ENGINE_SKY_TYPE_NIGHT:
@@ -112,6 +112,6 @@ void SkyObjectAddDefault(SkyObject *so, void *render)
             break;
     }
 
-    BluePrintAddSomeUpdater(&so->go.graphObj.blueprints, num_pack, 0, SkyObjectSkyBufferUpdate);
+    BluePrintAddSomeUpdater(&so->go.graphObj.blueprints, num_pack, 0, SkyObjectSkyBufferUpdate);*/
 
 }

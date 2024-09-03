@@ -119,11 +119,65 @@ void GameObject2DDefaultDraw(GameObject2D* go){
     }
 }
 
+
+void GameObject2DInitDefaultShader(GameObject2D *go){    
+    
+    if(go->self.flags & ENGINE_GAME_OBJECT_FLAG_SHADED)
+        return;
+    
+    uint32_t num_pack = BluePrintInit(&go->graphObj.blueprints);
+    
+    ShaderBuilder *vert = go->self.vert;
+    ShaderBuilder *frag = go->self.frag;
+
+    ShadersMakeDefault2DShader(vert, frag, go->num_images > 0);
+    
+    ShaderObject vert_shader, frag_shader;
+    memset(&vert_shader, 0, sizeof(ShaderObject));
+    memset(&frag_shader, 0, sizeof(ShaderObject));
+
+    vert_shader.code = vert->code;
+    vert_shader.size = vert->size * sizeof(uint32_t);
+    
+    frag_shader.code = frag->code;
+    frag_shader.size = frag->size * sizeof(uint32_t);
+
+    GraphicsObjectSetSomeShader(&go->graphObj, &vert_shader, num_pack);
+    GraphicsObjectSetSomeShader(&go->graphObj, &frag_shader, num_pack);
+
+    BluePrintAddSomeUpdater(&go->graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
+    BluePrintAddSomeUpdater(&go->graphObj.blueprints, num_pack, 1, GameObject2DImageBuffer);
+    BluePrintSetTextureImageCreate(&go->graphObj.blueprints, num_pack, go->image, 2);
+
+    uint32_t flags = BluePrintGetSettingsValue(&go->graphObj.blueprints, num_pack, 3);
+    BluePrintSetSettingsValue(&go->graphObj.blueprints, num_pack, 3, flags | ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE);
+
+    /*if(so->type == ENGINE_SHAPE_OBJECT_LINE)
+    {
+        flags = BluePrintGetSettingsValue(&so->go.graphObj.blueprints, num_pack, 3);
+
+        BluePrintSetSettingsValue(&so->go.graphObj.blueprints, num_pack, 1, VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+        BluePrintSetSettingsValue(&so->go.graphObj.blueprints, num_pack, 3, flags & ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED));
+    }*/
+    
+    go->self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;
+}
+
 void GameObject2DInitDraw(GameObject2D *go)
 {
+    if(!(go->self.flags & ENGINE_GAME_OBJECT_FLAG_SHADED))
+        return;
+
     GraphicsObjectCreateDrawItems(&go->graphObj);
 
     PipelineCreateGraphics(&go->graphObj);
+
+    go->self.flags |= ENGINE_GAME_OBJECT_FLAG_INIT;
+}
+
+void GameObject2DInitDefault(GameObject2D *go){
+    GameObject2DInitDefaultShader(go);
+    GameObject2DInitDraw(go);
 }
 
 void GameObject2DClean(GameObject2D* go){
@@ -162,9 +216,6 @@ void GameObject2DRecreate(GameObject2D* go){
 
 void GameObject2DDestroy(GameObject2D* go){
 
-    if(!go->self.init)
-        return;
-
     GraphicsObjectDestroy(&go->graphObj);
 
     if(go->image != NULL)
@@ -189,11 +240,12 @@ void GameObject2DDestroy(GameObject2D* go){
     FreeMemory(go->self.vert);
     FreeMemory(go->self.frag);
     
-    go->self.init = false;
+    go->self.flags &= ~(ENGINE_GAME_OBJECT_FLAG_INIT);
 }
 
 void GameObject2DInit(GameObject2D* go)
 {
+    GameObjectSetInitFunc((GameObject *)go, (void *)GameObject2DInitDefault);
     GameObjectSetUpdateFunc((GameObject *)go, (void *)GameObject2DDefaultUpdate);
     GameObjectSetDrawFunc((GameObject *)go, (void *)GameObject2DDefaultDraw);
     GameObjectSetCleanFunc((GameObject *)go, (void *)GameObject2DClean);
@@ -207,8 +259,6 @@ void GameObject2DInit(GameObject2D* go)
 
     go->self.vert = AllocateMemory(1, sizeof(ShaderBuilder));
     go->self.frag = AllocateMemory(1, sizeof(ShaderBuilder));
-
-    go->self.init = true;
 }
 
 vec2 GameObject2DGetSize(GameObject2D* go)

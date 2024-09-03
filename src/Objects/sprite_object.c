@@ -99,34 +99,6 @@ int SpriteObjectInit(SpriteObject *so, DrawParam *dParam){
     return 1;
 }
 
-void SpriteObjectAddDefault(SpriteObject *so, void *render)
-{
-    uint32_t num_pack = BluePrintInit(&so->go.graphObj.blueprints);
-    
-    ShaderBuilder *vert = so->go.self.vert;
-    ShaderBuilder *frag = so->go.self.frag;
-
-    ShadersMakeDefault2DShader(vert, frag, so->go.num_images > 0);
-
-    GraphicsObjectSetSomeShader(&so->go.graphObj, vert->code, vert->size, num_pack);
-    GraphicsObjectSetSomeShader(&so->go.graphObj, frag->code, frag->size, num_pack);
-
-    BluePrintAddSomeUpdater(&so->go.graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
-    BluePrintAddSomeUpdater(&so->go.graphObj.blueprints, num_pack, 1, GameObject2DImageBuffer);
-    BluePrintSetTextureImageCreate(&so->go.graphObj.blueprints, num_pack, so->go.image, 0);
-}
-
-void SpriteObjectInitDefault(SpriteObject *so, DrawParam *dParam)
-{
-    int res = SpriteObjectInit(so, dParam);
-
-    if(!res)
-        return;
-
-    SpriteObjectAddDefault(so, dParam->render);
-    GameObject2DInitDraw((GameObject2D *)so);
-}
-
 void SpriteObjectSetOffsetRect(SpriteObject *so, float x, float y, float width, float height)
 {
     Vertex2D *verts = so->go.graphObj.shapes[0].vParam.vertices;

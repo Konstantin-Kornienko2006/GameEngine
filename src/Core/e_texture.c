@@ -21,6 +21,7 @@
 #include "Tools/e_tools.h"
 
 #include "Data/e_resource_data.h"
+#include "Data/e_resource_shapes.h"
 #include "Data/e_resource_engine.h"
 
 extern ZEngine engine;
@@ -188,8 +189,8 @@ void TextureCreateEmptyDefault(Texture2D *texture)
 
     BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, ENGINE_BUFFER_ALLOCATE_STAGING);
 
-    char some_data[bufferSize];
-    memset(some_data, 0, bufferSize);
+    char *some_data = AllocateMemory(1, bufferSize);
+    memcpy(some_data, tigrib_bin, bufferSize);
 
     uint32_t * data;
     vkMapMemory(device->e_device, stagingBuffer.memory, 0, bufferSize, 0, (void **)&data);
@@ -204,6 +205,7 @@ void TextureCreateEmptyDefault(Texture2D *texture)
 
     BuffersDestroyBuffer(&stagingBuffer);
 
+    FreeMemory(some_data);
 }
 
 void TextureCreateEmpty(Texture2D *texture)
@@ -265,10 +267,12 @@ int TextureImageCreate(GameObjectImage *image, struct BluePrintDescriptor_T *des
         descr->textures = &images[0].texture;
         descr->flags |= ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
         return 0;
-    }
-
-    if(image->path == NULL && image->buffer == NULL)
+    }else if(image->path == NULL && image->buffer == NULL)
     {
+        descr->textures = &images[0].texture;
+        descr->flags |= ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
+        return 0;
+    } else if(!DirectIsFileExist(image->path)){
         descr->textures = &images[0].texture;
         descr->flags |= ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
         return 0;
@@ -610,7 +614,7 @@ void TextureCreate(struct BluePrintDescriptor_T *descriptor, uint32_t type, Game
         engine.DataR.e_var_num_images ++;
     }else{
 
-        Texture2D *texture = &descr->textures[descr->size];
+        Texture2D *texture = &descr->textures;
 
         texture->flags = texture->flags;
 

@@ -57,6 +57,11 @@ typedef struct{
 } EngineRenderItems;
 
 typedef struct{
+    void **lights[MAX_DRAW_OBJECTS];
+    uint32_t size;
+} EngineLightItems;
+
+typedef struct{
     struct GameObject *objects[MAX_DRAW_OBJECTS];
     uint32_t size;    
 } EngineGameObjects;
@@ -89,6 +94,8 @@ typedef struct{
     struct ZSwapChain_T *swapchain;
 
     EngineRenderItems renders;
+
+    EngineLightItems lights;
 
     EngineGameObjects gameObjects;    
 
@@ -139,20 +146,8 @@ typedef struct{
     }Sync;
 
     struct DataR{        
-        void *dir_shadow_array;
-        uint32_t num_dir_shadows;
-
-        void *point_shadow_array;
-        uint32_t num_point_shadows;
-
-        void *spot_shadow_array;
-        uint32_t num_spot_shadows;
-        
         void *e_var_images;
         int e_var_num_images;
-
-        void **e_var_lights;
-        int e_var_num_lights;
 
         FontCache *e_var_fonts;
         uint32_t e_var_num_fonts;

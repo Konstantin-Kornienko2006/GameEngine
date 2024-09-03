@@ -3,6 +3,7 @@
 #include <Core/engine.h>
 #include <Core/e_camera.h>
 
+#include <Objects/light_object.h>
 #include <Objects/render_texture.h>
 #include <Objects/primitiveObject.h>
 #include <Objects/shape_object.h>
@@ -16,11 +17,15 @@ PrimitiveObject po;
 
 ShapeObject shape;
 
+LightObject light;
+
 bool firstMouse = true;
 
 double lastX, lastY;
 
 double yaw = 90, pitch = 0, sensitivity = 2.0f;
+
+vec3 dir, l_pos;
 
 void CamRotateView(float deltaTime){
 
@@ -65,6 +70,12 @@ void CamRotateView(float deltaTime){
 
 void Update(float dTime){
     CamRotateView(dTime);
+
+    double time = ZEngineGetTime();
+
+    dir.x = l_pos.x = 3 * cos(time);
+    dir.y = l_pos.y = 3 * sin(time);
+    dir.z = l_pos.z = 3 * sin(time);
 }
 
 int main(){
@@ -86,8 +97,16 @@ int main(){
     params.size = 100;
     params.color = vec3_f(1, 1, 1);
 
-    PrimitiveObjectInitDefault(&po, &dParam, ENGINE_PRIMITIVE3D_CUBE, NULL);
+    PrimitiveObjectInit(&po, &dParam, ENGINE_PRIMITIVE3D_CUBE, NULL);
     Transform3DSetPosition(&po, 0, 0, -10);
+    GameObject3DEnableLight(&po, true);
+
+    QuadParams param;
+    param.size = 100;
+    param.color = vec3_f(1, 1, 1);
+
+    ShapeObjectInit(&shape, &dParam, ENGINE_SHAPE_OBJECT_QUAD, &param);
+    shape.go.transform.img.scale = vec2_f(2, 2);
 
     while (!ZEngineWindowIsClosed())
     {
@@ -95,13 +114,15 @@ int main(){
 
         Update(0.1);
 
+
         ZEngineDraw(&po);
-        //ZEngineDraw(&shape);
+        ZEngineDraw(&shape);
 
         ZEngineRender();
     }
     
     GameObjectDestroy((GameObject *)&po);
+    GameObjectDestroy((GameObject *)&shape);
     
     EngineDeviceWaitIdle();
     

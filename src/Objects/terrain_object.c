@@ -1,5 +1,5 @@
 #include "Objects/terrain_object.h"
-#include "Objects/lightObject.h"
+#include "Objects/light_object.h"
 #include "Objects/render_texture.h"
 
 #include <vulkan/vulkan.h>
@@ -514,7 +514,7 @@ void TerrainObjectInit(TerrainObject *to, DrawParam *dParam, TerrainParam *tPara
 
 void TerrainObjectApplyShadows(TerrainObject *to, DrawParam *dParam)
 {
-    RenderTexture **renders = engine.DataR.dir_shadow_array;
+    /*RenderTexture **renders = engine.DataR.dir_shadow_array;
 
     for(int i=0;i < engine.DataR.num_dir_shadows;i++)
         GameObject3DAddShadowDescriptor((GameObject3D *)to, ENGINE_LIGHT_TYPE_DIRECTIONAL, renders[i], i);
@@ -527,7 +527,7 @@ void TerrainObjectApplyShadows(TerrainObject *to, DrawParam *dParam)
     renders = engine.DataR.spot_shadow_array;
 
     for(int i=0;i < engine.DataR.num_spot_shadows;i++)
-        GameObject3DAddShadowDescriptor((GameObject3D *)to, ENGINE_LIGHT_TYPE_SPOT, renders[i], i);
+        GameObject3DAddShadowDescriptor((GameObject3D *)to, ENGINE_LIGHT_TYPE_SPOT, renders[i], i);*/
 
     TerrainObjectSetShadowDefaultDescriptor(to, dParam);
 }

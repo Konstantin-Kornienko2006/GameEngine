@@ -13,7 +13,7 @@
 
 void GrassObjectSetDefaultDescriptor(GrassObject *grass, DrawParam *dParam)
 {   
-    uint32_t num_pack = BluePrintInit(&grass->go.graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&grass->go.graphObj.blueprints);
     
     ShaderBuilder *vert = grass->go.self.vert;
     ShaderBuilder *frag = grass->go.self.frag;
@@ -24,18 +24,18 @@ void GrassObjectSetDefaultDescriptor(GrassObject *grass, DrawParam *dParam)
     GraphicsObjectSetSomeShader(&grass->go.graphObj, frag->code, frag->size, num_pack);
 
     BluePrintAddSomeUpdater(&grass->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
-    BluePrintSetTextureImageCreate(&grass->go.graphObj.blueprints, num_pack, &grass->go.images[0], 0);
+    BluePrintSetTextureImageCreate(&grass->go.graphObj.blueprints, num_pack, &grass->go.images[0], 0);*/
 }
 
 void GrassObjectSetInstanceDescriptor(GrassObject *grass, DrawParam *dParam)
 {
-    uint32_t num_pack = BluePrintInit(&grass->go.graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&grass->go.graphObj.blueprints);
 
     GraphicsObjectSetSomeShader(&grass->go.graphObj, &_binary_shaders_3d_object_instance_vert_spv_start, (size_t)(&_binary_shaders_3d_object_instance_vert_spv_size), num_pack);
     GraphicsObjectSetSomeShader(&grass->go.graphObj, &_binary_shaders_3d_object_instance_frag_spv_start, (size_t)(&_binary_shaders_3d_object_instance_frag_spv_size), num_pack);
 
     BluePrintAddSomeUpdater(&grass->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
-    BluePrintSetTextureImageCreate(&grass->go.graphObj.blueprints, num_pack, &grass->go.images[0], 0);
+    BluePrintSetTextureImageCreate(&grass->go.graphObj.blueprints, num_pack, &grass->go.images[0], 0);*/
     
     /*setting.vert_indx = 0;
     setting.cull_mode = VK_CULL_MODE_NONE;*/

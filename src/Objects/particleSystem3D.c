@@ -157,13 +157,13 @@ void Particle3DInit(ParticleObject3D* particle, DrawParam dParam){
 
 void Particle3DAddDefault(ParticleObject3D* particle, void *render)
 {
-    uint32_t num_pack = BluePrintInit(&particle->go.graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&particle->go.graphObj.blueprints);
 
     GraphicsObjectSetSomeShader(&particle->go.graphObj, &_binary_shaders_particle_vert3D_spv_start, (size_t)(&_binary_shaders_particle_vert3D_spv_size), num_pack);
     GraphicsObjectSetSomeShader(&particle->go.graphObj, &_binary_shaders_particle_frag3D_spv_start, (size_t)(&_binary_shaders_particle_frag3D_spv_size), num_pack);
 
     BluePrintAddSomeUpdater(&particle->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
-    BluePrintSetTextureImageCreate(&particle->go.graphObj.blueprints, num_pack, &particle->go.images[0], 0);
+    BluePrintSetTextureImageCreate(&particle->go.graphObj.blueprints, num_pack, &particle->go.images[0], 0);*/
     
     /*setting.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     setting.flags &= ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED);*/

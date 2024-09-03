@@ -570,7 +570,7 @@ void MarchingCubeObjectInit(MarchingCubeObject *mco, float *grid, uint32_t size,
 
 void MarchingCubeObjectSetDefaultDescriptor(MarchingCubeObject *mco, DrawParam *dParam)
 {    
-    uint32_t num_pack = BluePrintInit(&mco->go.graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&mco->go.graphObj.blueprints);
     
     ShaderBuilder *vert = mco->go.self.vert;
     ShaderBuilder *frag = mco->go.self.frag;
@@ -581,7 +581,7 @@ void MarchingCubeObjectSetDefaultDescriptor(MarchingCubeObject *mco, DrawParam *
     GraphicsObjectSetSomeShader(&mco->go.graphObj, frag->code, frag->size, num_pack);
 
     BluePrintAddSomeUpdater(&mco->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
-    BluePrintSetTextureImageCreate(&mco->go.graphObj.blueprints, num_pack, &mco->go.images[0], 0);
+    BluePrintSetTextureImageCreate(&mco->go.graphObj.blueprints, num_pack, &mco->go.images[0], 0);*/
 }
 
 void MarchingCubeObjectDefaultInit(MarchingCubeObject *mco, float *grid, uint32_t size, float isolevel, DrawParam *dParam)

@@ -514,8 +514,18 @@ void GUIManagerInit(){
 
     ShadersMakeClear2DShader(vert, frag);
 
-    GraphicsObjectSetSomeShader(&gui.go.graphObj, vert->code, vert->size, num_pack);
-    GraphicsObjectSetSomeShader(&gui.go.graphObj, frag->code, frag->size, num_pack);
+    ShaderObject vert_shader, frag_shader;
+    memset(&vert_shader, 0, sizeof(ShaderObject));
+    memset(&frag_shader, 0, sizeof(ShaderObject));
+
+    vert_shader.code = vert->code;
+    vert_shader.size = vert->size * sizeof(uint32_t);
+    
+    frag_shader.code = frag->code;
+    frag_shader.size = frag->size * sizeof(uint32_t);
+
+    GraphicsObjectSetSomeShader(&gui.go.graphObj, &vert_shader, num_pack);
+    GraphicsObjectSetSomeShader(&gui.go.graphObj, &frag_shader, num_pack);
 
     BluePrintSetTextureImage(&gui.go.graphObj.blueprints, num_pack, gui.font.texture, 0);
     

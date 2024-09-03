@@ -72,14 +72,14 @@ extern void WidgetDestroy(EWidget *widget);
 
 void ImageWidgetDestroy(EWidgetImage *img){
 
-    if(!img->widget.go.init)
+    if(!(img->image.self.flags & ENGINE_GAME_OBJECT_FLAG_INIT))
         return;
 
     WidgetDestroy(img);
 
     GameObjectDestroy(&img->image);
 
-    img->widget.go.init = false;
+    img->image.self.flags &= ~(ENGINE_GAME_OBJECT_FLAG_INIT);
 }
 
 
@@ -115,8 +115,18 @@ void ImageWidgetInit(EWidgetImage *img, char *image_path, EWidget *parent){
 
     ShadersMakeDefault2DShader(vert, frag, img->image.num_images > 0);
 
-    GraphicsObjectSetSomeShader(&img->image.graphObj, vert->code, vert->size, num_pack);
-    GraphicsObjectSetSomeShader(&img->image.graphObj, frag->code, frag->size, num_pack);
+    ShaderObject vert_shader, frag_shader;
+    memset(&vert_shader, 0, sizeof(ShaderObject));
+    memset(&frag_shader, 0, sizeof(ShaderObject));
+
+    vert_shader.code = vert->code;
+    vert_shader.size = vert->size * sizeof(uint32_t);
+    
+    frag_shader.code = frag->code;
+    frag_shader.size = frag->size * sizeof(uint32_t);
+
+    GraphicsObjectSetSomeShader(&img->image.graphObj, &vert_shader, num_pack);
+    GraphicsObjectSetSomeShader(&img->image.graphObj, &frag_shader, num_pack);
 
     BluePrintAddSomeUpdater(&img->image.graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
     BluePrintAddSomeUpdater(&img->image.graphObj.blueprints, num_pack, 1, GameObject2DImageBuffer);

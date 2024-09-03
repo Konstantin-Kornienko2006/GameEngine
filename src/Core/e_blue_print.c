@@ -144,31 +144,6 @@ BluePrintDescriptor *BluePrintAddUniformStorage(Blueprints *blueprints, uint32_t
     return &pack->descriptors[pack->num_descriptors - 1];
 }
 
-BluePrintDescriptor *BluePrintAddExistTextureImage(Blueprints *blueprints, uint32_t indx_pack, void *texture)
-{
-    BluePrintPack *pack = &blueprints->blue_print_packs[indx_pack];
-
-    if(pack->num_descriptors + 1 > MAX_UNIFORMS)
-    {
-        printf("Too much descriptors!\n");
-        return NULL;
-    }
-
-    BluePrintDescriptor *descriptor = &pack->descriptors[pack->num_descriptors];
-
-    descriptor->image = NULL;
-    descriptor->size = 0;
-    descriptor->textures = texture;
-    descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor->descrCount = 1;
-    descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
-    descriptor->flags = ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE | ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
-
-    pack->num_descriptors ++;
-
-    return &pack->descriptors[pack->num_descriptors - 1];
-}
-
 void BluePrintAddPushConstant(Blueprints *blueprints, uint32_t indx_pack, uint64_t size, uint32_t stage, uint32_t offset){
 
     BluePrintPushConstant *push_constant = &blueprints->blue_print_packs[indx_pack].push_constants[blueprints->blue_print_packs[indx_pack].num_push_constants];
@@ -254,7 +229,7 @@ void BluePrintAddRenderImageArray(Blueprints *blueprints, uint32_t indx_pack, vo
     descriptor->descrCount = size;
     descriptor->size = size;
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
-    descriptor->flags = 0;
+    descriptor->flags = ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
 
     Texture2D **textures = (Texture2D **)descriptor->textures;
 
@@ -292,7 +267,7 @@ void BluePrintAddRenderImageVector(Blueprints *blueprints, uint32_t indx_pack, v
     descriptor->descrCount = size;
     descriptor->size = size;
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
-    descriptor->flags = 0;
+    descriptor->flags = ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
 
     Texture2D **textures = (Texture2D **)descriptor->textures;
 
@@ -324,7 +299,6 @@ void BluePrintAddRenderImageCube(Blueprints *blueprints, uint32_t indx_pack, uin
     uint32_t nums = blueprints->blue_print_packs[indx_pack].num_descriptors;
     BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[indx_pack].descriptors[nums];
 
-    descriptor->textures = AllocateMemoryP(engine.imagesCount, sizeof(Texture2D*), blueprints);
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptor->descrCount = 1;
     descriptor->size = 1;
@@ -359,7 +333,6 @@ void BluePrintAddRenderImage(Blueprints *blueprints, uint32_t indx_pack, void *o
     uint32_t nums = blueprints->blue_print_packs[indx_pack].num_descriptors;
     BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[indx_pack].descriptors[nums];
 
-    descriptor->textures = AllocateMemoryP(engine.imagesCount, sizeof(Texture2D), blueprints);
     descriptor->num_textures = engine.imagesCount;
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptor->descrCount = 1;
@@ -503,7 +476,6 @@ BluePrintDescriptor *BluePrintAddTextureImage(Blueprints *blueprints, uint32_t i
 
     descriptor->image = image;
     descriptor->size = 0;
-    descriptor->textures = AllocateMemoryP(1, sizeof(Texture2D), blueprints);
     descriptor->num_textures = 1;
     descriptor->binding = blueprints->blue_print_packs[indx_pack].curr_bind;
 
@@ -559,7 +531,6 @@ void BluePrintAddTextureImageArray(Blueprints *blueprints, uint32_t indx_pack, G
 
     descriptor->image = images;
     descriptor->size = 0;
-    descriptor->textures = AllocateMemoryP(size, sizeof(Texture2D), blueprints);
     descriptor->num_textures = size;
 
     for(int i=0;i < size;i++)
@@ -609,6 +580,13 @@ void BluePrintClearTextures(BluePrintDescriptor *descriptor){
     }    
 }
 
+void BluePrintClearShaders(PipelineSetting *settings){
+    for(int i=0;i < settings->num_stages;i++){
+        if(settings->stages[i].flags & ENGINE_SHADER_OBJECT_READED)
+            FreeMemory(settings->stages[i].code_shader);
+    }
+}
+
 void BluePrintClearAll(Blueprints *blueprints){
 
     ZDevice *device = (ZDevice *)engine.device;
@@ -631,6 +609,8 @@ void BluePrintClearAll(Blueprints *blueprints){
                 BuffersDestroyContainer(&descriptor->uniform);
             }
         }
+        
+        BluePrintClearShaders(&blueprints->blue_print_packs[i].setting);
     }
 
 }

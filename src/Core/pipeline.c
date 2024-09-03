@@ -17,12 +17,13 @@
 
 extern ZEngine engine;
 
-void PipelineSettingSetShader(PipelineSetting *setting, char *shader, size_t size, uint32_t type)
+void PipelineSettingSetShader(PipelineSetting *setting, ShaderObject *shader, uint32_t type)
 {
     uint32_t num = setting->num_stages;
-    setting->stages[num].some_shader = shader;
-    setting->stages[num].size_some_shader = size;
-    setting->stages[num].type_some_shader = type;
+    setting->stages[num].code_shader = shader->code;
+    setting->stages[num].size_code_shader = shader->size;
+    setting->stages[num].type_code_shader = type;
+    setting->stages[num].flags = shader->flags;
     setting->num_stages ++;
 }
 
@@ -177,13 +178,13 @@ void PipelineMakePipeline(GraphicsObject *graphObj, uint32_t indx_pack)
         if(setting->flags & temp)
         {
             shaderStages[count_stages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-            shaderStages[count_stages].stage = setting->stages[count_stages].type_some_shader;
+            shaderStages[count_stages].stage = setting->stages[count_stages].type_code_shader;
             shaderStages[count_stages].pName = "main";
 
             ShaderObject some_shader_code;
 
-            some_shader_code.code = setting->stages[count_stages].some_shader;
-            some_shader_code.size = setting->stages[count_stages].size_some_shader;
+            some_shader_code.code = setting->stages[count_stages].code_shader;
+            some_shader_code.size = setting->stages[count_stages].size_code_shader;
 
             shaderStages[count_stages].module = createShaderModule(some_shader_code);
 

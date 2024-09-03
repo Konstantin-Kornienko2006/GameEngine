@@ -9,8 +9,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Objects/lightObject.h"
-
 #include "Tools/e_math.h"
 #include "Tools/e_tools.h"
 

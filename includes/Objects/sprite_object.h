@@ -23,14 +23,6 @@ typedef struct{
 /// @param dParam - параметры для рендера
 /// @return - прошла ли инициализация успешно (true) либо (false)
 int SpriteObjectInit(SpriteObject *go, DrawParam *dParam);
-/// @brief Инициализация стандартного объекта-спрайта
-/// @param go - объект-спрайт
-/// @param dParam - параметры для рендера
-void SpriteObjectInitDefault(SpriteObject *go, DrawParam *dParam);
-/// @brief  Установка стандартного чертежа для объекта-спрайта
-/// @param go - объект-спрайт
-/// @param render - рендерк которому прикрепляется объект. Может быть NULL.
-void SpriteObjectAddDefault(SpriteObject *so, void *render);
 /// @brief Установка смещения изображения по атласу текстуры
 /// @param go - объект-спрайт
 /// @param x - координата по x

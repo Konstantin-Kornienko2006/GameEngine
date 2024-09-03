@@ -8,7 +8,7 @@
 #include "Core/e_window.h"
 #include "Core/e_device.h"
 
-#include "Objects/lightObject.h"
+#include "Objects/light_object.h"
 #include "Objects/render_texture.h"
 
 #include "GUI/GUIManager.h"
@@ -70,9 +70,6 @@ void ZEngineInitSystem(int width, int height, const char* name){
 
     engine.MAX_FRAMES_IN_FLIGHT = 3;
 
-    //engine.DataR.e_var_lights = AllocateMemory(0, sizeof(LightObject *));
-    engine.DataR.e_var_num_lights = engine.DataR.num_dir_shadows = engine.DataR.num_point_shadows = engine.DataR.num_spot_shadows = 0;
-
     engine.DataR.e_var_images = AllocateMemoryP(MAX_IMAGES, sizeof(engine_buffered_image), &engine);
     engine.DataR.e_var_num_images = 0;
 
@@ -131,9 +128,14 @@ void ZEngineRender(){
     ZDevice *device = (ZDevice *)engine.device;
     ZSwapChain *swapchain = (ZSwapChain *)engine.swapchain;
 
+    
+    for( int i=0;i < engine.gameObjects.size;i++){
+        if(!(engine.gameObjects.objects[i]->flags & ENGINE_GAME_OBJECT_FLAG_INIT))
+            GameObjectInit(engine.gameObjects.objects[i]);
+    }
+
     vkWaitForFences(device->e_device, 1, &engine.Sync.inFlightFences[engine.imageIndex], VK_TRUE, UINT64_MAX);
     VkResult result = vkAcquireNextImageKHR(device->e_device, swapchain->swapChain, UINT64_MAX, engine.Sync.imageAvailableSemaphores[engine.currentFrame], VK_NULL_HANDLE, &engine.imageIndex);
-
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         RecreateSwapChain();
@@ -269,18 +271,11 @@ void ZEngineRender(){
     }
 
     engine.currentFrame = (engine.currentFrame + 1) % engine.MAX_FRAMES_IN_FLIGHT;
-
     
-    for( int i=0;i < engine.gameObjects.size;i++)
-        engine.gameObjects.objects[i] = NULL;
-
+    engine.lights.size = 0;
     engine.gameObjects.size = 0;
 
     GUIManagerClear();
-
-    /*free(engine.DataR.e_var_lights);
-    engine.DataR.e_var_lights = calloc(0, sizeof(LightObject *));
-    engine.DataR.e_var_num_lights = 0;*/
 }
 
 void ZEngineSetDrawFunc(DrawFunc_T func){
@@ -451,13 +446,6 @@ void ZEngineCleanUp(){
     }   
     FreeMemory(engine.DataR.e_var_images);
     engine.DataR.e_var_images = NULL;   
-
-    if(engine.DataR.e_var_num_lights > 0)
-    {
-        FreeMemory(engine.DataR.e_var_lights);
-        engine.DataR.e_var_lights = NULL;
-        engine.DataR.e_var_num_lights = 0;
-    }
 
     RenderTextureDestroy(engine.main_render);
     FreeMemory(engine.main_render);

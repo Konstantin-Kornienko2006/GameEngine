@@ -204,12 +204,11 @@ void DescriptorCreate(ShaderDescriptor *descriptor, BluePrintDescriptor *descrip
 
         for(int i=0;i<num_descr;i++)
         {
-            VkDescriptorSetLayoutBinding* binding = &bindings[i];
-            binding->binding = descriptors[i].binding;
-            binding->descriptorType = descriptors[i].descrType;
-            binding->descriptorCount = descriptors[i].descrCount;
-            binding->pImmutableSamplers = NULL;
-            binding->stageFlags = descriptors[i].stageflag;
+            bindings[i].binding = descriptors[i].binding;
+            bindings[i].descriptorType = descriptors[i].descrType;
+            bindings[i].descriptorCount = descriptors[i].descrCount;
+            bindings[i].pImmutableSamplers = NULL;
+            bindings[i].stageFlags = descriptors[i].stageflag;
         }
 
         VkDescriptorSetLayoutCreateInfo layoutInfo = {};

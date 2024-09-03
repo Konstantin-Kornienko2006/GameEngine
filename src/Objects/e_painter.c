@@ -55,13 +55,13 @@ void PainterObjectInit(EPainter *painter)
 
 void PainterObjectAddDefault(EPainter *painter, void *render)
 {    
-    uint32_t num_pack = BluePrintInit(&painter->go.graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&painter->go.graphObj.blueprints);
     
     GraphicsObjectSetSomeShader(&painter->go.graphObj, &_binary_shaders_gui_painter_vert_spv_start, (size_t)(&_binary_shaders_gui_painter_vert_spv_size), num_pack);
     GraphicsObjectSetSomeShader(&painter->go.graphObj, &_binary_shaders_gui_painter_frag_spv_start, (size_t)(&_binary_shaders_gui_painter_frag_spv_size), num_pack);
 
     BluePrintAddSomeUpdater(&painter->go.graphObj.blueprints, num_pack, 0, PainterObjectPainterBufferUpdate);
-    BluePrintAddSomeUpdater(&painter->go.graphObj.blueprints, num_pack, 1, PainterObjectDrawObjectsBufferUpdate);
+    BluePrintAddSomeUpdater(&painter->go.graphObj.blueprints, num_pack, 1, PainterObjectDrawObjectsBufferUpdate);*/
 }
 
 void PainterObjectInitDefault(EPainter *painter, DrawParam *dParam)
