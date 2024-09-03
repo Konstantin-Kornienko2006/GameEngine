@@ -15,4 +15,6 @@ extern const uint32_t cubeIndx[];
 extern const uint32_t planeIndx[];
 extern const uint32_t projPlaneIndx[];
 
+extern const uint32_t tigrib_bin[];
+
 #endif // E_RESOURCE_SHAPES_H

@@ -38,7 +38,7 @@ void QuadObjectInit(QuadObject *qu, uint32_t type)
 
 void QuadObjectAddDefault(QuadObject *qu, void *render)
 {
-    uint32_t num_pack = BluePrintInit(&qu->go.graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&qu->go.graphObj.blueprints);
     
     GraphicsObjectSetSomeShader(&qu->go.graphObj, &_binary_shaders_quad_vert_spv_start, (size_t)(&_binary_shaders_quad_vert_spv_size), num_pack);
 
@@ -54,7 +54,7 @@ void QuadObjectAddDefault(QuadObject *qu, void *render)
             break;
     }
 
-    BluePrintAddSomeUpdater(&qu->go.graphObj.blueprints, num_pack, 0, QuadObjectUpdate);
+    BluePrintAddSomeUpdater(&qu->go.graphObj.blueprints, num_pack, 0, QuadObjectUpdate);*/
     
     /*setting.flags &= ~(ENGINE_PIPELINE_FLAG_ALPHA);
     setting.vert_indx = 0;*/

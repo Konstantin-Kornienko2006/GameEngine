@@ -243,7 +243,7 @@ void WindowWidgetDestroy(EWidgetWindow *window){
     ChildStack *child = window->window.child;
     ChildStack *lastChild;
 
-    if(!window->window.go.init)
+    if(!(window->window.go.flags & ENGINE_GAME_OBJECT_FLAG_INIT))
         return;
     
     while(child != NULL)
@@ -256,7 +256,7 @@ void WindowWidgetDestroy(EWidgetWindow *window){
     
     FreeMemory(window->window.callbacks.stack);
     
-    window->window.go.init = false;
+    window->window.go.flags &= ~(ENGINE_GAME_OBJECT_FLAG_INIT);
 }
 
 
@@ -344,8 +344,6 @@ void WindowWidgetInit(EWidgetWindow *window, char* name, vec2 size, vec2 positio
     window->wasHide = false;
     window->wasResize = false;
     window->resizeble = true;
-
-    window->window.go.init = true;
 }
 
 void WindowWidgetAddWidget(EWidgetWindow *window, EWidget *widget){

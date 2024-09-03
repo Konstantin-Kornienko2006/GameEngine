@@ -22,7 +22,7 @@ typedef struct{
 
 void GraphicsObjectInit(GraphicsObject* graphObj, uint32_t type);
 
-void GraphicsObjectSetSomeShader(GraphicsObject* graphObj, uint32_t *code, uint32_t size, uint32_t pack_indx);
+void GraphicsObjectSetSomeShader(GraphicsObject* graphObj, ShaderObject *shader, uint32_t pack_indx);
 
 void GraphicsObjectSetVertex(GraphicsObject* graphObj, void *vert, int vertCount, uint32_t type_v_size, uint32_t *inx, int indxCount, uint32_t type_i_size);
 

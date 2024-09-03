@@ -711,12 +711,12 @@ void TreeObjectInitInstances(GameObject3D *go){
 
 void TreeObjectSetInstanceDescriptor(TreeObject *to, DrawParam *dParam){
 
-    uint32_t num_pack = BluePrintInit(&to->go.graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&to->go.graphObj.blueprints);
 
     GraphicsObjectSetSomeShader(&to->go.graphObj, &_binary_shaders_3d_object_instance_vert_spv_start, (size_t)(&_binary_shaders_3d_object_instance_vert_spv_size), num_pack);
     GraphicsObjectSetSomeShader(&to->go.graphObj, &_binary_shaders_3d_object_instance_frag_spv_start, (size_t)(&_binary_shaders_3d_object_instance_frag_spv_size), num_pack);
 
-    BluePrintAddSomeUpdater(&to->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
+    BluePrintAddSomeUpdater(&to->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);*/
 
     /*setting.vert_indx = 0;
     setting.cull_mode = VK_CULL_MODE_NONE;
@@ -727,7 +727,7 @@ void TreeObjectSetInstanceDescriptor(TreeObject *to, DrawParam *dParam){
 
 void TreeObjectSetDefaultDescriptor(TreeObject *to, uint32_t type, DrawParam *dParam)
 {
-    uint32_t num_pack = BluePrintInit(&to->go.graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&to->go.graphObj.blueprints);
     
     ShaderBuilder *vert = to->go.self.vert;
     ShaderBuilder *frag = to->go.self.frag;
@@ -737,7 +737,7 @@ void TreeObjectSetDefaultDescriptor(TreeObject *to, uint32_t type, DrawParam *dP
     GraphicsObjectSetSomeShader(&to->go.graphObj, vert->code, vert->size, num_pack);
     GraphicsObjectSetSomeShader(&to->go.graphObj, frag->code, frag->size, num_pack);
 
-    BluePrintAddSomeUpdater(&to->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
+    BluePrintAddSomeUpdater(&to->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);*/
 }
 
 void TreeObjectInitDefault(TreeObject *to, uint32_t type, DrawParam *dParam, void *arg)

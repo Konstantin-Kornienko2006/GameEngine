@@ -186,8 +186,6 @@ void WidgetInit(EWidget* ew, EWidget* parent){
 
     ew->callbacks.stack = (CallbackStruct *) AllocateMemory(MAX_GUI_CALLBACKS, sizeof(CallbackStruct));
     ew->callbacks.size = 0;
-
-    ew->go.init = true;
 }
 
 void WidgetConnect(EWidget* widget, int trigger, widget_callback callback, void* args){
@@ -361,7 +359,7 @@ void WidgetEventsPipe(ChildStack *child)
 
 void WidgetDestroy(EWidget *widget){
 
-    if(!widget->go.init)
+    if(!(widget->go.flags & ENGINE_GAME_OBJECT_FLAG_INIT))
         return;
 
     ChildStack *child = widget->child;
@@ -377,7 +375,7 @@ void WidgetDestroy(EWidget *widget){
 
     FreeMemory(widget->callbacks.stack);
 
-    widget->go.init = false;
+    widget->go.flags &= ~(ENGINE_GAME_OBJECT_FLAG_INIT);
 
     if((widget->widget_flags & ENGINE_FLAG_WIDGET_ALLOCATED))
         FreeMemory(widget);

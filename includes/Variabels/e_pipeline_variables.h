@@ -30,9 +30,10 @@ typedef enum{
 } EnginePipelineFlags;
 
 typedef struct{
-    char* some_shader;
-    uint32_t size_some_shader;
-    uint32_t type_some_shader;
+    char* code_shader;
+    uint32_t size_code_shader;
+    uint32_t type_code_shader;
+    uint32_t flags;
 } EngineShaderStage;
 
 typedef struct{

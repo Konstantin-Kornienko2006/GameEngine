@@ -260,71 +260,33 @@ int ShapeObjectInit(ShapeObject *so, DrawParam *dParam, ShapeType type, void *pa
     int len = strlen(currPath);
     currPath[len] = '\\';
 
-    if(strlen(dParam->diffuse) != 0)
-    {
-        char *full_path = ToolsMakeString(currPath, dParam->diffuse);
-        
-        if(!DirectIsFileExist(full_path)){
-            GameObjectDestroy(so);
-            FreeMemory(full_path);            
-            FreeMemory(currPath);
-            return 0;
+    if(dParam->diffuse != NULL){
+        if(strlen(dParam->diffuse) != 0)
+        {
+            char *full_path = ToolsMakeString(currPath, dParam->diffuse);
+            
+            if(!DirectIsFileExist(full_path)){
+                GameObjectDestroy(so);
+                FreeMemory(full_path);            
+                FreeMemory(currPath);
+                return 0;
+            }
+
+            int len = strlen(full_path);
+            so->go.image->path = AllocateMemory(len + 1, sizeof(char));
+            memcpy(so->go.image->path, full_path, len);
+            so->go.image->path[len] = '\0';
+            //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
+
+            so->go.num_images++;
+
+            FreeMemory(full_path);
         }
-
-        int len = strlen(full_path);
-        so->go.image->path = AllocateMemory(len + 1, sizeof(char));
-        memcpy(so->go.image->path, full_path, len);
-        so->go.image->path[len] = '\0';
-        //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
-
-        so->go.num_images++;
-
-        FreeMemory(full_path);
-    }
+    }    
 
     FreeMemory(currPath);
 
     so->go.graphObj.num_shapes = 1;
 
     return 1;
-}
-
-void ShapeObjectAddDefault(ShapeObject *so, void *render)
-{
-    uint32_t num_pack = BluePrintInit(&so->go.graphObj.blueprints);
-    
-    ShaderBuilder *vert = so->go.self.vert;
-    ShaderBuilder *frag = so->go.self.frag;
-
-    ShadersMakeDefault2DShader(vert, frag, so->go.num_images > 0);
-
-    GraphicsObjectSetSomeShader(&so->go.graphObj, vert->code, vert->size, num_pack);
-    GraphicsObjectSetSomeShader(&so->go.graphObj, frag->code, frag->size, num_pack);
-
-    BluePrintAddSomeUpdater(&so->go.graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
-    BluePrintAddSomeUpdater(&so->go.graphObj.blueprints, num_pack, 1, GameObject2DImageBuffer);
-    BluePrintSetTextureImageCreate(&so->go.graphObj.blueprints, num_pack, so->go.image, 0);
-
-    uint32_t flags = BluePrintGetSettingsValue(&so->go.graphObj.blueprints, num_pack, 3);
-    BluePrintSetSettingsValue(&so->go.graphObj.blueprints, num_pack, 3, flags | ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE);
-
-    if(so->type == ENGINE_SHAPE_OBJECT_LINE)
-    {
-        flags = BluePrintGetSettingsValue(&so->go.graphObj.blueprints, num_pack, 3);
-
-        BluePrintSetSettingsValue(&so->go.graphObj.blueprints, num_pack, 1, VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
-        BluePrintSetSettingsValue(&so->go.graphObj.blueprints, num_pack, 3, flags & ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED));
-    }
-
-}
-
-void ShapeObjectInitDefault(ShapeObject *so, DrawParam *dParam, ShapeType type, void *param)
-{
-    int res = ShapeObjectInit(so, dParam, type, param);
-
-    if(!res)
-        return;
-
-    ShapeObjectAddDefault(so, dParam->render);
-    GameObject2DInitDraw((GameObject2D *)so);
 }

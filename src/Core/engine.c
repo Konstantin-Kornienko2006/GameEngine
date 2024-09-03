@@ -20,7 +20,6 @@
 #include "string.h"
 
 #include "Objects/gameObject.h"
-#include "Objects/lightObject.h"
 #include "Objects/render_texture.h"
 
 #include "GUI/e_widget_entry.h"
@@ -104,34 +103,6 @@ void EngineCreateSyncobjects() {
             exit(1);
         }
     }
-}
-
-void EngineAcceptShadow(void *shadow, uint32_t count, uint32_t shadow_type)
-{
-    RenderTexture **array;
-
-    switch(shadow_type){
-        case ENGINE_SHADOW_TYPE_DIRECTIONAL :
-            engine.DataR.dir_shadow_array = AllocateMemory(count, sizeof(RenderTexture *));
-            array = engine.DataR.dir_shadow_array;
-            engine.DataR.num_dir_shadows = count;
-            break;
-        case ENGINE_SHADOW_TYPE_POINT :
-            engine.DataR.point_shadow_array = AllocateMemory(count, sizeof(RenderTexture *));
-            array = engine.DataR.point_shadow_array;
-            engine.DataR.num_point_shadows = count;
-            break;
-        case ENGINE_SHADOW_TYPE_SPOT :
-            engine.DataR.spot_shadow_array = AllocateMemory(count, sizeof(RenderTexture *));
-            array = engine.DataR.spot_shadow_array;
-            engine.DataR.num_spot_shadows = count;
-            break;
-    }
-
-    RenderTexture *renders = shadow;
-
-    for(int i=0;i < count;i++)
-        array[i] = &renders[i];
 }
 
 void EngineWaitEvents()

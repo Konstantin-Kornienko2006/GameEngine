@@ -20,7 +20,7 @@ typedef struct{
     void *GraphicsPipelineLayout;
 } PipelineStack;
 
-void PipelineSettingSetShader(PipelineSetting *setting, char *shader, size_t size, uint32_t type);
+void PipelineSettingSetShader(PipelineSetting *setting, ShaderObject *shader, uint32_t type);
 
 void PipelineDestroyStack(void *pipeline);
 

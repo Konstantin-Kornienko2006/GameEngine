@@ -2116,8 +2116,14 @@ uint32_t ReturnSizeVector(ShaderBuilder *builder, ShaderVariable *var_elm){
 
     ShaderVariable *elm_type = ShaderBuilderFindVar(builder, var_elm->args[0]);
 
+    uint32_t temp_size = 0;
     if(elm_type->type == SHADER_VARIABLE_TYPE_FLOAT || elm_type->type == SHADER_VARIABLE_TYPE_INT)
-        return 4 * var_elm->values[0] /*count elem*/;
+        temp_size = 4 * var_elm->values[0] /*count elem*/;
+
+    if(temp_size == 12)
+        temp_size = 16;
+
+    return temp_size;
 }
 
 uint32_t ReturnSizeMatrix(ShaderBuilder *builder, ShaderVariable *mat_elm){
@@ -2138,7 +2144,6 @@ uint32_t ReturnSizeMatrix(ShaderBuilder *builder, ShaderVariable *mat_elm){
 uint32_t ReturnSizeStruct(ShaderBuilder *builder, ShaderVariable *str_elm){
 
     uint32_t size = 0;
-
     for(int j=0;j < str_elm->num_args;j++){
         ShaderVariable *var_elm = ShaderBuilderFindVar(builder, str_elm->args[j]);
         
@@ -2164,10 +2169,15 @@ uint32_t ReturnSizeStruct(ShaderBuilder *builder, ShaderVariable *str_elm){
         }
     }
 
+    while(size % 16)
+        size ++;
+
     return size;
 }
 
 void ShaderBuilderMakeUniformsFromShader(ShaderBuilder *builder, uint32_t *code, uint32_t size, void *blueprints, uint32_t indx_pack, int with_parcing){
+
+    size /= sizeof(uint32_t);
 
     if(builder->alloc_head == NULL)
         builder->alloc_head = calloc(1, sizeof(ChildStack));

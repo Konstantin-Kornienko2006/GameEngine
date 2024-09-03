@@ -12,9 +12,15 @@ extern "C"
 {
 #endif
 
+typedef enum {
+    ENGINE_SHADER_OBJECT_NONE = 0x1,
+    ENGINE_SHADER_OBJECT_READED = 0x2
+} ShaderObjectFlags;
+
 typedef struct{
     char* code;
     size_t size;
+    ShaderObjectFlags flags;
 } ShaderObject;
 
 typedef struct{

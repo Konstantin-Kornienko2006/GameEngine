@@ -25,14 +25,14 @@ void WaterObjectUpdateBuffer(GameObject3D* go, BluePrintDescriptor *descriptor)
 
 void WaterObjectSetDefaultDescriptor(WaterObject *water, DrawParam *dParam)
 {    
-    uint32_t num_pack = BluePrintInit(&water->go.graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&water->go.graphObj.blueprints);
 
     GraphicsObjectSetSomeShader(&water->go.graphObj, &_binary_shaders_water_vert_spv_start, (size_t)(&_binary_shaders_water_vert_spv_size), num_pack);
     GraphicsObjectSetSomeShader(&water->go.graphObj, &_binary_shaders_water_frag_spv_start, (size_t)(&_binary_shaders_water_frag_spv_size), num_pack);
 
     BluePrintAddSomeUpdater(&water->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
     BluePrintAddSomeUpdater(&water->go.graphObj.blueprints, num_pack, 1, WaterObjectUpdateBuffer);
-    BluePrintSetTextureImageCreate(&water->go.graphObj.blueprints, num_pack, &water->go.images[0], 0);
+    BluePrintSetTextureImageCreate(&water->go.graphObj.blueprints, num_pack, &water->go.images[0], 0);*/
 }
 
 void WaterObjectInit(WaterObject *water, DrawParam *dParam, uint32_t size){

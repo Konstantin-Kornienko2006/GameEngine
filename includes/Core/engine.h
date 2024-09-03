@@ -22,11 +22,6 @@ void EngineCleanupSwapChain();
 void EnginereRecreateSwapChain();
 /// @brief Функция создания объектов для синхронизации кадров
 void EngineCreateSyncobjects();
-/// @brief Функция установки рендеров теней
-/// @param shadow - объект рендера типа RenderTexture
-/// @param count - количество объектов
-/// @param shadow_type - тип тени
-void EngineAcceptShadow(void *shadow, uint32_t count, uint32_t shadow_type);
 
 #ifdef __cplusplus
 }

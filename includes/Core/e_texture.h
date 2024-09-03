@@ -6,8 +6,8 @@
 
 #include "Tools/e_tools.h"
 
-#define EMPTY_IMAGE_WIDTH 100
-#define EMPTY_IMAGE_HEIGHT 100
+#define EMPTY_IMAGE_WIDTH 126
+#define EMPTY_IMAGE_HEIGHT 126
 
 struct BluePrintDescriptor_T;
 

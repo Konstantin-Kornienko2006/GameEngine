@@ -41,10 +41,10 @@ void ProjectionPlaneInit(GameObject2D *go, DrawParam dParam){
 
 void ProjectionPlaneAddDefault(GameObject2D *go, void *render)
 {    
-    uint32_t num_pack = BluePrintInit(&go->graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&go->graphObj.blueprints);
     
     GraphicsObjectSetSomeShader(&go->graphObj, &_binary_shaders_sprite_vert_spv_start, (size_t)(&_binary_shaders_sprite_vert_spv_size), num_pack);
     GraphicsObjectSetSomeShader(&go->graphObj, &_binary_shaders_sprite_frag_spv_start, (size_t)(&_binary_shaders_sprite_frag_spv_size), num_pack);
 
-    BluePrintAddSomeUpdater(&go->graphObj.blueprints, num_pack, 0, ProjectionPlaneUpdate);
+    BluePrintAddSomeUpdater(&go->graphObj.blueprints, num_pack, 0, ProjectionPlaneUpdate);*/
 }

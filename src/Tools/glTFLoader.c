@@ -14,7 +14,6 @@
 #include "Core/e_descriptor.h"
 
 #include "Objects/gameObject.h"
-#include "Objects/lightObject.h"
 #include "Objects/gameObject3D.h"
 
 #define CGLTF_IMPLEMENTATION

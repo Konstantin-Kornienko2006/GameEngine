@@ -27,7 +27,7 @@ int main(){
 
     ToolsAddStrings(dParam.diffuse, 256, "D:\\Projects\\Test\\res\\", "texture.jpg");
 
-    PrimitiveObjectInitDefault(&po, &dParam, ENGINE_PRIMITIVE3D_CUBE, NULL);
+    PrimitiveObjectInit(&po, &dParam, ENGINE_PRIMITIVE3D_CUBE, NULL);
 
     while (!ZEngineWindowIsClosed())
     {

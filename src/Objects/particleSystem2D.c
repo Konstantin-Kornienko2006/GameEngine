@@ -168,13 +168,13 @@ void Particle2DInit(ParticleObject2D* particle, DrawParam dParam){
 
 void Particle2DAddDefault(ParticleObject2D* particle, void *render)
 {    
-    uint32_t num_pack = BluePrintInit(&particle->go.graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&particle->go.graphObj.blueprints);
     
     GraphicsObjectSetSomeShader(&particle->go.graphObj, &_binary_shaders_particle_vert2D_spv_start, (size_t)(&_binary_shaders_particle_vert2D_spv_size), num_pack);
     GraphicsObjectSetSomeShader(&particle->go.graphObj, &_binary_shaders_particle_frag2D_spv_start, (size_t)(&_binary_shaders_particle_frag2D_spv_size), num_pack);
 
     BluePrintAddSomeUpdater(&particle->go.graphObj.blueprints, num_pack, 0, Particle2DDefaultUpdate);
-    BluePrintSetTextureImageCreate(&particle->go.graphObj.blueprints, num_pack, particle->go.image, 0);
+    BluePrintSetTextureImageCreate(&particle->go.graphObj.blueprints, num_pack, particle->go.image, 0);*/
     
     /*setting.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     setting.flags &= ~(ENGINE_PIPELINE_FLAG_DRAW_INDEXED);*/

@@ -55,7 +55,7 @@ void GameObjectDraw(GameObject* go) {
     if(go == NULL)
         return;
 
-    if(go->init == false)
+    if(!(go->flags & ENGINE_GAME_OBJECT_FLAG_INIT))
         return;
 
     GameObjectUpdate(go);
@@ -87,11 +87,7 @@ void GameObjectDestroy(GameObject* go){
     if(go == NULL)
         return;
         
-    if(!go->init)
-        return;
-
     EngineDeviceWaitIdle();
-
 
     void (*destroy)(GameObject* go) = go->DestroyPoint;
 

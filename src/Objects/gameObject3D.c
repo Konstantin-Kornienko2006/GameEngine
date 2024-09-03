@@ -13,7 +13,7 @@
 #include "Core/e_buffer.h"
 #include "Core/e_texture.h"
 
-#include "Objects/lightObject.h"
+#include "Objects/light_object.h"
 #include "Objects/render_texture.h"
 
 #include "Tools/e_math.h"
@@ -152,7 +152,7 @@ void GameObject3DDescriptorDirLightsUpdate(GameObject3D* go, void *data)
 
     LightObjectFillDirLights(&dlb);
 
-    if(engine.DataR.dir_shadow_array != NULL)
+    /*if(engine.dir_shadow_array != NULL)
     {
         RenderTexture **renders = engine.DataR.dir_shadow_array;
 
@@ -174,7 +174,7 @@ void GameObject3DDescriptorDirLightsUpdate(GameObject3D* go, void *data)
         dlb.cascadeSplits.y = renders[2]->cascadeSplit;
         dlb.cascadeSplits.z = renders[1]->cascadeSplit;
         dlb.cascadeSplits.w = renders[0]->cascadeSplit;
-    }
+    }*/
 
     memcpy(data, (char *)&dlb, sizeof(dlb));
 }
@@ -188,11 +188,11 @@ void GameObject3DDescriptorPointLightsUpdate(GameObject3D* go, void *data)
 
     LightObjectFillPointLights(&plb);
 
-    if(engine.DataR.num_point_shadows > 0)
+    /*if(engine.DataR.num_point_shadows > 0)
         for(int i=0;i < engine.DataR.num_point_shadows;i++){
             plb.pos[i].light_pos = plb.points[i].position;
             plb.pos[i].view_pos = cam->position;
-        }
+        }*/
 
     memcpy(data, (char *)&plb, sizeof(plb));
 }
@@ -204,7 +204,7 @@ void GameObject3DDescriptorSpotLightsUpdate(GameObject3D* go, void *data)
 
     LightObjectFillSpotLights(&slb);
 
-    if(engine.DataR.spot_shadow_array != NULL)
+    /*if(engine.DataR.spot_shadow_array != NULL)
     {
 
         RenderTexture **renders = engine.DataR.spot_shadow_array;
@@ -224,7 +224,7 @@ void GameObject3DDescriptorSpotLightsUpdate(GameObject3D* go, void *data)
             }else
                 slb.mats[i].proj = m4_ortho(-spot->ortg_view_size, spot->ortg_view_size, -spot->ortg_view_size, spot->ortg_view_size, -spot->ortg_view_distance, spot->ortg_view_distance);
         }
-    }
+    }*/
 
     memcpy(data, (char *)&slb, sizeof(slb));
 }
@@ -370,11 +370,92 @@ void GameObject3DDefaultDraw(GameObject3D* go){
     }
 }
 
-void GameObject3DInitDraw(GameObject3D *go)
-{
+void GameObject3DInitDefaultShader(GameObject3D *go){    
+    
+    if(go->self.flags & ENGINE_GAME_OBJECT_FLAG_SHADED)
+        return;
+
+    uint32_t num_pack = BluePrintInit(&go->graphObj.blueprints);
+    
+    ShaderBuilder *vert = go->self.vert;
+    ShaderBuilder *frag = go->self.frag;
+
+    ShadersMakeDefault3DShader(vert, frag, go->num_images > 0);
+
+    ShaderObject vert_shader, frag_shader;
+    memset(&vert_shader, 0, sizeof(ShaderObject));
+    memset(&frag_shader, 0, sizeof(ShaderObject));
+
+    vert_shader.code = vert->code;
+    vert_shader.size = vert->size * sizeof(uint32_t);
+    
+    frag_shader.code = frag->code;
+    frag_shader.size = frag->size * sizeof(uint32_t);
+
+    GraphicsObjectSetSomeShader(&go->graphObj, &vert_shader, num_pack);
+    GraphicsObjectSetSomeShader(&go->graphObj, &frag_shader, num_pack);
+    
+    GameObject3DSetDescriptorUpdate(go, num_pack, 0, GameObject3DDescriptorModelUpdate);
+    GameObject3DSetDescriptorTextureCreate(go, num_pack, 1, go->num_images > 0 ? &go->images[0] : NULL);
+    
+    go->self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;
+}
+
+void GameObject3DInitDraw(GameObject3D *go){
+
+    if(!(go->self.flags & ENGINE_GAME_OBJECT_FLAG_SHADED))
+        return;
+
     GraphicsObjectCreateDrawItems(&go->graphObj);
 
     PipelineCreateGraphics(&go->graphObj);
+    
+    go->self.flags |= ENGINE_GAME_OBJECT_FLAG_INIT;
+}
+
+void GameObject3DInitDefault(GameObject3D *go){
+    GameObject3DInitDefaultShader(go);
+    GameObject3DInitDraw(go);
+}
+
+void GameObject3DSetShader(GameObject3D *go, char *vert_path, char *frag_path){
+    
+    char *currPath = DirectGetCurrectFilePath();
+    int len = strlen(currPath);
+    currPath[len] = '\\';
+    
+    char *full_path_vert = ToolsMakeString(currPath, vert_path);
+
+    if(!DirectIsFileExist(full_path_vert)){
+        FreeMemory(full_path_vert);            
+        FreeMemory(currPath);
+        return;
+    }
+
+    char *full_path_frag = ToolsMakeString(currPath, frag_path);
+
+    if(!DirectIsFileExist(full_path_vert)){
+        FreeMemory(full_path_vert);  
+        FreeMemory(full_path_frag);            
+        FreeMemory(currPath);
+        return;
+    }
+
+    uint32_t num_pack = BluePrintInit(&go->graphObj.blueprints);
+
+    ShaderObject vert_code = readFile(full_path_vert);
+    vert_code.flags |= ENGINE_SHADER_OBJECT_READED;
+    ShaderObject frag_code = readFile(full_path_frag);
+    frag_code.flags |= ENGINE_SHADER_OBJECT_READED;
+    
+    GraphicsObjectSetSomeShader(&go->graphObj, &vert_code, num_pack);
+    GraphicsObjectSetSomeShader(&go->graphObj, &frag_code, num_pack);
+
+    FreeMemory(currPath);
+    FreeMemory(full_path_vert);
+    FreeMemory(full_path_frag);    
+
+    go->self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;
 }
 
 void GameObject3DAddShadowDescriptor(GameObject3D *go, uint32_t type, void *render, uint32_t layer_indx)
@@ -476,9 +557,6 @@ void GameObject3DRecreate(GameObject3D* go){
 
 void GameObject3DDestroy(GameObject3D* go){
     
-    if(!go->self.init)
-        return;
-
     GraphicsObjectDestroy(&go->graphObj);
 
     for(int i=0;i < go->num_images;i++)
@@ -506,7 +584,7 @@ void GameObject3DDestroy(GameObject3D* go){
     FreeMemory(go->self.vert);
     FreeMemory(go->self.frag);
     
-    go->self.init = false;
+    go->self.flags &= ~(ENGINE_GAME_OBJECT_FLAG_INIT);
 }
 
 int GameObject3DInitTextures(GameObject3D *go, DrawParam *dParam)
@@ -522,29 +600,31 @@ int GameObject3DInitTextures(GameObject3D *go, DrawParam *dParam)
     int len = strlen(currPath);
     currPath[len] = '\\';
 
-    if(strlen(dParam->diffuse) != 0)
-    {
-        char *full_path = ToolsMakeString(currPath, dParam->diffuse);
+    if(dParam->diffuse != NULL){
+        if(strlen(dParam->diffuse) != 0)
+        {
+            char *full_path = ToolsMakeString(currPath, dParam->diffuse);
 
-        if(!DirectIsFileExist(full_path)){
-            FreeMemory(full_path);            
-            FreeMemory(currPath);
-            return 0;
+            if(!DirectIsFileExist(full_path)){
+                FreeMemory(full_path);            
+                FreeMemory(currPath);
+                return 0;
+            }
+
+            len = strlen(full_path);
+            go->images[iter].path = AllocateMemoryP(len + 1, sizeof(char), go);
+            memcpy(go->images[iter].path, full_path, len);
+            go->images[iter].path[len] = '\0';
+            //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
+            go->num_images ++;
+            iter++;
+
+            FreeMemory(full_path);
         }
-
-        len = strlen(full_path);
-        go->images[iter].path = AllocateMemoryP(len + 1, sizeof(char), go);
-        memcpy(go->images[iter].path, full_path, len);
-        go->images[iter].path[len] = '\0';
-        //go->image->buffer = ToolsLoadImageFromFile(&go->image->size, dParam.filePath);
-         go->num_images ++;
-         iter++;
-
-         FreeMemory(full_path);
     }
-
+    
     if(dParam->normal != NULL){
-        if(strlen(dParam->normal) != 0)
+       if(strlen(dParam->normal) != 0)
         {
             char *full_path = ToolsMakeString(currPath, dParam->normal);
 
@@ -597,6 +677,7 @@ int GameObject3DInitTextures(GameObject3D *go, DrawParam *dParam)
 
 void GameObject3DInit(GameObject3D *go){
 
+    GameObjectSetInitFunc((GameObject *)go, (void *)GameObject3DInitDefault);
     GameObjectSetUpdateFunc((GameObject *)go, (void *)GameObject3DDefaultUpdate);
     GameObjectSetDrawFunc((GameObject *)go, (void *)GameObject3DDefaultDraw);
     GameObjectSetCleanFunc((GameObject *)go, (void *)GameObject3DClean);
@@ -616,8 +697,6 @@ void GameObject3DInit(GameObject3D *go){
     
     go->self.vert = AllocateMemory(1, sizeof(ShaderBuilder));
     go->self.frag = AllocateMemory(1, sizeof(ShaderBuilder));
-    
-    go->self.init = true;
 }
 
 void GameObject3DAddInstance(GameObject3D *go, VertexInstance3D vertex){
