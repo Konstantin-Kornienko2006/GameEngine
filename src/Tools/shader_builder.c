@@ -2167,27 +2167,27 @@ uint32_t ReturnSizeStruct(ShaderBuilder *builder, ShaderVariable *str_elm){
             }else if(elm_type->type == SHADER_VARIABLE_TYPE_STRUCT){
                 uint32_t str_size = ReturnSizeStruct(builder, elm_type);
                 size += str_size * elm_const->values[0]/*count elem*/;
-            }
+            }            
+            
+            while(size % 16)
+                size ++;
+
         }else if(var_elm->type == SHADER_VARIABLE_TYPE_STRUCT){
                 size += ReturnSizeStruct(builder, var_elm);
         }
     }
 
-    while(size % 16)
-        size ++;
-
     return size;
 }
 
-void ShaderBuilderMakeUniformsFromShader(ShaderBuilder *builder, uint32_t *code, uint32_t size, void *blueprints, uint32_t indx_pack, int with_parcing){
+void ShaderBuilderMakeUniformsFromShader(ShaderBuilder *builder, uint32_t *code, uint32_t size, void *blueprints, uint32_t indx_pack){
 
     size /= sizeof(uint32_t);
 
     if(builder->alloc_head == NULL)
         builder->alloc_head = calloc(1, sizeof(ChildStack));
 
-    if(with_parcing)
-        ShaderBuilderParcingShader(builder, code, size);
+    ShaderBuilderParcingShader(builder, code, size);
 
     printf("Shader builder : Variables count %i \n", ShaderBuilderGetVariablesCount(builder));
 
@@ -2212,6 +2212,7 @@ void ShaderBuilderMakeUniformsFromShader(ShaderBuilder *builder, uint32_t *code,
 
                     if(var_orig->type == SHADER_VARIABLE_TYPE_STRUCT){
                         size_buffer += ReturnSizeStruct(builder, var_orig);
+                        
 
                         uint32_t binding = 0;
                         for(int i=0;i < builder->num_decorations;i++){

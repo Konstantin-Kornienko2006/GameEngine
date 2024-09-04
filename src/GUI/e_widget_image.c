@@ -125,8 +125,8 @@ void ImageWidgetInit(EWidgetImage *img, char *image_path, EWidget *parent){
     frag_shader.code = frag->code;
     frag_shader.size = frag->size * sizeof(uint32_t);
 
-    GraphicsObjectSetSomeShader(&img->image.graphObj, &vert_shader, num_pack);
-    GraphicsObjectSetSomeShader(&img->image.graphObj, &frag_shader, num_pack);
+    GraphicsObjectSetShaderWithUniform(&img->image.graphObj, &vert_shader, num_pack);
+    GraphicsObjectSetShaderWithUniform(&img->image.graphObj, &frag_shader, num_pack);
 
     BluePrintAddSomeUpdater(&img->image.graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
     BluePrintAddSomeUpdater(&img->image.graphObj.blueprints, num_pack, 1, GameObject2DImageBuffer);

@@ -524,8 +524,8 @@ void GUIManagerInit(){
     frag_shader.code = frag->code;
     frag_shader.size = frag->size * sizeof(uint32_t);
 
-    GraphicsObjectSetSomeShader(&gui.go.graphObj, &vert_shader, num_pack);
-    GraphicsObjectSetSomeShader(&gui.go.graphObj, &frag_shader, num_pack);
+    GraphicsObjectSetShaderWithUniform(&gui.go.graphObj, &vert_shader, num_pack);
+    GraphicsObjectSetShaderWithUniform(&gui.go.graphObj, &frag_shader, num_pack);
 
     BluePrintSetTextureImage(&gui.go.graphObj.blueprints, num_pack, gui.font.texture, 0);
     

@@ -188,7 +188,7 @@ void ShaderBuilderStoreValue(ShaderBuilder *builder, ShaderLabel *label, uint32_
 uint32_t ShaderBuilderAddUniform(ShaderBuilder *builder, ShaderStructConstr *struct_arr, uint32_t count, char *name, uint32_t location, uint32_t binding);
 uint32_t ShaderBuilderAddIOData(ShaderBuilder *builder, ShaderVariableType type, ShaderDataFlags flags, ShaderStructConstr *struct_arr, uint32_t size, char *name, uint32_t location, uint32_t binding);
 
-void ShaderBuilderMakeUniformsFromShader(ShaderBuilder *builder, uint32_t *code, uint32_t size, void *blueprints, uint32_t indx_pack, int with_parcing);
+void ShaderBuilderMakeUniformsFromShader(ShaderBuilder *builder, uint32_t *code, uint32_t size, void *blueprints, uint32_t indx_pack);
 void ShaderBuilderParcingShader(ShaderBuilder *builder, uint32_t *shader, uint32_t size);
 
 void ShaderBuilderClear(ShaderBuilder *builder);

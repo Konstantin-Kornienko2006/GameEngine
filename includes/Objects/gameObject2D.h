@@ -33,6 +33,9 @@ void GameObject2DImageBuffer(GameObject2D *go, void *data);
 void GameObject2DDefaultUpdate(GameObject2D* go);
 void GameObject2DDefaultDraw(GameObject2D* go);
 
+void GameObject2DSetShader(GameObject2D *go, char *vert_path, char *frag_path);
+void GameObject2DSetShaderSimple(GameObject2D *go, char *vert_path, char *frag_path);
+
 void GameObject2DInitDraw(GameObject2D *go);
 void GameObject2DInit(GameObject2D* go);
 void GameObject2DClean(GameObject2D* go);

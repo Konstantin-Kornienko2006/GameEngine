@@ -177,7 +177,7 @@ void PrimitiveObjectSetBigDesriptor(PrimitiveObject *po){
     PipelineSettingSetShader(setting, &_binary_shaders_3d_object_vert_spv_start, (size_t)(&_binary_shaders_3d_object_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
     PipelineSettingSetShader(setting, &_binary_shaders_3d_object_frag_spv_start, (size_t)(&_binary_shaders_3d_object_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);*/
         
-    ShaderObject vert_shader, frag_shader;
+    /*ShaderObject vert_shader, frag_shader;
 
     vert_shader.code = &_binary_shaders_3d_object_vert_spv_start;
     vert_shader.size = (size_t)(&_binary_shaders_3d_object_vert_spv_size);
@@ -196,12 +196,12 @@ void PrimitiveObjectSetBigDesriptor(PrimitiveObject *po){
     GameObject3DSetDescriptorTextureCreate(po, num_pack, 5, &po->go.images[0]);
     GameObject3DSetDescriptorTextureCreate(po, num_pack, 6, &po->go.images[1]);
 
-    po->go.self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;
+    po->go.self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;*/
 }
 
 void PrimitiveObjectSetInstanceDescriptor(PrimitiveObject *po)
 {
-    uint32_t num_pack = BluePrintInit(&po->go.graphObj.blueprints);
+    /*uint32_t num_pack = BluePrintInit(&po->go.graphObj.blueprints);
     
     ShaderObject vert_shader, frag_shader;
 
@@ -217,7 +217,7 @@ void PrimitiveObjectSetInstanceDescriptor(PrimitiveObject *po)
     BluePrintAddSomeUpdater(&po->go.graphObj.blueprints, num_pack, 0, GameObject3DDescriptorModelUpdate);
     BluePrintSetTextureImageCreate(&po->go.graphObj.blueprints, num_pack, &po->go.images[0], 0);
     
-    po->go.self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;
+    po->go.self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;*/
 }
 
 void *PrimitiveObjectGetVertex(PrimitiveObject *po)

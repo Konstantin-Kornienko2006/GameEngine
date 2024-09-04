@@ -392,8 +392,8 @@ void GameObject3DInitDefaultShader(GameObject3D *go){
     frag_shader.code = frag->code;
     frag_shader.size = frag->size * sizeof(uint32_t);
 
-    GraphicsObjectSetSomeShader(&go->graphObj, &vert_shader, num_pack);
-    GraphicsObjectSetSomeShader(&go->graphObj, &frag_shader, num_pack);
+    GraphicsObjectSetShaderWithUniform(&go->graphObj, &vert_shader, num_pack);
+    GraphicsObjectSetShaderWithUniform(&go->graphObj, &frag_shader, num_pack);
     
     GameObject3DSetDescriptorUpdate(go, num_pack, 0, GameObject3DDescriptorModelUpdate);
     GameObject3DSetDescriptorTextureCreate(go, num_pack, 1, go->num_images > 0 ? &go->images[0] : NULL);
@@ -448,8 +448,48 @@ void GameObject3DSetShader(GameObject3D *go, char *vert_path, char *frag_path){
     ShaderObject frag_code = readFile(full_path_frag);
     frag_code.flags |= ENGINE_SHADER_OBJECT_READED;
     
-    GraphicsObjectSetSomeShader(&go->graphObj, &vert_code, num_pack);
-    GraphicsObjectSetSomeShader(&go->graphObj, &frag_code, num_pack);
+    GraphicsObjectSetShaderWithUniform(&go->graphObj, &vert_code, num_pack);
+    GraphicsObjectSetShaderWithUniform(&go->graphObj, &frag_code, num_pack);
+
+    FreeMemory(currPath);
+    FreeMemory(full_path_vert);
+    FreeMemory(full_path_frag);    
+
+    go->self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;
+}
+
+void GameObject3DSetShaderSimple(GameObject3D *go, char *vert_path, char *frag_path){
+    
+    char *currPath = DirectGetCurrectFilePath();
+    int len = strlen(currPath);
+    currPath[len] = '\\';
+    
+    char *full_path_vert = ToolsMakeString(currPath, vert_path);
+
+    if(!DirectIsFileExist(full_path_vert)){
+        FreeMemory(full_path_vert);            
+        FreeMemory(currPath);
+        return;
+    }
+
+    char *full_path_frag = ToolsMakeString(currPath, frag_path);
+
+    if(!DirectIsFileExist(full_path_vert)){
+        FreeMemory(full_path_vert);  
+        FreeMemory(full_path_frag);            
+        FreeMemory(currPath);
+        return;
+    }
+
+    uint32_t num_pack = BluePrintInit(&go->graphObj.blueprints);
+
+    ShaderObject vert_code = readFile(full_path_vert);
+    vert_code.flags |= ENGINE_SHADER_OBJECT_READED;
+    ShaderObject frag_code = readFile(full_path_frag);
+    frag_code.flags |= ENGINE_SHADER_OBJECT_READED;
+    
+    GraphicsObjectSetShader(&go->graphObj, &vert_code, num_pack, VK_SHADER_STAGE_VERTEX_BIT);
+    GraphicsObjectSetShader(&go->graphObj, &frag_code, num_pack, VK_SHADER_STAGE_FRAGMENT_BIT);
 
     FreeMemory(currPath);
     FreeMemory(full_path_vert);
@@ -512,6 +552,14 @@ void GameObject3DAddOmiShadow(GameObject3D *go, void *render, uint32_t layer_ind
     GameObject3DAddSettingPipeline(go, num, &setting);
 
     go->graphObj.blueprints.num_blue_print_packs ++;*/
+}
+
+void GameObject3DAddDescriptor(GameObject3D* go, uint32_t shader_indx, uint32_t size, uint32_t stage_bit, UpdateDescriptor Updater, uint32_t layer_indx){    
+    BluePrintAddUniformObject(&go->graphObj.blueprints, shader_indx, size, stage_bit, Updater, layer_indx);
+}
+
+void GameObject3DAddDescriptorTexture(GameObject3D* go, uint32_t shader_indx, uint32_t stage_bit, GameObjectImage *image){
+    BluePrintAddTextureImage(&go->graphObj.blueprints, shader_indx, image, stage_bit);
 }
 
 void GameObject3DSetDescriptorUpdate(GameObject3D* go, uint32_t shader_indx, uint32_t bind_index, UpdateDescriptor Updater){    

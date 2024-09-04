@@ -465,8 +465,6 @@ BluePrintDescriptor *BluePrintAddTextureImage(Blueprints *blueprints, uint32_t i
 {
     BluePrintPack *pack = &blueprints->blue_print_packs[indx_pack];
 
-    if(image->img_type == 0)
-        image->img_type = VK_FORMAT_R8G8B8A8_SRGB;
 
     if(pack->num_descriptors + 1 > MAX_UNIFORMS)
     {
@@ -481,29 +479,37 @@ BluePrintDescriptor *BluePrintAddTextureImage(Blueprints *blueprints, uint32_t i
     descriptor->num_textures = 1;
     descriptor->binding = blueprints->blue_print_packs[indx_pack].curr_bind;
 
-    if(!(image->flags & ENGINE_TEXTURE_FLAG_SPECIFIC))
-    {
-        if(descriptor->image->size > 0)
-            TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 0);
-        else
-            TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 1);
+    if(image == NULL){
+        TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 1);
+    }else{
+ 
+        if(image->img_type == 0)
+            image->img_type = VK_FORMAT_R8G8B8A8_SRGB;
 
-    }else
-    {
-        if(image->flags & ENGINE_TEXTURE_FLAG_URGB)
-            TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_UINT, image->imgWidth, image->imgHeight);
-        else if(image->flags & ENGINE_TEXTURE_FLAG_R16)
-            TextureCreateSpecific(descriptor, VK_FORMAT_R16_UNORM, image->imgWidth, image->imgHeight);
-        else if(image->flags & ENGINE_TEXTURE_FLAG_R16_UINT)
-            TextureCreateSpecific(descriptor, VK_FORMAT_R16_UINT, image->imgWidth, image->imgHeight);
-        else if(image->flags & ENGINE_TEXTURE_FLAG_R32)
-            TextureCreateSpecific(descriptor, VK_FORMAT_R32_SINT, image->imgWidth, image->imgHeight);
-        else if(image->flags & ENGINE_TEXTURE_FLAG_R32_UINT)
-            TextureCreateSpecific(descriptor, VK_FORMAT_R32_UINT, image->imgWidth, image->imgHeight);
-        else if(image->flags & ENGINE_TEXTURE_FLAG_SRGB)
-            TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_SRGB, image->imgWidth, image->imgHeight);
-        else
-            TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_SINT, image->imgWidth, image->imgHeight);
+        if(!(image->flags & ENGINE_TEXTURE_FLAG_SPECIFIC))
+        {
+            if(descriptor->image->size > 0)
+                TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 0);
+            else
+                TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 1);
+
+        }else
+        {
+            if(image->flags & ENGINE_TEXTURE_FLAG_URGB)
+                TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_UINT, image->imgWidth, image->imgHeight);
+            else if(image->flags & ENGINE_TEXTURE_FLAG_R16)
+                TextureCreateSpecific(descriptor, VK_FORMAT_R16_UNORM, image->imgWidth, image->imgHeight);
+            else if(image->flags & ENGINE_TEXTURE_FLAG_R16_UINT)
+                TextureCreateSpecific(descriptor, VK_FORMAT_R16_UINT, image->imgWidth, image->imgHeight);
+            else if(image->flags & ENGINE_TEXTURE_FLAG_R32)
+                TextureCreateSpecific(descriptor, VK_FORMAT_R32_SINT, image->imgWidth, image->imgHeight);
+            else if(image->flags & ENGINE_TEXTURE_FLAG_R32_UINT)
+                TextureCreateSpecific(descriptor, VK_FORMAT_R32_UINT, image->imgWidth, image->imgHeight);
+            else if(image->flags & ENGINE_TEXTURE_FLAG_SRGB)
+                TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_SRGB, image->imgWidth, image->imgHeight);
+            else
+                TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_SINT, image->imgWidth, image->imgHeight);
+        }   
     }
 
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

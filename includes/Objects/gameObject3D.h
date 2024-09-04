@@ -32,6 +32,9 @@ typedef struct GameObject3D{
 void GameObject3DDefaultUpdate(GameObject3D* go);
 void GameObject3DDefaultDraw(GameObject3D* go);
 
+void GameObject3DAddDescriptor(GameObject3D* go, uint32_t shader_indx, uint32_t size, uint32_t stage_bit, UpdateDescriptor Updater, uint32_t layer_indx);
+void GameObject3DAddDescriptorTexture(GameObject3D* go, uint32_t shader_indx, uint32_t stage_bit, GameObjectImage *image);
+
 void GameObject3DSetDescriptorUpdate(GameObject3D* go, uint32_t shader_indx, uint32_t bind_index, UpdateDescriptor Updater);
 void GameObject3DSetDescriptorTexture(GameObject3D* go, uint32_t shader_indx, uint32_t bind_index, Texture2D *texture);
 void GameObject3DSetDescriptorTextureCreate(GameObject3D* go, uint32_t shader_indx, uint32_t bind_index, GameObjectImage *image);
@@ -65,6 +68,7 @@ void GameObject3DUpdateInstances(GameObject3D *go);
 void GameObject3DInitCopy(GameObject3D *to, GameObject3D *from);
 
 void GameObject3DSetShader(GameObject3D *go, char *vert_path, char *frag_path);
+void GameObject3DSetShaderSimple(GameObject3D *go, char *vert_path, char *frag_path);
 
 void GameObject3DAddShadowDescriptor(GameObject3D *go, uint32_t type, void *render, uint32_t layer_indx);
 void GameObject3DAddOmiShadow(GameObject3D *go, void *render, uint32_t layer_indx);

@@ -146,16 +146,22 @@ void GraphicsObjectSetVertex(GraphicsObject* graphObj, void *vert, int vertCount
     graphObj->num_shapes ++;
 }
 
-void GraphicsObjectSetSomeShader(GraphicsObject* graphObj, ShaderObject *shader, uint32_t pack_indx){
+void GraphicsObjectSetShaderWithUniform(GraphicsObject* graphObj, ShaderObject *shader, uint32_t pack_indx){
     ShaderBuilder *temp = AllocateMemory(1, sizeof(ShaderBuilder));
 
-    ShaderBuilderMakeUniformsFromShader(temp, shader->code, shader->size, &graphObj->blueprints, pack_indx, 1);
+    ShaderBuilderMakeUniformsFromShader(temp, shader->code, shader->size, &graphObj->blueprints, pack_indx);
 
     PipelineSetting* setting = (PipelineSetting *)&graphObj->blueprints.blue_print_packs[pack_indx].setting;
 
     PipelineSettingSetShader(setting, shader, temp->type == SHADER_TYPE_VERTEX ? VK_SHADER_STAGE_VERTEX_BIT : VK_SHADER_STAGE_FRAGMENT_BIT);
 
     FreeMemory(temp);
+}
+
+void GraphicsObjectSetShader(GraphicsObject* graphObj, ShaderObject *shader, uint32_t pack_indx, uint32_t shader_type){
+    PipelineSetting* setting = (PipelineSetting *)&graphObj->blueprints.blue_print_packs[pack_indx].setting;
+
+    PipelineSettingSetShader(setting, shader, shader_type);
 }
 
 void GraphicsObjectCreateDrawItems(GraphicsObject* graphObj){
