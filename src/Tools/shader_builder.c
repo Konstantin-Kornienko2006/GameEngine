@@ -1909,6 +1909,10 @@ void ShaderBuilderParcingShader(ShaderBuilder *builder, uint32_t *shader, uint32
                     builder->decors[builder->num_decorations].indx = val;
                     NextCode(ptr, 1);
                     builder->decors[builder->num_decorations].type = val;
+                    if(val == 2){
+                        NextCode(ptr, 1);
+                        continue;
+                    }
                     NextCode(ptr, 1);
                     builder->decors[builder->num_decorations].val = val;
                     builder->num_decorations++;

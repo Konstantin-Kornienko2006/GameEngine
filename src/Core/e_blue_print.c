@@ -43,6 +43,8 @@ void BluePrintAddSomeUpdater(Blueprints *blueprints, uint32_t indx_pack, uint32_
 
     if(descriptor != NULL)
         descriptor->update = Updater;
+    else
+        printf("Blue Print : Uniform bind %i is not found!\n", bind_indx);
 }
 
 void BluePrintSetSettingsValue(Blueprints *blueprints, uint32_t indx_pack, uint32_t type, uint32_t value){
