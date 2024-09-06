@@ -21,11 +21,10 @@ typedef struct{
     uint32_t max_textures;
     BufferContainer uniform;
     uint32_t descrType;
-    uint32_t descrCount;
     uint32_t desr_set_indx;
     uint32_t binding;
     uint32_t stageflag;
-    uint32_t size;
+    uint32_t count;
     uint32_t buffsize;
     uint32_t flags;
     uint32_t indx_layer;

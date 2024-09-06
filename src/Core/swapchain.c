@@ -125,8 +125,6 @@ void SwapChainCreate() {
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
 
-    createInfo.oldSwapchain = VK_NULL_HANDLE;
-
     if (vkCreateSwapchainKHR(device->e_device, &createInfo, NULL, (VkSwapchainKHR *)&swapchain->swapChain) != VK_SUCCESS) {
         printf("failed to create swap chain!");
         exit(1);

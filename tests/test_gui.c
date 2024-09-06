@@ -45,7 +45,7 @@ int main(){
     Camera2DSetActive(&cam2D);
     Camera3DSetActive(&cam3D);
 
-    WindowWidgetInit(&window, "test", vec2_f(100, 200), vec2_f(200, 200));
+    WindowWidgetInit(&window, "test", vec2_f(300, 200), vec2_f(200, 200));
     
 
     float rot = 0;

@@ -125,8 +125,8 @@ void ImageWidgetInit(EWidgetImage *img, char *image_path, EWidget *parent){
     frag_shader.code = frag->code;
     frag_shader.size = frag->size * sizeof(uint32_t);
 
-    GraphicsObjectSetSomeShader(&img->image.graphObj, &vert_shader, num_pack);
-    GraphicsObjectSetSomeShader(&img->image.graphObj, &frag_shader, num_pack);
+    GraphicsObjectSetShaderWithUniform(&img->image.graphObj, &vert_shader, num_pack);
+    GraphicsObjectSetShaderWithUniform(&img->image.graphObj, &frag_shader, num_pack);
 
     BluePrintAddSomeUpdater(&img->image.graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
     BluePrintAddSomeUpdater(&img->image.graphObj.blueprints, num_pack, 1, GameObject2DImageBuffer);
@@ -135,6 +135,7 @@ void ImageWidgetInit(EWidgetImage *img, char *image_path, EWidget *parent){
     uint32_t flags = BluePrintGetSettingsValue(&img->image.graphObj.blueprints, num_pack, 3);
     BluePrintSetSettingsValue(&img->image.graphObj.blueprints, num_pack, 3, flags | ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE);
 
+    img->image.self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;
     //----------------------------------------------------
 
     GameObject2DInitDraw(&img->image);

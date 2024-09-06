@@ -93,6 +93,7 @@ void ZEngineInitSystem(int width, int height, const char* name){
     engine.DataR.e_var_num_images ++;
     
     memset(&engine.renders, 0, sizeof(EngineRenderItems));
+    memset(&engine.lights, 0, sizeof(EngineLightItems));
     
     engine.main_render = AllocateMemory(1, sizeof(RenderTexture));
     

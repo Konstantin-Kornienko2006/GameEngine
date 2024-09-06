@@ -10,8 +10,6 @@ void Camera2DInit(Camera2D *cam){
 
     cam->scale.x = 1;
     cam->scale.y = 1;
-
-    Camera2DSetActive(cam);
 }
 
 void Camera3DInit(Camera3D *cam){
@@ -24,8 +22,6 @@ void Camera3DInit(Camera3D *cam){
     cam->view_distance = 1000;
     cam->view_angle = 75.0f;
     cam->view_near = 0.01f;
-
-    Camera3DSetActive(cam);
 }
 
 void Camera3DSetViewDistance(Camera3D *cam, double distance)

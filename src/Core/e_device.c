@@ -98,7 +98,6 @@ void pickPhysicalDevice() {
     }
     
     FreeMemory(devices);
-
 }
 
 void createLogicalDevice() {
@@ -109,7 +108,7 @@ void createLogicalDevice() {
 
     QueueFamilyIndices indices = findQueueFamilies(device->e_physicalDevice);
 
-    if(engine.present){
+    if(engine.present && indices.graphicsFamily != indices.presentFamily){
         queueCreateInfos = (VkDeviceQueueCreateInfo*) AllocateMemory(2, sizeof(VkDeviceQueueCreateInfo));
         uniqueQueueFamilies = (uint32_t*) AllocateMemory(2, sizeof(uint32_t));
         uniqueQueueFamilies[0] = indices.graphicsFamily;
@@ -122,7 +121,7 @@ void createLogicalDevice() {
 
     float queuePriority = 1.0f;
 
-    uint32_t queueCount = engine.present ? 2 : 1;
+    uint32_t queueCount = engine.present && indices.graphicsFamily != indices.presentFamily ? 2 : 1;
     for (int i=0;i<queueCount;i++) {
         VkDeviceQueueCreateInfo queueCreateInfo;
         memset(&queueCreateInfo, 0, sizeof(VkDeviceQueueCreateInfo));
@@ -147,7 +146,7 @@ void createLogicalDevice() {
 
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.pQueueCreateInfos = queueCreateInfos;
-    createInfo.queueCreateInfoCount = indices.graphicsFamily != indices.presentFamily ? 2 : 1;
+    createInfo.queueCreateInfoCount =  queueCount;
     createInfo.pEnabledFeatures = &deviceFeatures;
     createInfo.enabledExtensionCount = num_dev_extensions;
     createInfo.ppEnabledExtensionNames = deviceExtensions;

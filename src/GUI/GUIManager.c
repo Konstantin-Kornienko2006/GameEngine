@@ -466,8 +466,7 @@ void GUIManagerAddTexture(){
     BluePrintDescriptor *descriptor = &pack->descriptors[1];
 
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor->descrCount = 1;
-    descriptor->size = 1;
+    descriptor->count = 1;
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor->image = NULL;
     descriptor->flags = ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE | ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
@@ -524,14 +523,15 @@ void GUIManagerInit(){
     frag_shader.code = frag->code;
     frag_shader.size = frag->size * sizeof(uint32_t);
 
-    GraphicsObjectSetSomeShader(&gui.go.graphObj, &vert_shader, num_pack);
-    GraphicsObjectSetSomeShader(&gui.go.graphObj, &frag_shader, num_pack);
+    GraphicsObjectSetShaderWithUniform(&gui.go.graphObj, &vert_shader, num_pack);
+    GraphicsObjectSetShaderWithUniform(&gui.go.graphObj, &frag_shader, num_pack);
 
     BluePrintSetTextureImage(&gui.go.graphObj.blueprints, num_pack, gui.font.texture, 0);
     
     uint32_t flags = BluePrintGetSettingsValue(&gui.go.graphObj.blueprints, num_pack, 3);
     BluePrintSetSettingsValue(&gui.go.graphObj.blueprints, num_pack, 3, flags | ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE);
 
+    gui.go.self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;
     ////---------------------------------------------------------
 
     gui._FringeScale = 1.0f;

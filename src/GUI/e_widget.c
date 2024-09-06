@@ -186,6 +186,9 @@ void WidgetInit(EWidget* ew, EWidget* parent){
 
     ew->callbacks.stack = (CallbackStruct *) AllocateMemory(MAX_GUI_CALLBACKS, sizeof(CallbackStruct));
     ew->callbacks.size = 0;
+    
+    
+    ew->go.flags |= ENGINE_GAME_OBJECT_FLAG_INIT;
 }
 
 void WidgetConnect(EWidget* widget, int trigger, widget_callback callback, void* args){
