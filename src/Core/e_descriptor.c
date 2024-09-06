@@ -126,9 +126,9 @@ void DescriptorUpdateIndex(BluePrintDescriptor *descriptor, char *data, uint32_t
     BufferObject stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
-    BuffersCreate(descriptor->uniform.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, ENGINE_BUFFER_ALLOCATE_STAGING);
+    BuffersCreate(descriptor->uniform.type_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, ENGINE_BUFFER_ALLOCATE_STAGING);
 
-    BuffersCopy(&stagingBuffer,  &descriptor->uniform.buffers[index], descriptor->uniform.size);
+    BuffersCopy(&stagingBuffer,  &descriptor->uniform.buffers[index], descriptor->uniform.type_size);
 
     BuffersDestroyBuffer(&stagingBuffer);
 }
@@ -171,7 +171,7 @@ void DescriptorSetImage(VkWriteDescriptorSet* descriptorWrites, void *descr_set,
     descriptorWrites->dstSet = descr_set;
     descriptorWrites->dstBinding = blueprint_descriptor->binding;
     descriptorWrites->dstArrayElement = 0;
-    descriptorWrites->descriptorCount = blueprint_descriptor->descrCount;
+    descriptorWrites->descriptorCount = blueprint_descriptor->count;
     descriptorWrites->descriptorType = blueprint_descriptor->descrType;
 }
 
@@ -183,13 +183,13 @@ void DescriptorSetBuffer(VkWriteDescriptorSet* descriptorWrites, void *descr_set
 
     bufferInfo->buffer = uniform_buffer;//юнибавер
     bufferInfo->offset = 0;
-    bufferInfo->range = blueprint_descriptor->uniform.size;//размер юниформ бафера
+    bufferInfo->range = blueprint_descriptor->uniform.type_size;//размер юниформ бафера
 
     descriptorWrites->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptorWrites->dstSet = descr_set;
     descriptorWrites->dstBinding = blueprint_descriptor->binding;
     descriptorWrites->dstArrayElement = 0;
-    descriptorWrites->descriptorCount = blueprint_descriptor->descrCount;
+    descriptorWrites->descriptorCount = blueprint_descriptor->count;
     descriptorWrites->descriptorType = blueprint_descriptor->descrType;
 }
 
@@ -206,7 +206,7 @@ void DescriptorCreate(ShaderDescriptor *descriptor, BluePrintDescriptor *descrip
         {
             bindings[i].binding = descriptors[i].binding;
             bindings[i].descriptorType = descriptors[i].descrType;
-            bindings[i].descriptorCount = descriptors[i].descrCount;
+            bindings[i].descriptorCount = descriptors[i].count;
             bindings[i].pImmutableSamplers = NULL;
             bindings[i].stageFlags = descriptors[i].stageflag;
         }
@@ -232,7 +232,7 @@ void DescriptorCreate(ShaderDescriptor *descriptor, BluePrintDescriptor *descrip
         {
             poolSizes[i].type = descriptors[i].descrType;
             //[Разобраться в корректном настраивании этого параметра]
-            poolSizes[i].descriptorCount = descriptors[i].descrCount * num_frame;
+            poolSizes[i].descriptorCount = descriptors[i].count * num_frame;
         }
 
         VkDescriptorPoolCreateInfo poolInfo = {};
@@ -297,7 +297,7 @@ void DescriptorCreate(ShaderDescriptor *descriptor, BluePrintDescriptor *descrip
                 if((blueprint_descriptor->flags & ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE) && (blueprint_descriptor->flags & ENGINE_BLUE_PRINT_FLAG_ARRAY_IMAGE))
                 {
 
-                    DescriptorSetImage(&descriptorWrites[blueprint_descriptor->binding], descriptor->descr_sets[i], blueprint_descriptor->size,blueprint_descriptor);
+                    DescriptorSetImage(&descriptorWrites[blueprint_descriptor->binding], descriptor->descr_sets[i], blueprint_descriptor->count, blueprint_descriptor);
 
                 //Если изображение еденичное
                 }else if(blueprint_descriptor->flags & ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE){
@@ -307,13 +307,11 @@ void DescriptorCreate(ShaderDescriptor *descriptor, BluePrintDescriptor *descrip
                 //Просто массив изображений
                 }else{
 
-                    DescriptorSetImage(&descriptorWrites[blueprint_descriptor->binding], descriptor->descr_sets[i], blueprint_descriptor->size, blueprint_descriptor);
+                    DescriptorSetImage(&descriptorWrites[blueprint_descriptor->binding], descriptor->descr_sets[i], blueprint_descriptor->count, blueprint_descriptor);
 
                 }
 
             }
-            int temp = 0;
-            temp ++;
         }
 
         //--------------------------------------

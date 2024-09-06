@@ -2124,9 +2124,6 @@ uint32_t ReturnSizeVector(ShaderBuilder *builder, ShaderVariable *var_elm){
     if(elm_type->type == SHADER_VARIABLE_TYPE_FLOAT || elm_type->type == SHADER_VARIABLE_TYPE_INT)
         temp_size = 4 * var_elm->values[0] /*count elem*/;
 
-    if(temp_size == 12)
-        temp_size = 16;
-
     return temp_size;
 }
 
@@ -2142,19 +2139,51 @@ uint32_t ReturnSizeMatrix(ShaderBuilder *builder, ShaderVariable *mat_elm){
         size += ReturnSizeVector(builder, elm_type) * mat_elm->values[0];
     }
 
+    
+    while(size % 16)
+        size ++;
+
     return size;
 }
 
 uint32_t ReturnSizeStruct(ShaderBuilder *builder, ShaderVariable *str_elm){
 
-    uint32_t size = 0;
+    uint32_t size = 0, temp_size = 0, biggest_value = 0, const_count = 0;
+    ShaderVariable *next_elm;
     for(int j=0;j < str_elm->num_args;j++){
         ShaderVariable *var_elm = ShaderBuilderFindVar(builder, str_elm->args[j]);
         
+        if(j + 1 < str_elm->num_args)
+            next_elm = ShaderBuilderFindVar(builder, str_elm->args[j + 1]);
+        else
+            next_elm = NULL;
+        
         if(var_elm->type == SHADER_VARIABLE_TYPE_FLOAT || var_elm->type == SHADER_VARIABLE_TYPE_INT){
+            temp_size = 4;
             size += 4;
+            const_count++;
         }else if(var_elm->type == SHADER_VARIABLE_TYPE_VECTOR){
-            size += ReturnSizeVector(builder, var_elm);
+            
+            temp_size = ReturnSizeVector(builder, var_elm);
+
+            if(next_elm != NULL){
+                if(var_elm->values[0] /*count elem*/ == 3 && (next_elm->type == SHADER_VARIABLE_TYPE_FLOAT || next_elm->type == SHADER_VARIABLE_TYPE_INT))
+                    size += temp_size;
+                else{
+                    temp_size += 4;
+                    size += temp_size;
+                }
+
+            }else{
+                if(var_elm->values[0] /*count elem*/ == 3){
+                    temp_size += 4;
+                    size += temp_size;
+                }else{
+                    size += temp_size;
+                }
+            }
+            
+
         }else if(var_elm->type == SHADER_VARIABLE_TYPE_MATRIX){
             size += ReturnSizeMatrix(builder, var_elm);
         }else if(var_elm->type == SHADER_VARIABLE_TYPE_ARRAY){
@@ -2175,7 +2204,14 @@ uint32_t ReturnSizeStruct(ShaderBuilder *builder, ShaderVariable *str_elm){
         }else if(var_elm->type == SHADER_VARIABLE_TYPE_STRUCT){
                 size += ReturnSizeStruct(builder, var_elm);
         }
+        
+        if(biggest_value < temp_size)
+            biggest_value = temp_size;
     }
+
+    if(biggest_value != 0)
+        while(size % biggest_value)
+            size ++;
 
     return size;
 }

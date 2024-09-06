@@ -212,25 +212,25 @@ int BuffersUpdateIndex(struct IndexParam_T* indx)
 
 void BuffersCreateUniform(BufferContainer* uniform) {
 
-    uniform->buffers = AllocateMemoryP(uniform->size, sizeof(BufferObject), uniform);
+    uniform->buffers = AllocateMemoryP(uniform->count, sizeof(BufferObject), uniform);
 
-    for (int i = 0; i < uniform->size; i++) {
+    for (int i = 0; i < uniform->count; i++) {
         BuffersCreate(uniform->type_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &uniform->buffers[i], ENGINE_BUFFER_ALLOCATE_UNIFORM);
     }
 }
 
 void BuffersCreateStorage(BufferContainer* uniform){
-    uniform->buffers = AllocateMemoryP(uniform->size, sizeof(BufferObject), uniform);
+    uniform->buffers = AllocateMemoryP(uniform->count, sizeof(BufferObject), uniform);
 
-    for (int i = 0; i < uniform->size; i++) {
+    for (int i = 0; i < uniform->count; i++) {
         BuffersCreate(uniform->type_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &uniform->buffers[i], ENGINE_BUFFER_ALLOCATE_UNIFORM);
     }
 }
 
 void BuffersCreateStorageVertex(BufferContainer* uniform){
-    uniform->buffers = AllocateMemoryP(uniform->size, sizeof(BufferObject), uniform);
+    uniform->buffers = AllocateMemoryP(uniform->count, sizeof(BufferObject), uniform);
 
-    for (int i = 0; i < uniform->size; i++) {
+    for (int i = 0; i < uniform->count; i++) {
         BuffersCreate(uniform->type_size,VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &uniform->buffers[i], ENGINE_BUFFER_ALLOCATE_UNIFORM);
     }
 }
@@ -282,6 +282,7 @@ void BuffersCreate(uint64_t size, uint32_t usage, uint32_t properties, BufferObj
     ZDevice *device = (ZDevice *)engine.device;
 
     VkBufferCreateInfo bufferInfo = {};
+    memset(&bufferInfo, 0, sizeof(VkBufferCreateInfo));
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
     bufferInfo.usage = usage;
@@ -293,9 +294,11 @@ void BuffersCreate(uint64_t size, uint32_t usage, uint32_t properties, BufferObj
     }
 
     VkMemoryRequirements memRequirements;
+    memset(&memRequirements, 0, sizeof(VkMemoryRequirements));
     vkGetBufferMemoryRequirements(device->e_device, buffer->buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo = {};
+    memset(&allocInfo, 0, sizeof(VkMemoryAllocateInfo));
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO; 
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
@@ -399,12 +402,12 @@ void BuffersClearAll()
 }
 
 void BuffersDestroyContainer(BufferContainer *container){
-    for (int i = 0; i < container->size; i++) {
+    for (int i = 0; i < container->count; i++) {
         BuffersDestroyBuffer(&container->buffers[i]);
     }
     FreeMemory(container->buffers);
     container->buffers = NULL;
-    container->size = 0;
+    container->count = 0;
 }
 
 void BuffersCopy(BufferObject *srcBuffer, BufferObject *dstBuffer, uint64_t size) {
@@ -432,7 +435,7 @@ void BuffersRecreateUniform(struct  BluePrints_T *bPrints){
 
             if(descriptor->descrType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
             {
-                descriptor->uniform.size = engine.imagesCount;
+                descriptor->uniform.count = engine.imagesCount;
                 descriptor->uniform.type_size = descriptor->buffsize;
                 BuffersCreateUniform(&descriptor->uniform);
             }

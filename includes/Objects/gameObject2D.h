@@ -33,6 +33,13 @@ void GameObject2DImageBuffer(GameObject2D *go, void *data);
 void GameObject2DDefaultUpdate(GameObject2D* go);
 void GameObject2DDefaultDraw(GameObject2D* go);
 
+void GameObject2DAddDescriptor(GameObject2D* go, uint32_t shader_indx, uint32_t size, uint32_t stage_bit, UpdateDescriptor Updater, uint32_t layer_indx);
+void GameObject2DAddDescriptorTexture(GameObject2D* go, uint32_t shader_indx, uint32_t stage_bit, GameObjectImage *image);
+
+void GameObject2DSetDescriptorUpdate(GameObject2D* go, uint32_t shader_indx, uint32_t bind_index, UpdateDescriptor Updater);
+void GameObject2DSetDescriptorTexture(GameObject2D* go, uint32_t shader_indx, uint32_t bind_index, Texture2D *texture);
+void GameObject2DSetDescriptorTextureCreate(GameObject2D* go, uint32_t shader_indx, uint32_t bind_index, GameObjectImage *image);
+
 void GameObject2DSetShader(GameObject2D *go, char *vert_path, char *frag_path);
 void GameObject2DSetShaderSimple(GameObject2D *go, char *vert_path, char *frag_path);
 

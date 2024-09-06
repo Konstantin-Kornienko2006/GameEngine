@@ -174,10 +174,9 @@ void PrimitiveObjectSetBigDesriptor(PrimitiveObject *po){
     
     PipelineSetting* setting = (PipelineSetting *)&po->go.graphObj.blueprints.blue_print_packs[num_pack].setting;
 
-    PipelineSettingSetShader(setting, &_binary_shaders_3d_object_vert_spv_start, (size_t)(&_binary_shaders_3d_object_vert_spv_size), VK_SHADER_STAGE_VERTEX_BIT);
-    PipelineSettingSetShader(setting, &_binary_shaders_3d_object_frag_spv_start, (size_t)(&_binary_shaders_3d_object_frag_spv_size), VK_SHADER_STAGE_FRAGMENT_BIT);*/
-        
-    /*ShaderObject vert_shader, frag_shader;
+    ShaderObject vert_shader, frag_shader;
+    memset(&vert_shader, 0, sizeof(ShaderObject));
+    memset(&frag_shader, 0, sizeof(ShaderObject));
 
     vert_shader.code = &_binary_shaders_3d_object_vert_spv_start;
     vert_shader.size = (size_t)(&_binary_shaders_3d_object_vert_spv_size);
@@ -185,8 +184,19 @@ void PrimitiveObjectSetBigDesriptor(PrimitiveObject *po){
     frag_shader.code = &_binary_shaders_3d_object_frag_spv_start;
     frag_shader.size = (size_t)(&_binary_shaders_3d_object_frag_spv_size);
 
-    GraphicsObjectSetSomeShader(&po->go.graphObj, &vert_shader, num_pack);
-    GraphicsObjectSetSomeShader(&po->go.graphObj, &frag_shader, num_pack);
+    PipelineSettingSetShader(setting, &vert_shader, VK_SHADER_STAGE_VERTEX_BIT);
+    PipelineSettingSetShader(setting, &frag_shader, VK_SHADER_STAGE_FRAGMENT_BIT);*/
+        
+    ShaderObject vert_shader, frag_shader;
+
+    vert_shader.code = &_binary_shaders_3d_object_vert_spv_start;
+    vert_shader.size = (size_t)(&_binary_shaders_3d_object_vert_spv_size);
+    
+    frag_shader.code = &_binary_shaders_3d_object_frag_spv_start;
+    frag_shader.size = (size_t)(&_binary_shaders_3d_object_frag_spv_size);
+
+    GraphicsObjectSetShaderWithUniform(&po->go.graphObj, &vert_shader, num_pack);
+    GraphicsObjectSetShaderWithUniform(&po->go.graphObj, &frag_shader, num_pack);
     
     GameObject3DSetDescriptorUpdate(po, num_pack, 0, GameObject3DDescriptorModelUpdate);
     GameObject3DSetDescriptorUpdate(po, num_pack, 1, GameObject3DDescriptorDirLightsUpdate);
@@ -196,7 +206,7 @@ void PrimitiveObjectSetBigDesriptor(PrimitiveObject *po){
     GameObject3DSetDescriptorTextureCreate(po, num_pack, 5, &po->go.images[0]);
     GameObject3DSetDescriptorTextureCreate(po, num_pack, 6, &po->go.images[1]);
 
-    po->go.self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;*/
+    po->go.self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;
 }
 
 void PrimitiveObjectSetInstanceDescriptor(PrimitiveObject *po)

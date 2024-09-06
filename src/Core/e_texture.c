@@ -189,12 +189,9 @@ void TextureCreateEmptyDefault(Texture2D *texture)
 
     BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, ENGINE_BUFFER_ALLOCATE_STAGING);
 
-    char *some_data = AllocateMemory(1, bufferSize);
-    memcpy(some_data, tigrib_bin, bufferSize);
-
     uint32_t * data;
     vkMapMemory(device->e_device, stagingBuffer.memory, 0, bufferSize, 0, (void **)&data);
-    memcpy(data, some_data, bufferSize);
+    memcpy(data, tigrib_bin, bufferSize);
     vkUnmapMemory(device->e_device, stagingBuffer.memory);
 
     ImageCreateEmpty(texture, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -204,8 +201,6 @@ void TextureCreateEmptyDefault(Texture2D *texture)
     ToolsTransitionImageLayout(texture->image, texture->textureType, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1);
 
     BuffersDestroyBuffer(&stagingBuffer);
-
-    FreeMemory(some_data);
 }
 
 void TextureCreateEmpty(Texture2D *texture)
@@ -430,6 +425,7 @@ void TextureCreateImage(uint32_t width, uint32_t height, uint32_t mip_levels, ui
     ZDevice *device = (ZDevice *)engine.device;
     
     VkImageCreateInfo imageInfo = {};
+    memset(&imageInfo, 0, sizeof(VkImageCreateInfo));
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
     imageInfo.extent.width = width;
@@ -459,6 +455,7 @@ void TextureCreateImage(uint32_t width, uint32_t height, uint32_t mip_levels, ui
     vkGetImageMemoryRequirements(device->e_device, texture->image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo = {};
+    memset(&allocInfo, 0, sizeof(VkMemoryAllocateInfo));
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
@@ -475,6 +472,7 @@ VkImageView TextureCreateImageView(VkImage image, uint32_t type, uint32_t format
     ZDevice *device = (ZDevice *)engine.device;
 
     VkImageViewCreateInfo viewInfo = {};
+    memset(&viewInfo, 0, sizeof(VkImageViewCreateInfo));
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
     viewInfo.viewType = type; //VK_IMAGE_VIEW_TYPE_2D;
@@ -535,6 +533,7 @@ void TextureCreateSampler(void *sampler, uint32_t texture_type, uint32_t mip_lev
     ZDevice *device = (ZDevice *)engine.device;
 
     VkSamplerCreateInfo samplerInfo = {};
+    memset(&samplerInfo, 0, sizeof(VkSamplerCreateInfo));
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
     if(texture_type == VK_FORMAT_R8G8B8A8_UINT || texture_type == VK_FORMAT_R16_UINT || texture_type == VK_FORMAT_R32_UINT)
@@ -554,6 +553,7 @@ void TextureCreateSampler(void *sampler, uint32_t texture_type, uint32_t mip_lev
     samplerInfo.anisotropyEnable = VK_TRUE;
 
     VkPhysicalDeviceProperties properties  ={};
+    memset(&properties, 0, sizeof(VkPhysicalDeviceProperties));
     vkGetPhysicalDeviceProperties(device->e_physicalDevice, &properties);
 
     samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
@@ -606,19 +606,12 @@ void TextureCreate(struct BluePrintDescriptor_T *descriptor, uint32_t type, Game
         TextureCreateSampler(&texture->sampler, texture->textureType, texture->image_data.mip_levels);
 
         descr->textures = texture;
-        descr->size ++;
 
         image->imgHeight = texture->image_data.texHeight;
         image->imgWidth = texture->image_data.texWidth;
 
         engine.DataR.e_var_num_images ++;
     }else{
-
-        Texture2D *texture = &descr->textures;
-
-        texture->flags = texture->flags;
-
-        descr->size ++;
 
         return;
     }
@@ -628,7 +621,7 @@ void TextureCreateSpecific(struct BluePrintDescriptor_T *descriptor, uint32_t fo
 {
     BluePrintDescriptor *descr = (BluePrintDescriptor *)descriptor;
 
-    Texture2D *texture = &descr->textures[descr->size];
+    Texture2D *texture = descr->textures;
 
     texture->flags = ENGINE_TEXTURE2D_FLAG_GENERATED;
     texture->image_data.texWidth = width;

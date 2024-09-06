@@ -103,10 +103,9 @@ BluePrintDescriptor *BluePrintAddExistUniformStorage(Blueprints *blueprints, uin
 
     descriptor->uniform = uniform;
     descriptor->descrType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptor->descrCount = 1;
-    descriptor->size = 1;
+    descriptor->count = 1;
     descriptor->stageflag = flags;
-    descriptor->buffsize = uniform.size;
+    descriptor->buffsize = uniform.type_size;
     descriptor->image = NULL;
     descriptor->update = update_func;
     descriptor->indx_layer = layer_indx;
@@ -129,10 +128,9 @@ BluePrintDescriptor *BluePrintAddUniformStorage(Blueprints *blueprints, uint32_t
 
     BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[indx_pack].descriptors[blueprints->blue_print_packs[indx_pack].num_descriptors];
 
-    descriptor->uniform.size = size;
+    descriptor->uniform.count = engine.imagesCount;
     descriptor->descrType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptor->descrCount = 1;
-    descriptor->size = 1;
+    descriptor->count = 1;
     descriptor->stageflag = flags;
     descriptor->buffsize = size;
     descriptor->image = NULL;
@@ -170,10 +168,9 @@ void BluePrintAddUniformObjectC(Blueprints *blueprints, uint32_t indx_pack, uint
     BluePrintDescriptor *descriptor = &pack->descriptors[pack->num_descriptors];
 
     descriptor->uniform.type_size = size;
-    descriptor->uniform.size = engine.imagesCount;
+    descriptor->uniform.count = engine.imagesCount;
     descriptor->descrType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor->descrCount = 1;
-    descriptor->size = 1;
+    descriptor->count = 1;
     descriptor->stageflag = flags;
     descriptor->binding = binding;
     descriptor->buffsize = size;
@@ -197,10 +194,9 @@ void BluePrintAddUniformObject(Blueprints *blueprints, uint32_t indx_pack, uint6
     BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[indx_pack].descriptors[blueprints->blue_print_packs[indx_pack].num_descriptors];
 
     descriptor->uniform.type_size = size;
-    descriptor->uniform.size = engine.imagesCount;
+    descriptor->uniform.count = engine.imagesCount;
     descriptor->descrType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor->descrCount = 1;
-    descriptor->size = 1;
+    descriptor->count = 1;
     descriptor->stageflag = flags;
     descriptor->binding = blueprints->blue_print_packs[indx_pack].curr_bind;
     descriptor->buffsize = size;
@@ -228,8 +224,7 @@ void BluePrintAddRenderImageArray(Blueprints *blueprints, uint32_t indx_pack, vo
 
     descriptor->textures = AllocateMemoryP(engine.imagesCount, sizeof(Texture2D*), blueprints);
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor->descrCount = size;
-    descriptor->size = size;
+    descriptor->count = size;
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor->flags = ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
 
@@ -266,8 +261,7 @@ void BluePrintAddRenderImageVector(Blueprints *blueprints, uint32_t indx_pack, v
 
     descriptor->textures = AllocateMemoryP(engine.imagesCount, sizeof(Texture2D*), blueprints);
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor->descrCount = size;
-    descriptor->size = size;
+    descriptor->count = size;
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor->flags = ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
 
@@ -302,8 +296,7 @@ void BluePrintAddRenderImageCube(Blueprints *blueprints, uint32_t indx_pack, uin
     BluePrintDescriptor *descriptor = &blueprints->blue_print_packs[indx_pack].descriptors[nums];
 
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor->descrCount = 1;
-    descriptor->size = 1;
+    descriptor->count = 1;
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor->flags = 0;
 
@@ -337,8 +330,7 @@ void BluePrintAddRenderImage(Blueprints *blueprints, uint32_t indx_pack, void *o
 
     descriptor->num_textures = engine.imagesCount;
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor->descrCount = 1;
-    descriptor->size = 1;
+    descriptor->count = 1;
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor->flags = 0;
 
@@ -372,10 +364,9 @@ BluePrintDescriptor *BluePrintAddTextureC(Blueprints *blueprints, uint32_t indx_
     BluePrintDescriptor *descriptor = &pack->descriptors[pack->num_descriptors];
 
     descriptor->image = NULL;
-    descriptor->size = 0;
+    descriptor->count = 1;
     descriptor->num_textures = 1;    
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor->descrCount = 1;
     descriptor->binding = binding;
     descriptor->stageflag = stage_bit;// VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor->flags = ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE;
@@ -404,6 +395,7 @@ void BluePrintSetTextureImage(Blueprints *blueprints, uint32_t indx_pack, Textur
     if(descriptor != NULL){
         descriptor->flags = ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE | ENGINE_BLUE_PRINT_FLAG_LINKED_TEXTURE;
         descriptor->textures = texture;
+        descriptor->count = 1;
     }
 }
 
@@ -475,7 +467,7 @@ BluePrintDescriptor *BluePrintAddTextureImage(Blueprints *blueprints, uint32_t i
     BluePrintDescriptor *descriptor = &pack->descriptors[pack->num_descriptors];
 
     descriptor->image = image;
-    descriptor->size = 0;
+    descriptor->count = 1;
     descriptor->num_textures = 1;
     descriptor->binding = blueprints->blue_print_packs[indx_pack].curr_bind;
 
@@ -513,7 +505,6 @@ BluePrintDescriptor *BluePrintAddTextureImage(Blueprints *blueprints, uint32_t i
     }
 
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor->descrCount = 1;
     descriptor->stageflag = stage_bit;// VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor->flags = ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE;
 
@@ -538,7 +529,7 @@ void BluePrintAddTextureImageArray(Blueprints *blueprints, uint32_t indx_pack, G
     BluePrintDescriptor *descriptor = &pack->descriptors[pack->num_descriptors];
 
     descriptor->image = images;
-    descriptor->size = 0;
+    descriptor->count = 1;
     descriptor->num_textures = size;
 
     for(int i=0;i < size;i++)
@@ -564,7 +555,6 @@ void BluePrintAddTextureImageArray(Blueprints *blueprints, uint32_t indx_pack, G
     }
 
     descriptor->descrType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor->descrCount = descriptor->size;
     descriptor->stageflag = VK_SHADER_STAGE_FRAGMENT_BIT;
     descriptor->flags = ENGINE_BLUE_PRINT_FLAG_ARRAY_IMAGE | ENGINE_BLUE_PRINT_FLAG_SINGLE_IMAGE;
 

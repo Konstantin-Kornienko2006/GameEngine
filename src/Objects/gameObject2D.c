@@ -60,7 +60,7 @@ void GameObject2DDefaultUpdate(GameObject2D* go) {
 
                 if(descriptor->descrType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
                 {
-                    if(descriptor->uniform.size == 0 || descriptor->update == NULL)
+                    if(descriptor->uniform.count == 0 || descriptor->update == NULL)
                         continue;
 
                     void *point;
@@ -118,6 +118,27 @@ void GameObject2DDefaultDraw(GameObject2D* go){
         }
     }
 }
+
+void GameObject2DAddDescriptor(GameObject2D* go, uint32_t shader_indx, uint32_t size, uint32_t stage_bit, UpdateDescriptor Updater, uint32_t layer_indx){    
+    BluePrintAddUniformObject(&go->graphObj.blueprints, shader_indx, size, stage_bit, Updater, layer_indx);
+}
+
+void GameObject2DAddDescriptorTexture(GameObject2D* go, uint32_t shader_indx, uint32_t stage_bit, GameObjectImage *image){
+    BluePrintAddTextureImage(&go->graphObj.blueprints, shader_indx, image, stage_bit);
+}
+
+void GameObject2DSetDescriptorUpdate(GameObject2D* go, uint32_t shader_indx, uint32_t bind_index, UpdateDescriptor Updater){    
+    BluePrintAddSomeUpdater(&go->graphObj.blueprints, shader_indx, bind_index, Updater);
+}
+
+void GameObject2DSetDescriptorTexture(GameObject2D* go, uint32_t shader_indx, uint32_t bind_index, Texture2D *texture){
+    BluePrintSetTextureImage(&go->graphObj.blueprints, shader_indx, texture, bind_index);
+}
+
+void GameObject2DSetDescriptorTextureCreate(GameObject2D* go, uint32_t shader_indx, uint32_t bind_index, GameObjectImage *image){
+    BluePrintSetTextureImageCreate(&go->graphObj.blueprints, shader_indx, image, bind_index);
+}
+
 
 void GameObject2DSetShader(GameObject2D *go, char *vert_path, char *frag_path){
     
@@ -225,9 +246,9 @@ void GameObject2DInitDefaultShader(GameObject2D *go){
     GraphicsObjectSetShaderWithUniform(&go->graphObj, &vert_shader, num_pack);
     GraphicsObjectSetShaderWithUniform(&go->graphObj, &frag_shader, num_pack);
 
-    BluePrintAddSomeUpdater(&go->graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
-    BluePrintAddSomeUpdater(&go->graphObj.blueprints, num_pack, 1, GameObject2DImageBuffer);
-    BluePrintSetTextureImageCreate(&go->graphObj.blueprints, num_pack, go->image, 2);
+    GameObject2DSetDescriptorUpdate(go, num_pack, 0, GameObject2DTransformBufferUpdate);
+    GameObject2DSetDescriptorUpdate(go, num_pack, 1, GameObject2DImageBuffer);
+    GameObject2DSetDescriptorTextureCreate(go, num_pack, 2, go->image);
 
     uint32_t flags = BluePrintGetSettingsValue(&go->graphObj.blueprints, num_pack, 3);
     BluePrintSetSettingsValue(&go->graphObj.blueprints, num_pack, 3, flags | ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE);

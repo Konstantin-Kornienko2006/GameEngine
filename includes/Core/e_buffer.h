@@ -26,7 +26,7 @@ typedef struct BufferObject{
 typedef struct BufferContainer{
     BufferObject* buffers;
     uint32_t type_size;
-    uint32_t size;
+    uint32_t count;
 } BufferContainer;
 
 void BuffersCreateCommandPool();

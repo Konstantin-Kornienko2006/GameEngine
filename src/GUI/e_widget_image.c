@@ -135,6 +135,7 @@ void ImageWidgetInit(EWidgetImage *img, char *image_path, EWidget *parent){
     uint32_t flags = BluePrintGetSettingsValue(&img->image.graphObj.blueprints, num_pack, 3);
     BluePrintSetSettingsValue(&img->image.graphObj.blueprints, num_pack, 3, flags | ENGINE_PIPELINE_FLAG_FACE_CLOCKWISE);
 
+    img->image.self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;
     //----------------------------------------------------
 
     GameObject2DInitDraw(&img->image);
