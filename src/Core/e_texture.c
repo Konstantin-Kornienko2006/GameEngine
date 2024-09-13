@@ -78,7 +78,7 @@ int ImageSetTile(const char *path, char *data, uint32_t width, uint32_t height, 
 {
     ImageFileData f_data;
 
-    f_data.path = path;
+    f_data.path = (char *)path;
 
     int res = ImageLoadFile(&f_data, 1);
     if(res)
@@ -96,8 +96,8 @@ int ImageSetTile(const char *path, char *data, uint32_t width, uint32_t height, 
 
     uint32_t iter_x = 0, iter_y = 0;
 
-    uint32_t *t_point = f_data.data;
-    uint32_t *d_point = data;
+    uint32_t *t_point = (uint32_t *)f_data.data;
+    uint32_t *d_point = (uint32_t *)data;
     while(iter_y < f_data.texHeight)
     {
         d_point[((tile_y * tile_size * width) + (tile_x * tile_size)) + ((iter_y * width) + iter_x)] = (t_point[iter_y * f_data.texWidth + iter_x] | 0xFF000000);

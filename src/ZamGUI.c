@@ -19,6 +19,11 @@
 extern GUIManager gui;
 extern ZEngine engine;
 
+extern void PathEllipticalArcTo(const vec2 center, const vec2 radius, float rot, float a_min, float a_max, int num_segments);
+extern void _PathArcToFastEx(const vec2 center, float radius, int a_min_sample, int a_max_sample, int a_step);
+extern void PathArcTo(const vec2 center, float radius, float a_min, float a_max, int num_segments);
+extern int _CalcCircleAutoSegmentCount(float radius);
+
 void GUIAddLine(const vec2 p1, const vec2 p2, vec3 col, float thickness)
 {
     PathLineTo(v2_add(p1, vec2_f(0.5f, 0.5f)));
@@ -84,7 +89,7 @@ void GUIAddCircle(vec2 center, float radius, vec3 col, int num_segments, float t
 
         // Because we are filling a closed shape we remove 1 from the count of segments/points
         const float a_max = (M_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
-        PathArcTo(center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
+        (center, radius - 0.5f, 0.0f, a_max, num_segments - 1);
     }
 
     PathStroke(col, GUIDrawFlags_Closed, thickness);

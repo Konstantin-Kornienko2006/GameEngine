@@ -11,6 +11,7 @@
 #include "Core/e_window.h"
 #include "Core/e_texture.h"
 
+#include "Objects/light_object.h"
 #include "Objects/terrain_object.h"
 
 #include "Data/e_resource_data.h"
@@ -164,7 +165,7 @@ ShaderObject readFile(const char* filename) {
     fclose(file);
 
     ShaderObject shdr;
-    shdr.code = temp;
+    shdr.code = (char *)temp;
     shdr.size = size;
 
     return shdr;
@@ -1792,7 +1793,7 @@ void* ToolsLoadImageFromFile(size_t* len, char *filepath)
     fd = fopen(filepath, "r");
     if (fd == NULL) {
         printf("File Not Found!\n");
-        return;
+        return NULL;
     }
 
 

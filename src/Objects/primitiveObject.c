@@ -26,7 +26,7 @@ extern ZEngine engine;
 
 void PrimitiveObjectDestroy(PrimitiveObject *po)
 {
-    GameObject3DDestroy(po);
+    GameObject3DDestroy((GameObject3D *)po);
 
     FreeMemory(po->params);
     po->params = NULL;
@@ -57,10 +57,10 @@ int PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void 
             GraphicsObjectSetVertex(&po->go.graphObj, (void *)lineVert, 2, sizeof(Vertex3D), NULL, 0, sizeof(uint32_t));
             break;
         case ENGINE_PRIMITIVE3D_TRIANGLE :
-            GraphicsObjectSetVertex(&po->go.graphObj, (void *)triVert, 3, sizeof(Vertex3D), triIndx, 3, sizeof(uint32_t));
+            GraphicsObjectSetVertex(&po->go.graphObj, (void *)triVert, 3, sizeof(Vertex3D), (uint32_t *)triIndx, 3, sizeof(uint32_t));
             break;
         case ENGINE_PRIMITIVE3D_QUAD :
-            GraphicsObjectSetVertex(&po->go.graphObj, (void *)quadVert, 4, sizeof(Vertex3D), quadIndx, 6, sizeof(uint32_t));
+            GraphicsObjectSetVertex(&po->go.graphObj, (void *)quadVert, 4, sizeof(Vertex3D), (uint32_t *)quadIndx, 6, sizeof(uint32_t));
             break;
         case ENGINE_PRIMITIVE3D_PLANE :
             InitPlane3D(&vParam, &iParam, pParam->sectorCount, pParam->stackCount);
@@ -69,7 +69,7 @@ int PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void 
             builded = true;
             break;
         case ENGINE_PRIMITIVE3D_CUBE :
-            GraphicsObjectSetVertex(&po->go.graphObj, (void *)cubeVert, 24, sizeof(Vertex3D), cubeIndx, 36, sizeof(uint32_t));
+            GraphicsObjectSetVertex(&po->go.graphObj, (void *)cubeVert, 24, sizeof(Vertex3D), (uint32_t *)cubeIndx, 36, sizeof(uint32_t));
             break;
         case ENGINE_PRIMITIVE3D_CUBESPHERE :
             Cubesphere(&vParam, &iParam, csParam->radius, csParam->verperrow);
@@ -112,7 +112,7 @@ int PrimitiveObjectInit(PrimitiveObject *po, DrawParam *dParam, char type, void 
     GameObject3DInitTextures((GameObject3D *)po, dParam);
 
     if(type == ENGINE_PRIMITIVE3D_SKYBOX)
-        Transform3DSetScale((GameObject3D *)po, -500, -500, -500);
+        Transform3DSetScale((struct GameObject3D_T *)po, -500, -500, -500);
 
     return 1;
 }
@@ -198,13 +198,13 @@ void PrimitiveObjectSetBigDesriptor(PrimitiveObject *po){
     GraphicsObjectSetShaderWithUniform(&po->go.graphObj, &vert_shader, num_pack);
     GraphicsObjectSetShaderWithUniform(&po->go.graphObj, &frag_shader, num_pack);
     
-    GameObject3DSetDescriptorUpdate(po, num_pack, 0, GameObject3DDescriptorModelUpdate);
-    GameObject3DSetDescriptorUpdate(po, num_pack, 1, GameObject3DDescriptorDirLightsUpdate);
-    GameObject3DSetDescriptorUpdate(po, num_pack, 2, GameObject3DDescriptorPointLightsUpdate);
-    GameObject3DSetDescriptorUpdate(po, num_pack, 3, GameObject3DDescriptorSpotLightsUpdate);
-    GameObject3DSetDescriptorUpdate(po, num_pack, 4, GameObject3DLigtStatusBufferUpdate);
-    GameObject3DSetDescriptorTextureCreate(po, num_pack, 5, &po->go.images[0]);
-    GameObject3DSetDescriptorTextureCreate(po, num_pack, 6, &po->go.images[1]);
+    GameObject3DSetDescriptorUpdate((GameObject3D *)po, num_pack, 0, (UpdateDescriptor)GameObject3DDescriptorModelUpdate);
+    GameObject3DSetDescriptorUpdate((GameObject3D *)po, num_pack, 1, (UpdateDescriptor)GameObject3DDescriptorDirLightsUpdate);
+    GameObject3DSetDescriptorUpdate((GameObject3D *)po, num_pack, 2, (UpdateDescriptor)GameObject3DDescriptorPointLightsUpdate);
+    GameObject3DSetDescriptorUpdate((GameObject3D *)po, num_pack, 3, (UpdateDescriptor)GameObject3DDescriptorSpotLightsUpdate);
+    GameObject3DSetDescriptorUpdate((GameObject3D *)po, num_pack, 4, (UpdateDescriptor)GameObject3DLigtStatusBufferUpdate);
+    GameObject3DSetDescriptorTextureCreate((GameObject3D *)po, num_pack, 5, &po->go.images[0]);
+    GameObject3DSetDescriptorTextureCreate((GameObject3D *)po, num_pack, 6, &po->go.images[1]);
 
     po->go.self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;
 }

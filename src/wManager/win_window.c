@@ -25,6 +25,8 @@ extern WCHAR* _wManagerCreateWideStringFromUTF8Win32(const char* source);
 
 extern void _wManagerCenterCursorInContentArea(wManagerWindow* window);
 
+extern int _wManager_min(int a, int b);
+
 
 // Update window framebuffer transparency
 //
@@ -177,32 +179,32 @@ void maximizeWindowManually(wManagerWindow* window)
                  SWP_NOACTIVATE | SWP_NOZORDER | SWP_FRAMECHANGED);
 }
 
-int32_t _wManagerWindowFocusedWin32(wManagerWindow* window)
+uint32_t _wManagerWindowFocusedWin32(wManagerWindow* window)
 {
     return ((wManagerWin *)window->WindowData)->handle == GetActiveWindow();
 }
 
-int32_t _wManagerWindowIconifiedWin32(wManagerWindow* window)
+uint32_t _wManagerWindowIconifiedWin32(wManagerWindow* window)
 {
     return IsIconic(((wManagerWin *)window->WindowData)->handle);
 }
 
-int32_t _wManagerWindowVisibleWin32(wManagerWindow* window)
+uint32_t _wManagerWindowVisibleWin32(wManagerWindow* window)
 {
     return IsWindowVisible(((wManagerWin *)window->WindowData)->handle);
 }
 
-int32_t _wManagerWindowMaximizedWin32(wManagerWindow* window)
+uint32_t _wManagerWindowMaximizedWin32(wManagerWindow* window)
 {
     return IsZoomed(((wManagerWin *)window->WindowData)->handle);
 }
 
-int32_t _wManagerWindowHoveredWin32(wManagerWindow* window)
+uint32_t _wManagerWindowHoveredWin32(wManagerWindow* window)
 {
     return cursorInContentArea(window);
 }
 
-int32_t _wManagerFramebufferTransparentWin32(wManagerWindow* window)
+uint32_t _wManagerFramebufferTransparentWin32(wManagerWindow* window)
 {
     BOOL composition, opaque;
     DWORD color;
@@ -229,7 +231,7 @@ int32_t _wManagerFramebufferTransparentWin32(wManagerWindow* window)
     return true;
 }
 
-void _wManagerSetWindowMousePassthroughWin32(wManagerWindow* window, int32_t enabled)
+void _wManagerSetWindowMousePassthroughWin32(wManagerWindow* window, uint32_t enabled)
 {
     COLORREF key = 0;
     BYTE alpha = 0;
@@ -387,17 +389,17 @@ void _wManagerGetCursorPosWin32(wManagerWindow *window, double* xpos, double* yp
     }
 }
 
-void _wManagerSetWindowResizableWin32(wManagerWindow* window, int32_t enabled)
+void _wManagerSetWindowResizableWin32(wManagerWindow* window, uint32_t enabled)
 {
     updateWindowStyles(window);
 }
 
-void _wManagerSetWindowDecoratedWin32(wManagerWindow* window, int32_t enabled)
+void _wManagerSetWindowDecoratedWin32(wManagerWindow* window, uint32_t enabled)
 {
     updateWindowStyles(window);
 }
 
-void _wManagerSetWindowFloatingWin32(wManagerWindow* window, int32_t enabled)
+void _wManagerSetWindowFloatingWin32(wManagerWindow* window, uint32_t enabled)
 {
     const HWND after = enabled ? HWND_TOPMOST : HWND_NOTOPMOST;
     SetWindowPos(((wManagerWin *)window->WindowData)->handle, after, 0, 0, 0, 0,
@@ -405,7 +407,7 @@ void _wManagerSetWindowFloatingWin32(wManagerWindow* window, int32_t enabled)
 }
 
 
-void _wManagerSetRawMouseMotionWin32(wManagerWindow *window, int32_t enabled)
+void _wManagerSetRawMouseMotionWin32(wManagerWindow *window, uint32_t enabled)
 {
     /*if (_wMWindow.disabledCursorWindow != window)
         return;*/
@@ -416,7 +418,7 @@ void _wManagerSetRawMouseMotionWin32(wManagerWindow *window, int32_t enabled)
         disableRawMouseMotion(window);
 }
 
-int32_t _wManagerRawMouseMotionSupportedWin32(void)
+uint32_t _wManagerRawMouseMotionSupportedWin32(void)
 {
     return true;
 }
@@ -1585,7 +1587,7 @@ void releaseMonitor(wManagerWindow* window)
     _wManagerRestoreVideoModeWin32(window->monitor);*/
 }
 
-int _wManagerCreateWindowWin32(wManagerWindow *window,
+uint32_t _wManagerCreateWindowWin32(wManagerWindow *window,
                                const _wManagerwndconfig* wndconfig,
                                const _wManagerfbconfig* fbconfig)
 {
@@ -1726,7 +1728,7 @@ void _wManagerGetRequiredInstanceExtensionsWin32(char** extensions)
 
 extern const char* _wManagerGetVulkanResultString(VkResult result);
 
-int32_t _wManagerGetPhysicalDevicePresentationSupportWin32(VkInstance instance,
+uint32_t _wManagerGetPhysicalDevicePresentationSupportWin32(VkInstance instance,
                                                         VkPhysicalDevice device,
                                                         uint32_t queuefamily)
 {

@@ -691,7 +691,7 @@ void TreeObjectInit(TreeObject *to, uint32_t type, DrawParam *dParam, void *arg)
         FreeMemory(vParam.vertices);
         FreeMemory(iParam.indices);
     }else{
-        GraphicsObjectSetVertex(&to->go.graphObj, (void *)cubeVert, 24, sizeof(TreeVertex3D), cubeIndx, 36, sizeof(uint32_t));
+        GraphicsObjectSetVertex(&to->go.graphObj, (void *)cubeVert, 24, sizeof(TreeVertex3D), (uint32_t *)cubeIndx, 36, sizeof(uint32_t));
     }
 }
 
@@ -705,7 +705,7 @@ void TreeObjectInitInstances(GameObject3D *go){
 
     bufferSize = sizeof(VertexInstance3D) * MAX_INSTANCES;
 
-    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &go->buffer.buffer, ENGINE_BUFFER_ALLOCATE_VERTEX);
+    BuffersCreate(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &go->buffer, ENGINE_BUFFER_ALLOCATE_VERTEX);
 
 }
 

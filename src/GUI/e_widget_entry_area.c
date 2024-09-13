@@ -46,7 +46,7 @@ int EntryAreaWidgetKeyPressInput(EWidget* widget, int key, void *arg){
 int EntryAreaWidgetKeyRepeatInput(EWidget* widget, int key, void *arg)
 {
     if(key == ENGINE_KEY_BACKSPACE)
-        EntryAreaWidgetMakeDelete(widget);
+        EntryAreaWidgetMakeDelete((EWidgetEntryArea *)widget);
 
     return 0;
 }

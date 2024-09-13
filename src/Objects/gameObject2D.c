@@ -9,7 +9,7 @@
 #include "Core/e_camera.h"
 
 #include "Tools/e_math.h"
-#include "Tools/shader_builder.h"
+#include "Tools/e_shaders.h"
 
 #include "Variabels/e_pipeline_variables.h"
 
@@ -237,17 +237,17 @@ void GameObject2DInitDefaultShader(GameObject2D *go){
     memset(&vert_shader, 0, sizeof(ShaderObject));
     memset(&frag_shader, 0, sizeof(ShaderObject));
 
-    vert_shader.code = vert->code;
+    vert_shader.code = (char *)vert->code;
     vert_shader.size = vert->size * sizeof(uint32_t);
     
-    frag_shader.code = frag->code;
+    frag_shader.code = (char *)frag->code;
     frag_shader.size = frag->size * sizeof(uint32_t);
 
     GraphicsObjectSetShaderWithUniform(&go->graphObj, &vert_shader, num_pack);
     GraphicsObjectSetShaderWithUniform(&go->graphObj, &frag_shader, num_pack);
 
-    GameObject2DSetDescriptorUpdate(go, num_pack, 0, GameObject2DTransformBufferUpdate);
-    GameObject2DSetDescriptorUpdate(go, num_pack, 1, GameObject2DImageBuffer);
+    GameObject2DSetDescriptorUpdate((GameObject2D *)go, num_pack, 0, (UpdateDescriptor)GameObject2DTransformBufferUpdate);
+    GameObject2DSetDescriptorUpdate((GameObject2D *)go, num_pack, 1, (UpdateDescriptor)GameObject2DImageBuffer);
     GameObject2DSetDescriptorTextureCreate(go, num_pack, 2, go->image);
 
     uint32_t flags = BluePrintGetSettingsValue(&go->graphObj.blueprints, num_pack, 3);
@@ -305,13 +305,13 @@ void GameObject2DRecreate(GameObject2D* go){
         settings->viewport.width = engine.width;
     }
 
-    BuffersRecreateUniform(&go->graphObj.blueprints);
+    BuffersRecreateUniform((struct BluePrints_T *)&go->graphObj.blueprints);
 
     GraphicsObjectCreateDrawItems(&go->graphObj);
     PipelineCreateGraphics(&go->graphObj);
 
-    Transform2DReposition((struct GameObject2D *)go);
-    Transform2DRescale((struct GameObject2D *)go);
+    Transform2DReposition((struct GameObject2D_T *)go);
+    Transform2DRescale((struct GameObject2D_T *)go);
 
 }
 

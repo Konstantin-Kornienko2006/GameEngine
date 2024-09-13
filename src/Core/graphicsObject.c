@@ -126,11 +126,11 @@ void GraphicsObjectSetVertex(GraphicsObject* graphObj, void *vert, int vertCount
 
     if(!graphObj->shapes[num].init)
     {
-        res = BuffersCreateVertex(&graphObj->shapes[num].vParam);
+        res = BuffersCreateVertex((struct VertexParam_T *)&graphObj->shapes[num].vParam);
         if(res)
             return;
 
-        res = BuffersCreateIndex(&graphObj->shapes[num].iParam);
+        res = BuffersCreateIndex((struct IndexParam_T *)&graphObj->shapes[num].iParam);
         if(res)
             return;
 
@@ -138,10 +138,10 @@ void GraphicsObjectSetVertex(GraphicsObject* graphObj, void *vert, int vertCount
     }
 
     if(graphObj->shapes[num].vParam.verticesSize > 0)
-        BuffersUpdateVertex(&graphObj->shapes[num].vParam);
+        BuffersUpdateVertex((struct VertexParam_T *)&graphObj->shapes[num].vParam);
 
     if(graphObj->shapes[num].iParam.indexesSize > 0)
-        BuffersUpdateIndex(&graphObj->shapes[num].iParam);
+        BuffersUpdateIndex((struct IndexParam_T *)&graphObj->shapes[num].iParam);
 
     graphObj->num_shapes ++;
 }
@@ -149,7 +149,7 @@ void GraphicsObjectSetVertex(GraphicsObject* graphObj, void *vert, int vertCount
 void GraphicsObjectSetShaderWithUniform(GraphicsObject* graphObj, ShaderObject *shader, uint32_t pack_indx){
     ShaderBuilder *temp = AllocateMemory(1, sizeof(ShaderBuilder));
 
-    ShaderBuilderMakeUniformsFromShader(temp, shader->code, shader->size, &graphObj->blueprints, pack_indx);
+    ShaderBuilderMakeUniformsFromShader(temp, (uint32_t *)shader->code, shader->size, &graphObj->blueprints, pack_indx);
 
     PipelineSetting* setting = (PipelineSetting *)&graphObj->blueprints.blue_print_packs[pack_indx].setting;
 

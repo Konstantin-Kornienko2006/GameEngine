@@ -199,7 +199,7 @@ void _wManagerUpdateKeyNamesWin32(void)
     }
 }
 
-int _wManagerInitWin32(void)
+uint32_t _wManagerInitWin32(void)
 {
     /*if (!loadLibraries())
         return false;*/
@@ -257,8 +257,8 @@ void _wManagerTerminateWin32(void)
 extern void _wManagerGetCursorPosWin32(wManagerWindow *window, double *xpos, double *ypos);
 extern void _wManagerSetCursorPosWin32(wManagerWindow *window, double xpos, double ypos);
 extern void _wManagerSetCursorModeWin32(wManagerWindow* window, int mode);
-extern void _wManagerSetRawMouseMotionWin32(wManagerWindow *window, int32_t enabled);
-extern int32_t _wManagerRawMouseMotionSupportedWin32(void);
+extern void _wManagerSetRawMouseMotionWin32(wManagerWindow *window, uint32_t enabled);
+extern uint32_t _wManagerRawMouseMotionSupportedWin32(void);
 extern const char* _wManagerGetScancodeNameWin32(int scancode);
 extern int _wManagerGetKeyScancodeWin32(int key);
 extern void _wManagerSetClipboardStringWin32(const char* string);
@@ -268,7 +268,7 @@ extern void _wManagerSetWindowMonitorWin32(wManagerWindow* window,
                                            int width, int height,
                                            int refreshRate);
 extern const char* _wManagerGetClipboardStringWin32(void);
-extern int _wManagerCreateWindowWin32(wManagerWindow *window, const _wManagerwndconfig* wndconfig, const _wManagerfbconfig* fbconfig);
+extern uint32_t _wManagerCreateWindowWin32(wManagerWindow *window, const _wManagerwndconfig* wndconfig, const _wManagerfbconfig* fbconfig);
 extern void _wManagerDestroyWindowWin32(wManagerWindow* window);
 extern void _wManagerSetWindowTitleWin32(wManagerWindow* window, const char* title);
 extern void _wManagerSetWindowIconWin32(wManagerWindow* window, int count, void* images);
@@ -292,24 +292,24 @@ extern void _wManagerShowWindowWin32(wManagerWindow* window);
 extern void _wManagerHideWindowWin32(wManagerWindow* window);
 extern void _wManagerRequestWindowAttentionWin32(wManagerWindow* window);
 extern void _wManagerFocusWindowWin32(wManagerWindow* window);
-extern int32_t _wManagerWindowFocusedWin32(wManagerWindow* window);
-extern int32_t _wManagerWindowIconifiedWin32(wManagerWindow* window);
-extern int32_t _wManagerWindowVisibleWin32(wManagerWindow* window);
-extern int32_t _wManagerWindowMaximizedWin32(wManagerWindow* window);
-extern int32_t _wManagerWindowHoveredWin32(wManagerWindow* window);
-extern int32_t _wManagerFramebufferTransparentWin32(wManagerWindow* window);
+extern uint32_t _wManagerWindowFocusedWin32(wManagerWindow* window);
+extern uint32_t _wManagerWindowIconifiedWin32(wManagerWindow* window);
+extern uint32_t _wManagerWindowVisibleWin32(wManagerWindow* window);
+extern uint32_t _wManagerWindowMaximizedWin32(wManagerWindow* window);
+extern uint32_t _wManagerWindowHoveredWin32(wManagerWindow* window);
+extern uint32_t _wManagerFramebufferTransparentWin32(wManagerWindow* window);
 extern float _wManagerGetWindowOpacityWin32(wManagerWindow* window);
-extern void _wManagerSetWindowResizableWin32(wManagerWindow* window, int32_t enabled);
-extern void _wManagerSetWindowDecoratedWin32(wManagerWindow* window, int32_t enabled);
-extern void _wManagerSetWindowFloatingWin32(wManagerWindow* window, int32_t enabled);
+extern void _wManagerSetWindowResizableWin32(wManagerWindow* window, uint32_t enabled);
+extern void _wManagerSetWindowDecoratedWin32(wManagerWindow* window, uint32_t enabled);
+extern void _wManagerSetWindowFloatingWin32(wManagerWindow* window, uint32_t enabled);
 extern void _wManagerSetWindowOpacityWin32(wManagerWindow* window, float opacity);
-extern void _wManagerSetWindowMousePassthroughWin32(wManagerWindow* window, int32_t enabled);
+extern void _wManagerSetWindowMousePassthroughWin32(wManagerWindow* window, uint32_t enabled);
 extern void _wManagerPollEventsWin32();
 extern void _wManagerWaitEventsWin32(void);
 extern void _wManagerWaitEventsTimeoutWin32(double timeout);
 extern void _wManagerPostEmptyEventWin32(void);
 extern void _wManagerGetRequiredInstanceExtensionsWin32(char** extensions);
-extern int32_t _wManagerGetPhysicalDevicePresentationSupportWin32(VkInstance instance,
+extern uint32_t _wManagerGetPhysicalDevicePresentationSupportWin32(VkInstance instance,
                                                                   VkPhysicalDevice device,
                                                                   uint32_t queuefamily);
 extern VkResult _wManagerCreateWindowSurfaceWin32(VkInstance instance,

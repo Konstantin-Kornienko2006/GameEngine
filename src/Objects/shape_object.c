@@ -266,7 +266,7 @@ int ShapeObjectInit(ShapeObject *so, DrawParam *dParam, ShapeType type, void *pa
             char *full_path = ToolsMakeString(currPath, dParam->diffuse);
             
             if(!DirectIsFileExist(full_path)){
-                GameObjectDestroy(so);
+                GameObjectDestroy((GameObject *)so);
                 FreeMemory(full_path);            
                 FreeMemory(currPath);
                 return 0;

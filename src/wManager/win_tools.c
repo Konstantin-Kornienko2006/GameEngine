@@ -1,6 +1,8 @@
 #include "wManager/manager_includes.h"
 #include"wManager/input_manager.h"
 
+#include "stdio.h"
+
 extern wManagerWindow _wMWindow;
 
 #ifdef _WIN_

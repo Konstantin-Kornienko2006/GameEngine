@@ -423,30 +423,30 @@ void BluePrintSetTextureImageCreate(Blueprints *blueprints, uint32_t indx_pack, 
         descriptor->image = image;
 
         if(image == NULL)
-            TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, NULL, 0);
+            TextureCreate((struct BluePrintDescriptor_T *)descriptor, VK_IMAGE_VIEW_TYPE_2D, NULL, 0);
         else if(!(image->flags & ENGINE_TEXTURE_FLAG_SPECIFIC))
         {
             if(descriptor->image->size > 0)
-                TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 0);
+                TextureCreate((struct BluePrintDescriptor_T *)descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 0);
             else
-                TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 1);
+                TextureCreate((struct BluePrintDescriptor_T *)descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 1);
 
         }else
         {
             if(image->flags & ENGINE_TEXTURE_FLAG_URGB)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_UINT, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R8G8B8A8_UINT, image->imgWidth, image->imgHeight);
             else if(image->flags & ENGINE_TEXTURE_FLAG_R16)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R16_UNORM, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R16_UNORM, image->imgWidth, image->imgHeight);
             else if(image->flags & ENGINE_TEXTURE_FLAG_R16_UINT)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R16_UINT, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R16_UINT, image->imgWidth, image->imgHeight);
             else if(image->flags & ENGINE_TEXTURE_FLAG_R32)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R32_SINT, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R32_SINT, image->imgWidth, image->imgHeight);
             else if(image->flags & ENGINE_TEXTURE_FLAG_R32_UINT)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R32_UINT, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R32_UINT, image->imgWidth, image->imgHeight);
             else if(image->flags & ENGINE_TEXTURE_FLAG_SRGB)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_SRGB, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R8G8B8A8_SRGB, image->imgWidth, image->imgHeight);
             else
-                TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_SINT, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R8G8B8A8_SINT, image->imgWidth, image->imgHeight);
         }
     }else
         printf("Error : Texture is not found!\n");
@@ -472,7 +472,7 @@ BluePrintDescriptor *BluePrintAddTextureImage(Blueprints *blueprints, uint32_t i
     descriptor->binding = blueprints->blue_print_packs[indx_pack].curr_bind;
 
     if(image == NULL){
-        TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 1);
+        TextureCreate((struct BluePrintDescriptor_T *)descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 1);
     }else{
  
         if(image->img_type == 0)
@@ -481,26 +481,26 @@ BluePrintDescriptor *BluePrintAddTextureImage(Blueprints *blueprints, uint32_t i
         if(!(image->flags & ENGINE_TEXTURE_FLAG_SPECIFIC))
         {
             if(descriptor->image->size > 0)
-                TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 0);
+                TextureCreate((struct BluePrintDescriptor_T *)descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 0);
             else
-                TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 1);
+                TextureCreate((struct BluePrintDescriptor_T *)descriptor, VK_IMAGE_VIEW_TYPE_2D, descriptor->image, 1);
 
         }else
         {
             if(image->flags & ENGINE_TEXTURE_FLAG_URGB)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_UINT, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R8G8B8A8_UINT, image->imgWidth, image->imgHeight);
             else if(image->flags & ENGINE_TEXTURE_FLAG_R16)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R16_UNORM, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R16_UNORM, image->imgWidth, image->imgHeight);
             else if(image->flags & ENGINE_TEXTURE_FLAG_R16_UINT)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R16_UINT, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R16_UINT, image->imgWidth, image->imgHeight);
             else if(image->flags & ENGINE_TEXTURE_FLAG_R32)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R32_SINT, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R32_SINT, image->imgWidth, image->imgHeight);
             else if(image->flags & ENGINE_TEXTURE_FLAG_R32_UINT)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R32_UINT, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R32_UINT, image->imgWidth, image->imgHeight);
             else if(image->flags & ENGINE_TEXTURE_FLAG_SRGB)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_SRGB, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R8G8B8A8_SRGB, image->imgWidth, image->imgHeight);
             else
-                TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_SINT, image->imgWidth, image->imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R8G8B8A8_SINT, image->imgWidth, image->imgHeight);
         }   
     }
 
@@ -541,16 +541,16 @@ void BluePrintAddTextureImageArray(Blueprints *blueprints, uint32_t indx_pack, G
         if(!(images[i].flags & ENGINE_TEXTURE_FLAG_SPECIFIC))
         {
             if(descriptor->image->size > 0)
-                TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, &images[i], 0);
+                TextureCreate((struct BluePrintDescriptor_T *)descriptor, VK_IMAGE_VIEW_TYPE_2D, &images[i], 0);
             else
-                TextureCreate(descriptor, VK_IMAGE_VIEW_TYPE_2D, &images[i], 1);
+                TextureCreate((struct BluePrintDescriptor_T *)descriptor, VK_IMAGE_VIEW_TYPE_2D, &images[i], 1);
 
         }else
         {
             if(images[i].flags & ENGINE_TEXTURE_FLAG_URGB)
-                TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_UINT, images[i].imgWidth, images[i].imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R8G8B8A8_UINT, images[i].imgWidth, images[i].imgHeight);
             else
-                TextureCreateSpecific(descriptor, VK_FORMAT_R8G8B8A8_SINT, images[i].imgWidth, images[i].imgHeight);
+                TextureCreateSpecific((struct BluePrintDescriptor_T *)descriptor, VK_FORMAT_R8G8B8A8_SINT, images[i].imgWidth, images[i].imgHeight);
         }
     }
 

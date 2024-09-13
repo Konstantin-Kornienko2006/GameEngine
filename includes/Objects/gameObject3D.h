@@ -12,11 +12,6 @@
  extern "C" {
 #endif
 
-typedef struct{
-     void *buffer_memory;
-     void *buffer;
-} InstanceBuffer;
-
 typedef struct GameObject3D{
     GameObject self;
     GraphicsObject graphObj;
@@ -24,7 +19,7 @@ typedef struct GameObject3D{
     GameObjectImage *images;
     uint32_t num_images;
     VertexInstance3D instances[MAX_INSTANCES];
-    InstanceBuffer buffer;
+    BufferObject buffer;
     uint32_t num_instances;
     char name[256];
 } GameObject3D;

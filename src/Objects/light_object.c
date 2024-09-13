@@ -10,7 +10,7 @@ void LightObjectFillDirLights(DirLightBuffer *blb)
 
     if(engine.lights.size > 0)
     {
-        LightObject **lights = (LightObject *)engine.lights.lights;
+        LightObject **lights = (LightObject **)engine.lights.lights;
 
         for(int i=0;i < engine.lights.size; i++)
         {
@@ -33,7 +33,7 @@ void LightObjectFillPointLights(PointLightBuffer *plb)
 
     if(engine.lights.size > 0)
     {
-        LightObject **lights = (LightObject *)engine.lights.lights;
+        LightObject **lights = (LightObject **)engine.lights.lights;
 
         for(int i=0;i < engine.lights.size; i++)
         {
@@ -58,7 +58,7 @@ void LightObjectFillSpotLights(SpotLightBuffer *slb)
 
     if(engine.lights.size > 0)
     {
-        LightObject **lights = (LightObject *)engine.lights.lights;
+        LightObject **lights = (LightObject **)engine.lights.lights;
 
         for(int i=0;i < engine.lights.size; i++)
         {
@@ -83,7 +83,7 @@ void LightObjectFillLightStatus(LightStatusBuffer *lsb)
 {
     if(engine.lights.size > 0)
     {
-        LightObject **lights = (LightObject *)engine.lights.lights;
+        LightObject **lights = (LightObject **)engine.lights.lights;
 
         for(int i=0;i < engine.lights.size; i++)
         {
@@ -160,7 +160,7 @@ void LightObjectSetSpecularColor(LightObject *lo, float r, float g, float b)
 
 void LightObjectDraw(LightObject *lo)
 {
-    LightObject **lights = (LightObject *)engine.lights.lights;
+    LightObject **lights = (LightObject **)engine.lights.lights;
 
     for(int i=0;i < engine.lights.size; i++)
         if(lights[i] == lo)
@@ -169,6 +169,6 @@ void LightObjectDraw(LightObject *lo)
     if(engine.lights.size + 1 > 32)
         return;
 
-    engine.lights.lights[engine.lights.size] = lo;
+    engine.lights.lights[engine.lights.size] = (void *)lo;
     engine.lights.size++;
 }

@@ -18,7 +18,7 @@
 
 #include "Tools/e_math.h"
 #include "Tools/e_tools.h"
-#include "Tools/shader_builder.h"
+#include "Tools/e_shaders.h"
 
 #include "Data/e_resource_data.h"
 #include "Data/e_resource_engine.h"
@@ -487,16 +487,16 @@ void GameObject3DInitDefaultShader(GameObject3D *go){
     memset(&vert_shader, 0, sizeof(ShaderObject));
     memset(&frag_shader, 0, sizeof(ShaderObject));
 
-    vert_shader.code = vert->code;
+    vert_shader.code = (char *)vert->code;
     vert_shader.size = vert->size * sizeof(uint32_t);
     
-    frag_shader.code = frag->code;
+    frag_shader.code = (char *)frag->code;
     frag_shader.size = frag->size * sizeof(uint32_t);
 
     GraphicsObjectSetShaderWithUniform(&go->graphObj, &vert_shader, num_pack);
     GraphicsObjectSetShaderWithUniform(&go->graphObj, &frag_shader, num_pack);
     
-    GameObject3DSetDescriptorUpdate(go, num_pack, 0, GameObject3DDescriptorModelUpdate);
+    GameObject3DSetDescriptorUpdate(go, num_pack, 0, (UpdateDescriptor)GameObject3DDescriptorModelUpdate);
     GameObject3DSetDescriptorTextureCreate(go, num_pack, 1, go->num_images > 0 ? &go->images[0] : NULL);
     
     go->self.flags |= ENGINE_GAME_OBJECT_FLAG_SHADED;
@@ -597,7 +597,7 @@ void GameObject3DRecreate(GameObject3D* go){
         settings->viewport.width = engine.width;
     }
 
-    BuffersRecreateUniform(&go->graphObj.blueprints);
+    BuffersRecreateUniform((struct BluePrints_T *)&go->graphObj.blueprints);
 
     GraphicsObjectCreateDrawItems(&go->graphObj);
     PipelineCreateGraphics(&go->graphObj);
@@ -627,7 +627,7 @@ void GameObject3DDestroy(GameObject3D* go){
     }
 
     if(go->num_instances > 0)
-        BuffersDestroyBuffer(go->buffer.buffer);
+        BuffersDestroyBuffer(&go->buffer);
 
     FreeMemory(go->self.vert);
     FreeMemory(go->self.frag);
@@ -640,7 +640,7 @@ int GameObject3DInitTextures(GameObject3D *go, DrawParam *dParam)
     go->images = AllocateMemoryP(3, sizeof(GameObjectImage), go);
 
     if(dParam == NULL)
-        return;
+        return 0;
 
     int iter = 0;
     

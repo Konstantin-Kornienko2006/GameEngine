@@ -50,7 +50,7 @@ void PainterObjectInit(EPainter *painter)
 
     GameObject2DInit((GameObject2D *)painter);
 
-    GraphicsObjectSetVertex(&painter->go.graphObj, (void **)projPlaneVert, 4, sizeof(Vertex2D), (void **)projPlaneIndx, 6, sizeof(uint32_t));
+    GraphicsObjectSetVertex(&painter->go.graphObj, (void **)projPlaneVert, 4, sizeof(Vertex2D), (uint32_t *)projPlaneIndx, 6, sizeof(uint32_t));
 }
 
 void PainterObjectAddDefault(EPainter *painter, void *render)

@@ -178,7 +178,7 @@ void TerrainObjectGenerateTerrainTextureMap(TerrainObject *to, void *buffer)
         }
     }
 
-    TextureUpdate(to->texture_descr, some_map, size_texture * sizeof(uint16_t), 0);
+    TextureUpdate((struct BluePrintDescriptor_T *)to->texture_descr, some_map, size_texture * sizeof(uint16_t), 0);
 }
 
 void TerrainObjectGenerateTerrainHeightTextureMap(TerrainObject *to)
@@ -220,7 +220,7 @@ void TerrainObjectGenerateTerrainHeightTextureMap(TerrainObject *to)
         }
     }
 
-    TextureUpdate(to->texture_height_map, heightMap, size_texture * sizeof(uint16_t), 0);
+    TextureUpdate((struct BluePrintDescriptor_T *) to->texture_height_map, heightMap, size_texture * sizeof(uint16_t), 0);
 }
 
 void TerrainObjectGenerateTerrainHeights(TerrainObject *to)
@@ -291,7 +291,7 @@ void TerrainObjectGenerateTerrainHeights(TerrainObject *to)
 
     memcpy(to->height_map, verts, vParam->verticesSize * sizeof(TerrainVertex));
 
-    BuffersUpdateVertex(vParam);
+    BuffersUpdateVertex((struct VertexParam_T *)vParam);
 }
 
 void TerrainObjectSetShadowDefaultDescriptor(TerrainObject *to, DrawParam *dParam)

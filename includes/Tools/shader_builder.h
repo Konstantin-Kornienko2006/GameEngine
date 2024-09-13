@@ -22,6 +22,7 @@ typedef enum{
 
 typedef enum{
     SHADER_VARIABLE_TYPE_VOID,
+    SHADER_VARIABLE_TYPE_BOOL,
     SHADER_VARIABLE_TYPE_INT,
     SHADER_VARIABLE_TYPE_FLOAT,
     SHADER_VARIABLE_TYPE_VECTOR,
@@ -32,6 +33,7 @@ typedef enum{
     SHADER_VARIABLE_TYPE_STRUCT,
     SHADER_VARIABLE_TYPE_VARIABLE,
     SHADER_VARIABLE_TYPE_CONSTANT,
+    SHADER_VARIABLE_TYPE_CONSTANT_COMPOSITE,
     SHADER_VARIABLE_TYPE_POINTER,
     SHADER_VARIABLE_TYPE_FUNCTION,
     SHADER_VARIABLE_TYPE_UNIFORM,
@@ -39,28 +41,36 @@ typedef enum{
     SHADER_VARIABLE_TYPE_EXTENDED_IMPORT,
 } ShaderVariableType;
 
-typedef struct{
+typedef struct ShaderStructConstr{
     ShaderVariableType var_type;
     uint32_t size;
     uint32_t type;
     char name[32];
+    struct ShaderStructConstr *str;
+    uint32_t count;
+    char name_str[32];
 } ShaderStructConstr;
 
 typedef enum{
     SHADER_OPERAND_TYPE_ACCESS,
     SHADER_OPERAND_TYPE_LOAD,
     SHADER_OPERAND_TYPE_STORE,
+    SHADER_OPERAND_TYPE_BRANCH,
+    SHADER_OPERAND_TYPE_BRANCH_CONDITIONAL,
+    SHADER_OPERAND_TYPE_LOOP,
     SHADER_OPERAND_TYPE_COMPOSITE_EXTRACT,
     SHADER_OPERAND_TYPE_COMPOSITE_CONSTRUCT,
     SHADER_OPERAND_TYPE_IMAGE_SAMLE_IMPLICIT_LOD,
     SHADER_OPERAND_TYPE_ADD,
     SHADER_OPERAND_TYPE_SUB,
     SHADER_OPERAND_TYPE_MUL,
+    SHADER_OPERAND_TYPE_DIV,
     SHADER_OPERAND_TYPE_MATTIMEMAT,
     SHADER_OPERAND_TYPE_MATTIMEVEC,
     SHADER_OPERAND_TYPE_VECTIMES,
-    SHADER_OPERAND_TYPE_DIV,
+    SHADER_OPERAND_TYPE_VECSHUFFLE,
     SHADER_OPERAND_TYPE_VARIABLE,
+    SHADER_OPERAND_TYPE_SLESSTHAN,
 } ShaderOperandType;
 
 typedef enum{
@@ -115,6 +125,7 @@ typedef struct{
     uint32_t index;
     ShaderOperand operands[256];
     uint32_t num_operands;
+    int will_return;
 } ShaderLabel;
 
 typedef struct{
@@ -163,33 +174,45 @@ typedef struct{
 } ShaderBuilder;
 
 void ShaderBuilderInit(ShaderBuilder *builder, ShaderType type);
-void ShaderBuilderMake(ShaderBuilder *builder);
-void ShaderBuilderWriteToFile(ShaderBuilder *builder,  const char *path);
+void ShaderBuilderMake();
+void ShaderBuilderWriteToFile(ShaderBuilder *builder, const char *path);
 
-uint32_t ShaderBuilderAddVector(ShaderBuilder *builder, uint32_t size, char *name);
-VectorExtract ShaderBuilderGetElemenets(ShaderBuilder *builder, ShaderLabel *label, uint32_t src_index, uint32_t start_indx, uint32_t size);
-uint32_t ShaderBuilderAddOperand(ShaderBuilder *builder, ShaderLabel *label, uint32_t *indexes, uint32_t count, ShaderOperandType operand);
-uint32_t ShaderBuilderAcceptLoadL(ShaderBuilder *builder, ShaderLabel *label, uint32_t val_indx, uint32_t struct_indx);
+void ShaderBuilderSetCurrentLabel(int label_indx);
 
-uint32_t ShaderBuilderCompositeConstruct(ShaderBuilder *builder, ShaderLabel *label, uint32_t *arr_arg, uint32_t size_arr);
+uint32_t ShaderBuilderAddPointer(ShaderVariableType point_type, uint32_t size, ShaderDataFlags flags);
+uint32_t ShaderBuilderAddConstant(ShaderVariableType var_type, ShaderDataFlags flags,  uint32_t valu, uint32_t sign);
+uint32_t ShaderBuilderAddConstantComposite(ShaderVariableType var_type, uint32_t size, uint32_t value);
 
-uint32_t ShaderBuilderAddFuncMult(ShaderBuilder *builder, ShaderLabel *label, uint32_t val_1, uint32_t indx_1, uint32_t type_1, uint32_t size_1,  uint32_t val_2, uint32_t indx_2, uint32_t type_2, uint32_t size_2, uint32_t res_size);
-uint32_t ShaderBuilderAddFuncSetTexure(ShaderBuilder *builder, ShaderLabel *label, uint32_t texture_indx, uint32_t uv_indx, uint32_t dest_indx, uint32_t dest_size);
-int ShaderBuilderAddFuncAdd(ShaderBuilder *builder, ShaderLabel *label, uint32_t val_1, uint32_t val_2, uint32_t size, uint32_t res_store);
-uint32_t ShaderBuilderAddFuncMove(ShaderBuilder *builder, ShaderLabel *label, uint32_t src_indx, uint32_t src_size, uint32_t dest_indx, uint32_t dest_size);
-uint32_t ShaderBuilderAddFuncMultS(ShaderBuilder *builder, ShaderLabel *label, uint32_t val_indx, uint32_t single_indx, uint32_t size);
-uint32_t ShaderBuilderAddFuncSetColor4(ShaderBuilder *builder, ShaderLabel *label, uint32_t val_indx, uint32_t single_indx, uint32_t size);
-uint32_t ShaderBuilderGetTexture(ShaderBuilder *builder, ShaderLabel *label, uint32_t texture_indx, uint32_t uv_indx);
+uint32_t ShaderBuilderAddVector(uint32_t size, char *name);
+VectorExtract ShaderBuilderGetElemenets(uint32_t src_index, uint32_t start_indx, uint32_t size);
+uint32_t ShaderBuilderAddOperand(uint32_t *indexes, uint32_t count, ShaderOperandType operand);
+uint32_t ShaderBuilderAcceptAccess(uint32_t val_indx, ShaderVariableType var_type, uint32_t type_arg, uint32_t *chain, uint32_t size);
+uint32_t ShaderBuilderAcceptLoadL(uint32_t val_indx, uint32_t struct_indx);
 
-int ShaderBuilderAddFuncMoveToGL(ShaderBuilder *builder, ShaderLabel *label, uint32_t vec_val, uint32_t vec_size, uint32_t res_store);
+uint32_t ShaderBuilderNextLabel(int with_transition, uint32_t indx_label, int will_return);
 
-void ShaderBuilderStoreValue(ShaderBuilder *builder, ShaderLabel *label, uint32_t *arr, uint32_t size);
+uint32_t ShaderBuilderCompositeConstruct(uint32_t *arr_arg, uint32_t size_arr);
 
-uint32_t ShaderBuilderAddUniform(ShaderBuilder *builder, ShaderStructConstr *struct_arr, uint32_t count, char *name, uint32_t location, uint32_t binding);
-uint32_t ShaderBuilderAddIOData(ShaderBuilder *builder, ShaderVariableType type, ShaderDataFlags flags, ShaderStructConstr *struct_arr, uint32_t size, char *name, uint32_t location, uint32_t binding);
+void ShaderBuilderMakeBranchConditional(uint32_t cond_type, uint32_t *vals, uint32_t size, uint32_t true_label, uint32_t false_label);
+
+uint32_t ShaderBuilderAddFuncDiv(uint32_t val_1, uint32_t indx_1, uint32_t type_1, uint32_t size_1,  uint32_t val_2, uint32_t indx_2, uint32_t type_2, uint32_t size_2, uint32_t res_size);
+uint32_t ShaderBuilderAddFuncMult(uint32_t val_1, uint32_t indx_1, uint32_t type_1, uint32_t size_1,  uint32_t val_2, uint32_t indx_2, uint32_t type_2, uint32_t size_2, uint32_t res_size);
+uint32_t ShaderBuilderAddFuncSetTexure(uint32_t texture_indx, uint32_t uv_indx, uint32_t dest_indx, uint32_t dest_size);
+int ShaderBuilderAddFuncAdd(uint32_t val_1, uint32_t val_2, uint32_t size, uint32_t res_store);
+uint32_t ShaderBuilderAddFuncMove(uint32_t src_indx, uint32_t src_size, uint32_t dest_indx, uint32_t dest_size);
+uint32_t ShaderBuilderAddFuncMultS(uint32_t val_indx, uint32_t single_indx, uint32_t size);
+uint32_t ShaderBuilderAddFuncSetColor4(uint32_t val_indx, uint32_t single_indx, uint32_t size);
+uint32_t ShaderBuilderGetTexture(uint32_t texture_indx, uint32_t uv_indx);
+
+int ShaderBuilderAddFuncMoveToGL(uint32_t vec_val, uint32_t vec_size, uint32_t res_store);
+
+void ShaderBuilderStoreValue(uint32_t *arr, uint32_t size);
+
+uint32_t ShaderBuilderAddUniform(ShaderStructConstr *struct_arr, uint32_t count, char *name, uint32_t location, uint32_t binding);
+uint32_t ShaderBuilderAddIOData(ShaderVariableType type, ShaderDataFlags flags, ShaderStructConstr *struct_arr, uint32_t size, char *name, uint32_t location, uint32_t binding);
 
 void ShaderBuilderMakeUniformsFromShader(ShaderBuilder *builder, uint32_t *code, uint32_t size, void *blueprints, uint32_t indx_pack);
-void ShaderBuilderParcingShader(ShaderBuilder *builder, uint32_t *shader, uint32_t size);
+void ShaderBuilderParcingShader(uint32_t *shader, uint32_t size);
 
 void ShaderBuilderClear(ShaderBuilder *builder);
 

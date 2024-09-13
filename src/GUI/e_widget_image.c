@@ -60,11 +60,11 @@ void ImageWidgetCreateQuad(GameObject2D *go)
 
 void ImageWidgetDraw(EWidgetImage *img){
 
-    Transform2DSetScale(&img->image, img->widget.scale.x, img->widget.scale.y);
-    Transform2DSetPosition(&img->image, img->widget.position.x + img->widget.base.x, img->widget.position.y + img->widget.base.y);
+    Transform2DSetScale((struct GameObject2D_T *)&img->image, img->widget.scale.x, img->widget.scale.y);
+    Transform2DSetPosition((struct GameObject2D_T *)&img->image, img->widget.position.x + img->widget.base.x, img->widget.position.y + img->widget.base.y);
 
     if(img->widget.widget_flags & ENGINE_FLAG_WIDGET_VISIBLE){
-        GameObjectDraw(&img->image);
+        GameObjectDraw((GameObject *)&img->image);
     }
 }
 
@@ -75,9 +75,9 @@ void ImageWidgetDestroy(EWidgetImage *img){
     if(!(img->image.self.flags & ENGINE_GAME_OBJECT_FLAG_INIT))
         return;
 
-    WidgetDestroy(img);
+    WidgetDestroy((EWidget *)img);
 
-    GameObjectDestroy(&img->image);
+    GameObjectDestroy((GameObject *)&img->image);
 
     img->image.self.flags &= ~(ENGINE_GAME_OBJECT_FLAG_INIT);
 }
@@ -88,10 +88,10 @@ void ImageWidgetInit(EWidgetImage *img, char *image_path, EWidget *parent){
     if(strlen(image_path) == 0)
         return;
 
-    WidgetInit(img, parent);
+    WidgetInit((EWidget *)img, parent);
 
-    GameObjectSetDrawFunc(img, ImageWidgetDraw);
-    GameObjectSetDestroyFunc(img, ImageWidgetDestroy);
+    GameObjectSetDrawFunc((GameObject *)img, ImageWidgetDraw);
+    GameObjectSetDestroyFunc((GameObject *)img, ImageWidgetDestroy);
 
     img->widget.type = ENGINE_WIDGET_TYPE_IMAGE;
     ///--------------------------------------------------
@@ -119,17 +119,17 @@ void ImageWidgetInit(EWidgetImage *img, char *image_path, EWidget *parent){
     memset(&vert_shader, 0, sizeof(ShaderObject));
     memset(&frag_shader, 0, sizeof(ShaderObject));
 
-    vert_shader.code = vert->code;
+    vert_shader.code = (char *) vert->code;
     vert_shader.size = vert->size * sizeof(uint32_t);
     
-    frag_shader.code = frag->code;
+    frag_shader.code = (char *) frag->code;
     frag_shader.size = frag->size * sizeof(uint32_t);
 
     GraphicsObjectSetShaderWithUniform(&img->image.graphObj, &vert_shader, num_pack);
     GraphicsObjectSetShaderWithUniform(&img->image.graphObj, &frag_shader, num_pack);
 
-    BluePrintAddSomeUpdater(&img->image.graphObj.blueprints, num_pack, 0, GameObject2DTransformBufferUpdate);
-    BluePrintAddSomeUpdater(&img->image.graphObj.blueprints, num_pack, 1, GameObject2DImageBuffer);
+    BluePrintAddSomeUpdater(&img->image.graphObj.blueprints, num_pack, 0, (UpdateDescriptor)GameObject2DTransformBufferUpdate);
+    BluePrintAddSomeUpdater(&img->image.graphObj.blueprints, num_pack, 1, (UpdateDescriptor)GameObject2DImageBuffer);
     BluePrintSetTextureImageCreate(&img->image.graphObj.blueprints, num_pack, img->image.image, 0);
 
     uint32_t flags = BluePrintGetSettingsValue(&img->image.graphObj.blueprints, num_pack, 3);

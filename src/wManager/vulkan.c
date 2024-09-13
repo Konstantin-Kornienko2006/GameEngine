@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 
 #include <stdbool.h>
+#include <stdio.h>
 
 wManagerInfo _wMInfo;
 extern wManagerWindow _wMWindow;

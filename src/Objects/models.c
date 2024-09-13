@@ -366,7 +366,7 @@ void ModelDescriptorLightPosUpdate(ModelObject3D* mo, uint32_t indx_node, BluePr
 
 void ModelDefaultUpdate(ModelObject3D *mo)
 {
-    for(int i=0; i < mo->num_draw_nodes;i++)
+    /*for(int i=0; i < mo->num_draw_nodes;i++)
     {
         for(int j=0;j < mo->nodes[i].num_models;j++)
         {
@@ -395,7 +395,7 @@ void ModelDefaultUpdate(ModelObject3D *mo)
 
             }
         }
-    }
+    }*/
 }
 
 void ModelClean(ModelObject3D* mo){
@@ -410,7 +410,7 @@ void ModelClean(ModelObject3D* mo){
 
 void ModelRecreate(ModelObject3D* mo){
 
-    for(int i=0; i < mo->num_draw_nodes;i++)
+    /*for(int i=0; i < mo->num_draw_nodes;i++)
     {
         for(int j=0;j < mo->nodes[i].num_models;j++)
         {
@@ -436,7 +436,7 @@ void ModelRecreate(ModelObject3D* mo){
                 PipelineCreateGraphics(&model->graphObj);
             }
         }
-    }
+    }*/
 }
 
 //Не корректно

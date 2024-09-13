@@ -29,7 +29,7 @@ void QuadObjectInit(QuadObject *qu, uint32_t type)
 {
     GameObject2DInit((GameObject2D *)qu);
 
-    GraphicsObjectSetVertex(&qu->go.graphObj, (void *)projPlaneVert, 4, sizeof(Vertex2D), projPlaneIndx, 6, sizeof(uint32_t));
+    GraphicsObjectSetVertex(&qu->go.graphObj, (void *)projPlaneVert, 4, sizeof(Vertex2D), (uint32_t *)projPlaneIndx, 6, sizeof(uint32_t));
 
     qu->type = type;
 

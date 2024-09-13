@@ -21,7 +21,7 @@ uint32_t button_wind_offset = 8;
 int WindowWidgetSetSize(EWidgetWindow* window, float x, float y)
 {
 
-    WidgetSetScale(window, x, y);    
+    WidgetSetScale((EWidget *)window, x, y);    
 
     vec2 botSize = window->window.scale;
     botSize.y -= 40;
@@ -53,7 +53,7 @@ int WindowWidgetMove(EWidget* widget, void* entry, void* args)
     EWidgetWindow *window = (EWidgetWindow *)args;
 
     if(window->wasResize)
-        return;
+        return 1;
 
     vec2 te;
     double xpos, ypos;
@@ -93,7 +93,7 @@ int WindowWidgetCloseButton(EWidget* widget, void* entry, void *arg){
 
     window->window.widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
 
-    WidgetConfirmTrigger(window, ENGINE_WIDGET_TRIGGER_WINDOW_CLOSE, NULL);
+    WidgetConfirmTrigger((EWidget *)window, ENGINE_WIDGET_TRIGGER_WINDOW_CLOSE, NULL);
     
     EWidget *child_widget = NULL;
     ChildStack *child = window->surface.child;
@@ -128,7 +128,7 @@ int WindowWidgetResizeButton(EWidget* widget, void* entry, void *arg){
     EWidgetWindow *window = (EWidgetWindow *)arg;
 
     if(!window->resizeble)
-        return;
+        return 1;
 
     if(!window->wasResize && !window->wasHide)
     {
@@ -139,7 +139,7 @@ int WindowWidgetResizeButton(EWidget* widget, void* entry, void *arg){
         WindowWidgetSetSize(window, window->lastSize.x, window->lastSize.y);
         window->wasHide = false;
         window->wasResize = false;
-        return;
+        return 1;
     }
 
     window->wasResize = true;
@@ -195,13 +195,13 @@ int WindowWidgetHideButton(EWidget* widget, void* entry, void *arg){
             child = child->next;
         }
 
-        return;
+        return 1;
     }
 
     window->wasHide = true;
 
     WindowWidgetSetSize(window, 200, 40);
-    WidgetSetPosition(&widget->parent->go, 60, (engine.height * 2) - 60);
+    WidgetSetPosition((EWidget *)&widget->parent->go, 60, (engine.height * 2) - 60);
 
     return 0;
 }
@@ -223,9 +223,9 @@ void WindowWidgetDraw(EWidgetWindow *window){
 
         vec2 b_pos = v2_add(pos, vec2_f(window->window.scale.x , button_wind_offset));
 
-        WidgetSetPosition(&window->close, b_pos.x - 30, b_pos.y);
-        WidgetSetPosition(&window->resize, b_pos.x - 60, b_pos.y);
-        WidgetSetPosition(&window->hide, b_pos.x - 90, b_pos.y);
+        WidgetSetPosition((EWidget *)&window->close, b_pos.x - 30, b_pos.y);
+        WidgetSetPosition((EWidget *)&window->resize, b_pos.x - 60, b_pos.y);
+        WidgetSetPosition((EWidget *)&window->hide, b_pos.x - 90, b_pos.y);
 
         ChildStack *child = window->surface.child;
 
@@ -296,29 +296,29 @@ void InitSurface(EWidget* widget, vec2 scale, EWidget *parent){
 
 void InitClose(EWidget* widget, vec2 size, EWidget *parent){
 
-    ButtonWidgetInit(widget, vec2_f(20, 20), NULL, parent);
+    ButtonWidgetInit((EWidgetButton *)widget, vec2_f(20, 20), NULL, parent);
     
     widget->rounding = 5.0f;
 
-    ButtonWidgetSetColor(widget, 1.0f, 0.0f, 0.0);
+    ButtonWidgetSetColor((EWidgetButton *)widget, 1.0f, 0.0f, 0.0);
 }
 
 void InitResize(EWidget* widget, vec2 size, EWidget *parent){
     
-    ButtonWidgetInit(widget, vec2_f(20, 20), NULL, parent);
+    ButtonWidgetInit((EWidgetButton *)widget, vec2_f(20, 20), NULL, parent);
     
     widget->rounding = 5.0f;
     
-    ButtonWidgetSetColor(widget, 0.0f, 1.0f, 0.0f);
+    ButtonWidgetSetColor((EWidgetButton *)widget, 0.0f, 1.0f, 0.0f);
 }
 
 void InitHide(EWidget* widget, vec2 size, EWidget *parent){
 
-    ButtonWidgetInit(widget, vec2_f(20, 20), NULL, parent);
+    ButtonWidgetInit((EWidgetButton *)widget, vec2_f(20, 20), NULL, parent);
 
     widget->rounding = 5.0f;
 
-    ButtonWidgetSetColor(widget, 0.0f, 0.0f, 1.0f);
+    ButtonWidgetSetColor((EWidgetButton *)widget, 0.0f, 0.0f, 1.0f);
 }
 
 void WindowWidgetInit(EWidgetWindow *window, char* name, vec2 size, vec2 position)
@@ -327,18 +327,18 @@ void WindowWidgetInit(EWidgetWindow *window, char* name, vec2 size, vec2 positio
     InitSurface(&window->surface, size, &window->window);
     InitName(window, name, &window->window);
 
-    InitClose(&window->close, size, &window->window);
-    InitResize(&window->resize, size, &window->window);
-    InitHide(&window->hide, size, &window->window);
+    InitClose((EWidget *)&window->close, size, &window->window);
+    InitResize((EWidget *)&window->resize, size, &window->window);
+    InitHide((EWidget *)&window->hide, size, &window->window);
 
     window->origScale = size;
 
     WidgetConnect(&window->window, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetPress, NULL);
     WidgetConnect(&window->window, ENGINE_WIDGET_TRIGGER_MOUSE_MOVE, WindowWidgetMove, window);
 
-    WidgetConnect(&window->close, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetCloseButton, window);
-    WidgetConnect(&window->resize, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetResizeButton, window);
-    WidgetConnect(&window->hide, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetHideButton, window);
+    WidgetConnect((EWidget *)&window->close, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetCloseButton, window);
+    WidgetConnect((EWidget *)&window->resize, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetResizeButton, window);
+    WidgetConnect((EWidget *)&window->hide, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, WindowWidgetHideButton, window);
 
     window->window.type = ENGINE_WIDGET_TYPE_WINDOW;
     window->wasHide = false;
@@ -348,13 +348,13 @@ void WindowWidgetInit(EWidgetWindow *window, char* name, vec2 size, vec2 positio
 
 void WindowWidgetAddWidget(EWidgetWindow *window, EWidget *widget){
 
-    WidgetSetParent(widget, &window->surface);
+    WidgetSetParent((EWidget *)widget, &window->surface);
 }
 
 void WindowWidgetShow(EWidgetWindow *window){
     window->window.widget_flags |= ENGINE_FLAG_WIDGET_VISIBLE;
 
-    WidgetConfirmTrigger(window, ENGINE_WIDGET_TRIGGER_WINDOW_OPEN, NULL);
+    WidgetConfirmTrigger((EWidget *)window, ENGINE_WIDGET_TRIGGER_WINDOW_OPEN, NULL);
 
     EWidget *widget = NULL;
     ChildStack *child = window->surface.child;
@@ -386,7 +386,7 @@ void WindowWidgetShow(EWidgetWindow *window){
 void WindowWidgetHide(EWidgetWindow *window){
     window->window.widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
 
-    WidgetConfirmTrigger(window, ENGINE_WIDGET_TRIGGER_WINDOW_CLOSE, NULL);
+    WidgetConfirmTrigger((EWidget *)window, ENGINE_WIDGET_TRIGGER_WINDOW_CLOSE, NULL);
 
     EWidget *widget = NULL;
     ChildStack *child = window->surface.child;

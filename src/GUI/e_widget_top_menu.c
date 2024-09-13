@@ -18,7 +18,7 @@ int TopMenuWidgetFocus(EWidget *widget, void *entry, void *args)
             menu = menu->parent;
 
             if(menu == NULL)
-                return;
+                return 1;
         }
     }
 
@@ -50,7 +50,7 @@ int ToggleMenu(EWidget *widget, void *entry, EWidgetList *list)
         menu = menu->parent;
 
         if(menu == NULL)
-            return;
+            return 1;
     }
 
     int iter = 0;
@@ -86,7 +86,7 @@ int MenuPressItem(EWidget *widget, int id, void *arg)
         menu = menu->parent;
 
         if(menu == NULL)
-            return;
+            return 1;
     }
 
     int iter = 0;
@@ -118,23 +118,23 @@ void TopMenuWidgetResize(EWidgetTopMenu *top_menu)
 {
     if(top_menu->window != NULL)
     {
-        vec2 size = Transform2DGetScale(&top_menu->window->surface);
+        vec2 size = Transform2DGetScale((struct GameObject2D_T *)&top_menu->window->surface);
 
-        Transform2DSetScale(&top_menu->widget, size.x, size.y);
-        Transform2DSetScale(&top_menu->top, size.x, 20);
-        Transform2DSetPosition(&top_menu->top, 0, 0);
-        Transform2DSetPosition(&top_menu->widget, 0, 20);
+        Transform2DSetScale((struct GameObject2D_T *)&top_menu->widget, size.x, size.y);
+        Transform2DSetScale((struct GameObject2D_T *)&top_menu->top, size.x, 20);
+        Transform2DSetPosition((struct GameObject2D_T *)&top_menu->top, 0, 0);
+        Transform2DSetPosition((struct GameObject2D_T *)&top_menu->widget, 0, 20);
     }else{
-        Transform2DSetScale(&top_menu->widget, engine.width, engine.height);
-        Transform2DSetScale(&top_menu->top, engine.width, 20);
-        Transform2DSetPosition(&top_menu->top, 0, 0);
-        Transform2DSetPosition(&top_menu->widget, 0, 0);
+        Transform2DSetScale((struct GameObject2D_T *)&top_menu->widget, engine.width, engine.height);
+        Transform2DSetScale((struct GameObject2D_T *)&top_menu->top, engine.width, 20);
+        Transform2DSetPosition((struct GameObject2D_T *)&top_menu->top, 0, 0);
+        Transform2DSetPosition((struct GameObject2D_T *)&top_menu->widget, 0, 0);
     }
 }
 
 void TopMenuWidgetInit(EWidgetTopMenu *top_menu, DrawParam *dParam,EWidgetWindow *window)
 {
-    WidgetInit(&top_menu->widget, window);
+    WidgetInit(&top_menu->widget, (EWidget *)window);
 
     top_menu->widget.type = ENGINE_WIDGET_TYPE_MENU;
 
@@ -159,15 +159,15 @@ int TopMenuWidgetAddMenu(EWidgetTopMenu *top_menu, char *name, DrawParam *dParam
     EWidgetButton *b_menu = AllocateMemory(1, sizeof(EWidgetButton));
     //ButtonWidgetInit(b_menu, name, &top_menu->top);
 
-    Transform2DSetPosition(b_menu, (top_menu->num_elems - 1) * 240, 0);
-    Transform2DSetScale(b_menu, 120, 20);
+    Transform2DSetPosition((struct GameObject2D_T *)b_menu, (top_menu->num_elems - 1) * 240, 0);
+    Transform2DSetScale((struct GameObject2D_T *)b_menu, 120, 20);
 
     top_menu->list[top_menu->num_elems - 1].button = b_menu;
 
     return top_menu->num_elems - 1;
 }
 
-void TopMenuWidgetAddItem(EWidgetTopMenu *top_menu, int num_menu, char *name, DrawParam *dParam)
+EWidget *TopMenuWidgetAddItem(EWidgetTopMenu *top_menu, int num_menu, char *name, DrawParam *dParam)
 {
     EWidgetButton *button;
 
@@ -175,7 +175,7 @@ void TopMenuWidgetAddItem(EWidgetTopMenu *top_menu, int num_menu, char *name, Dr
     {
         //button = ListWidgetAddItem(top_menu->list[num_menu].list, name, dParam);
 
-        return top_menu->list[num_menu].list;
+        return (EWidget *)top_menu->list[num_menu].list;
     }
 
     EWidgetList *l_menu = AllocateMemory(1, sizeof(EWidgetList));
@@ -185,20 +185,20 @@ void TopMenuWidgetAddItem(EWidgetTopMenu *top_menu, int num_menu, char *name, Dr
     if(top_menu->window == NULL)
         point = &top_menu->widget;
     else
-        point = top_menu->window;
+        point = (EWidget *)top_menu->window;
 
     //ListWidgetInit(l_menu, 110, 20, dParam, point);
     ListWidgetSetColor(l_menu, (vec3){ 0.6, 0.6, 0.6});
 
-    vec2 pos = Transform2DGetPosition(top_menu->list[top_menu->num_elems - 1].button);
-    Transform2DSetPosition(l_menu, pos.x, 40);
+    vec2 pos = Transform2DGetPosition((struct GameObject2D_T *)top_menu->list[top_menu->num_elems - 1].button);
+    Transform2DSetPosition((struct GameObject2D_T *)l_menu, pos.x, 40);
     //l_menu->widget.widget_flags &= ~(ENGINE_FLAG_WIDGET_VISIBLE);
     top_menu->list[num_menu].list = l_menu;
 
     //button = ListWidgetAddItem(top_menu->list[num_menu].list, name, dParam);
 
-    WidgetConnect(top_menu->list[top_menu->num_elems - 1].list, ENGINE_WIDGET_TRIGGER_LIST_PRESS_ITEM, MenuPressItem, NULL);
-    WidgetConnect(top_menu->list[top_menu->num_elems - 1].button, ENGINE_WIDGET_TRIGGER_BUTTON_PRESS, ToggleMenu, top_menu->list[top_menu->num_elems - 1].list);
+    WidgetConnect((EWidget *)top_menu->list[top_menu->num_elems - 1].list, ENGINE_WIDGET_TRIGGER_LIST_PRESS_ITEM, (widget_callback)MenuPressItem, NULL);
+    WidgetConnect((EWidget *)top_menu->list[top_menu->num_elems - 1].button, ENGINE_WIDGET_TRIGGER_BUTTON_PRESS, (widget_callback)ToggleMenu, (void *)top_menu->list[top_menu->num_elems - 1].list);
 
-    return top_menu->list[num_menu].list;
+    return (EWidget *)top_menu->list[num_menu].list;
 }

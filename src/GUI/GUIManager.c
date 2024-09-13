@@ -517,10 +517,10 @@ void GUIManagerInit(){
     memset(&vert_shader, 0, sizeof(ShaderObject));
     memset(&frag_shader, 0, sizeof(ShaderObject));
 
-    vert_shader.code = vert->code;
+    vert_shader.code = (char *)vert->code;
     vert_shader.size = vert->size * sizeof(uint32_t);
     
-    frag_shader.code = frag->code;
+    frag_shader.code = (char *)frag->code;
     frag_shader.size = frag->size * sizeof(uint32_t);
 
     GraphicsObjectSetShaderWithUniform(&gui.go.graphObj, &vert_shader, num_pack);

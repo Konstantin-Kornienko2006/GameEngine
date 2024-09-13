@@ -227,10 +227,10 @@ int WidgetCheck(EWidget *widget){
     ZWindow *window = (ZWindow *)engine.window;
 
     if(widget == NULL)
-        return NULL;
+        return 0;
         
     if(!(widget->widget_flags & ENGINE_FLAG_WIDGET_ACTIVE) || !(widget->widget_flags & ENGINE_FLAG_WIDGET_VISIBLE))
-        return NULL;
+        return 0;
 
     double xpos, ypos;
     wManagerGetCursorPos(window->e_window, &xpos, &ypos);

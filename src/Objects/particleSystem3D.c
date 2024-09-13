@@ -1,5 +1,7 @@
 #include "Objects/particleSystem3D.h"
 
+#include "ZamEngine.h"
+
 #include <vulkan/vulkan.h>
 
 #include "Tools/e_tools.h"
@@ -77,7 +79,7 @@ void Particle3DDefaultUpdate(ParticleObject3D* particle, BluePrintDescriptor *de
         verts[i].size = particle->particles[i].scale;
     }
 
-    BuffersUpdateVertex(vParam);
+    BuffersUpdateVertex((struct VertexParam_T *)vParam);
 
 
     GameObject3DDescriptorModelUpdate((GameObject3D *)particle, descriptor);

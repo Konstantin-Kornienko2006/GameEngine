@@ -18,7 +18,7 @@ int main(){
     memset(&vert, 0, sizeof(ShaderBuilder));
     memset(&frag, 0, sizeof(ShaderBuilder));
 
-    ShadersMakeDefault2DShader(&vert, &frag, false);
+    ShadersMakeDeafult3DShaderWithLight(&vert, &frag, false);
     
     ShaderBuilderWriteToFile(&vert, "D:\\Projects\\Temp\\vert.spv");
     ShaderBuilderWriteToFile(&frag, "D:\\Projects\\Temp\\frag.spv");

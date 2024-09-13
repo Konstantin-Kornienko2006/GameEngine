@@ -2,9 +2,9 @@
 
 int ComboboxWidgetPressMain(EWidget* widget, void* entry, void *arg){
 
-    EWidgetCombobox *combo = widget;
+    EWidgetCombobox *combo = (EWidgetCombobox *)widget;
 
-    WidgetConfirmTrigger(combo, ENGINE_WIDGET_TRIGGER_COMBOBOX_PRESS, NULL);
+    WidgetConfirmTrigger((EWidget *)combo, ENGINE_WIDGET_TRIGGER_COMBOBOX_PRESS, NULL);
 
     combo->show = !combo->show;
 
@@ -13,20 +13,20 @@ int ComboboxWidgetPressMain(EWidget* widget, void* entry, void *arg){
 
 int ComboboxWidgetPressSub(EWidget* widget, int id, void *arg){
 
-    EWidgetList *list = widget;
+    EWidgetList *list = (EWidgetList *)widget;
 
-    EWidgetCombobox *parent = widget->parent;
+    EWidgetCombobox *parent = (EWidgetCombobox *)widget->parent;
 
-    EWidgetButton *butt = WidgetFindChild(list, id)->node;
+    EWidgetButton *butt =(EWidgetButton *) WidgetFindChild((EWidget *)list, id)->node;
 
     if(parent == NULL)
-        return;
+        return 1;
 
-    ButtonWidgetSetText(parent, butt->text);
+    ButtonWidgetSetText((EWidgetButton *)parent, butt->text);
 
     parent->currId = id;
 
-    WidgetConfirmTrigger(parent, ENGINE_WIDGET_TRIGGER_COMBOBOX_CHANGE_SELLECTED_ITEM, id);
+    WidgetConfirmTrigger((EWidget *)parent, ENGINE_WIDGET_TRIGGER_COMBOBOX_CHANGE_SELLECTED_ITEM, (void *)id);
 
     return 0;
 }
@@ -38,17 +38,17 @@ void ComboboxWidgetDraw(EWidgetCombobox *combobox){
     if(combobox->button.widget.widget_flags & ENGINE_FLAG_WIDGET_VISIBLE){
         ButtonWidgetDraw(&combobox->button);
 
-        WidgetSetPosition(&combobox->list, combobox->button.widget.position.x , combobox->button.widget.position.x + combobox->button.widget.scale.y);
+        WidgetSetPosition((EWidget *)&combobox->list, combobox->button.widget.position.x , combobox->button.widget.position.x + combobox->button.widget.scale.y);
     }
 
 }
 
 void ComboboxWidgetInit(EWidgetCombobox *combobox, vec2 scale, EWidget *parent){
 
-    ButtonWidgetInit(combobox, scale," ", parent);
-    ButtonWidgetSetColor(combobox, 0.4, 0.4, 0.4);
+    ButtonWidgetInit((EWidgetButton *)combobox, scale," ", parent);
+    ButtonWidgetSetColor((EWidgetButton *)combobox, 0.4, 0.4, 0.4);
 
-    GameObjectSetDrawFunc(combobox, ComboboxWidgetDraw);
+    GameObjectSetDrawFunc((GameObject *)combobox, ComboboxWidgetDraw);
 
     combobox->button.widget.type = ENGINE_WIDGET_TYPE_COMBOBOX;
     combobox->button.widget.rounding = 0.f;
@@ -58,9 +58,9 @@ void ComboboxWidgetInit(EWidgetCombobox *combobox, vec2 scale, EWidget *parent){
     combobox->currId = -1;
     combobox->show = false;
 
-    ListWidgetInit(&combobox->list, scale, combobox);
-    WidgetConnect(combobox, ENGINE_WIDGET_TRIGGER_BUTTON_PRESS, ComboboxWidgetPressMain,  NULL);
-    WidgetConnect(&combobox->list, ENGINE_WIDGET_TRIGGER_LIST_PRESS_ITEM, ComboboxWidgetPressSub,  NULL);
+    ListWidgetInit(&combobox->list, scale, (EWidget *)combobox);
+    WidgetConnect((EWidget *)combobox, ENGINE_WIDGET_TRIGGER_BUTTON_PRESS, ComboboxWidgetPressMain,  NULL);
+    WidgetConnect((EWidget *)&combobox->list, ENGINE_WIDGET_TRIGGER_LIST_PRESS_ITEM, (widget_callback)ComboboxWidgetPressSub,  NULL);
 
     combobox->show = false;
 

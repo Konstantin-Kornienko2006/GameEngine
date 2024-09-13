@@ -75,7 +75,7 @@ int SpriteObjectInit(SpriteObject *so, DrawParam *dParam){
         char *full_path = ToolsMakeString(currPath, dParam->normal);
         
         if(!DirectIsFileExist(full_path)){
-            GameObjectDestroy(so);
+            GameObjectDestroy((GameObject *)so);
             FreeMemory(full_path);            
             FreeMemory(currPath);
             return 0;
@@ -118,6 +118,6 @@ void SpriteObjectSetOffsetRect(SpriteObject *so, float x, float y, float width, 
     verts[3].texCoord.x = temp_x;
     verts[3].texCoord.y = temp_y + height / so->go.image->imgHeight;
 
-    BuffersUpdateVertex(&so->go.graphObj.shapes[0].vParam);
+    BuffersUpdateVertex((struct VertexParam_T *) &so->go.graphObj.shapes[0].vParam);
 
 }

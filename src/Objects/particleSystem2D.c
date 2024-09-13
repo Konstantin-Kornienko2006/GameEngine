@@ -1,5 +1,7 @@
 #include "Objects/particleSystem2D.h"
 
+#include "ZamEngine.h"
+
 #include <vulkan/vulkan.h>
 
 #include "Core/e_memory.h"
@@ -82,7 +84,7 @@ void Particle2DDefaultUpdate(ParticleObject2D* particle, BluePrintDescriptor *de
         verts[i].size = particle->particles[i].scale;
     }
 
-    BuffersUpdateVertex(vParam);
+    BuffersUpdateVertex((struct VertexParam_T *) vParam);
 
     TransformBuffer2D tbo = {};
 

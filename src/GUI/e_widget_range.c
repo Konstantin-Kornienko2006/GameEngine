@@ -64,7 +64,7 @@ int RangeWidgetMove(EWidget* widget, void* entry, void* args){
 
     range->rangePos.x = te.x;
 
-    WidgetConfirmTrigger(range, ENGINE_WIDGET_TRIGGER_RANGE_CHANGE, &val);
+    WidgetConfirmTrigger((EWidget *)range, ENGINE_WIDGET_TRIGGER_RANGE_CHANGE, &val);
 
     return 0;
 }
@@ -85,18 +85,18 @@ void RangeWidgetDraw(EWidgetRange *range){
 
 void RangeWidgetInit(EWidgetRange *range, vec2 scale, float min, float max, EWidget *parent){
 
-    WidgetInit(&range->widget, parent);
-    WidgetSetScale(range, scale.x, scale.y);
+    WidgetInit((EWidget *)&range->widget, parent);
+    WidgetSetScale((EWidget *)range, scale.x, scale.y);
 
-    GameObjectSetDrawFunc(range, RangeWidgetDraw);
+    GameObjectSetDrawFunc((GameObject *)range, RangeWidgetDraw);
 
     range->widget.type = ENGINE_WIDGET_TYPE_RANGE;
 
-    WidgetInit(&range->range, &range->widget);
-    WidgetSetScale(&range->range, 30, scale.y);
+    WidgetInit((EWidget *)&range->range, &range->widget);
+    WidgetSetScale((EWidget *)&range->range, 30, scale.y);
     range->range.rounding = 10.0f;
 
-    WidgetSetColor(range, vec3_f(0.7, 0.7, 0.7));
+    WidgetSetColor((EWidget *)range, vec3_f(0.7, 0.7, 0.7));
 
     range->min = min;
     range->max = max;
@@ -105,11 +105,11 @@ void RangeWidgetInit(EWidgetRange *range, vec2 scale, float min, float max, EWid
     range->selfColor = vec3_f(0.6, 0.3, 0.1);
     range->rangePos = vec2_f(0, 0);
 
-    WidgetSetColor(&range->range, range->selfColor);
+    WidgetSetColor((EWidget *)&range->range, range->selfColor);
 
-    WidgetConnect(&range->range, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, RangeWidgetPress, range);
-    WidgetConnect(&range->range, ENGINE_WIDGET_TRIGGER_MOUSE_MOVE, RangeWidgetMove, range);
-    WidgetConnect(&range->range, ENGINE_WIDGET_TRIGGER_MOUSE_RELEASE, RangeWidgetRelease, range);
+    WidgetConnect((EWidget *)&range->range, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, RangeWidgetPress, range);
+    WidgetConnect((EWidget *)&range->range, ENGINE_WIDGET_TRIGGER_MOUSE_MOVE, RangeWidgetMove, range);
+    WidgetConnect((EWidget *)&range->range, ENGINE_WIDGET_TRIGGER_MOUSE_RELEASE, RangeWidgetRelease, range);
 }
 
 void RangeWidgetSetValueDestin(EWidgetRange *range, float *val_dest)
@@ -120,14 +120,14 @@ void RangeWidgetSetValueDestin(EWidgetRange *range, float *val_dest)
 void RangeWidgetSetValue(EWidgetRange *range, float val)
 {
 
-    vec2 size = v2_muls(Transform2DGetScale(&range->widget), 2);
+    vec2 size = v2_muls(Transform2DGetScale((struct GameObject2D_T *)&range->widget), 2);
     size.x -= 20;
 
-    vec2 te = Transform2DGetPosition(&range->range);
+    vec2 te = Transform2DGetPosition((struct GameObject2D_T *)&range->range);
 
     int len = range->max - range->min;
     float diff =  len / size.x;
 
     te.x = (val - range->min) / diff;
-    Transform2DSetPosition(&range->range, te.x, te.y);
+    Transform2DSetPosition((struct GameObject2D_T *)&range->range, te.x, te.y);
 }

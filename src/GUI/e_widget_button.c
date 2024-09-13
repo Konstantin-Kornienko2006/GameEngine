@@ -43,7 +43,7 @@ void ButtonWidgetInit(EWidgetButton *button, vec2 scale, const char *text, EWidg
 
     memset(button, 0, sizeof(EWidgetButton));
 
-    WidgetInit(button, parent);
+    WidgetInit((EWidget *)button, parent);
 
     GameObjectSetDrawFunc((GameObject *)button, (void *)ButtonWidgetDraw);
 
@@ -55,8 +55,8 @@ void ButtonWidgetInit(EWidgetButton *button, vec2 scale, const char *text, EWidg
     if(text != NULL)
         ButtonWidgetSetText(button, text);
 
-    WidgetSetColor(&button->widget, button->selfColor);
-    WidgetSetScale(button, scale.x, scale.y);
+    WidgetSetColor((EWidget *)&button->widget, button->selfColor);
+    WidgetSetScale((EWidget *)button, scale.x, scale.y);
 
     WidgetConnect(&button->widget, ENGINE_WIDGET_TRIGGER_MOUSE_PRESS, ButtonWidgetPress, NULL);
     WidgetConnect(&button->widget, ENGINE_WIDGET_TRIGGER_MOUSE_RELEASE, ButtonWidgetRelease, NULL);
